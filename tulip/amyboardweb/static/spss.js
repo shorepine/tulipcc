@@ -259,6 +259,9 @@ function _knob_log_struct_key(message) {
   }
   return out;
 }
+// editor_drums.js repositions its per-note lines (delete + re-insert) so they
+// replay after the channel's level broadcast — it needs the same keys.
+window._knob_log_struct_key = _knob_log_struct_key;
 
 // Serialize the log to the block body: one Z-terminated wire line per entry.
 function serialize_knob_log() {

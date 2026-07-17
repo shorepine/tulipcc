@@ -4,12 +4,11 @@
 // amy#913, a SINGLE-VOICE synth whose one voice is a container holding one
 // dedicated osc per drum sound. The kit patch sets up each osc with its PCM
 // preset (`v<k>w7p<preset>`) and maps each GM note to its osc with a per-note
-// MIDI note mapping `io<note>,<L>,<N>,<X>,<O>,<template>`, where the template
-// `v<k>n<base>l%vi%i` carries only what a hit must set: the osc, the sample's
-// base note and the velocity. The sample's kit-balancing gain rides the
-// mapping's linear velocity scale (the X/max field: %v = X * vel/127). Kit
-// synths are created with synth_flags=3 (SYNTH_FLAGS_NOTES_VIA_MIDI), so every
-// note path — MIDI in, the sequencer, amy.send(note=...) — goes through these
+// MIDI note mapping `io<note>,<L>,<N>,<X>,<O>,v<k>n<base>l%vi%i`, whose
+// template carries only what a hit must set: the osc, the sample's base note
+// and the velocity (X = the sample's kit-balancing gain). Kit synths are
+// created with synth_flags=3 (SYNTH_FLAGS_NOTES_VIA_MIDI), so every note
+// path — MIDI in, the sequencer, amy.send(note=...) — goes through these
 // mappings. Because each drum owns its osc, osc params set on it persist
 // across hits (and across other drums' hits).
 //
@@ -18,8 +17,11 @@
 // each such note has its own osc, so a sound's edit is sent to every one):
 //
 //   pitch   -24..+24 semitones  → the osc's freq const, f440*2^(st/12)
-//   vol     0..1.2              → multiplier on the kit gain in the mapping's
-//                                 velocity max (X field)
+//                                 (440 Hz = no shift; logfreq coefficients
+//                                 combine additively, so the const transposes
+//                                 the sample)
+//   vol     0..1.2              → the osc's amp const, TIMES the channel
+//                                 level: a<vol*level> (see Level below)
 //   offset  0..0.95             → sample start point, the osc's persistent
 //                                 trigger_phase P (phase = start_frame / 2^23;
 //                                 frames from drum_presets.generated.js)
@@ -30,36 +32,32 @@
 //
 // Ranges/defaults match the gamma9001 web drum machine.
 //
-// The knobs split into two groups by where the value has to live:
+// Every knob is a persistent param on the drum's dedicated osc — the kit's
+// `io` note mappings are NEVER rewritten. A sound's edits are one line per
+// note, addressed BY NOTE: `i<ch>n<note>f<hz>a<amp>Q<pan>G4F<hz>R<q>P<ph>`
+// (all params in a fixed shape so the line's structural key is stable). AMY
+// routes a note-addressed event with no velocity through the note mapping as
+// a "fake note on" (amy#913), so it lands on the right osc without the UI
+// needing osc numbers. Hits never touch these params, so they stick until
+// changed.
 //
-//   pitch / offset / pan / cutoff / res — persistent params on the drum's
-//   dedicated osc, set by addressing the drum BY NOTE:
-//   `i<ch>n<note>f<hz>Q<pan>G4F<hz>R<q>P<phase>` (one line per note, all
-//   params in a fixed shape so the line's structural key is stable). AMY
-//   routes a note-addressed event with no velocity through the note mapping
-//   as a "fake note on" (amy#913), so it lands on the right osc without the
-//   UI needing to know osc numbers. Hits never touch these params, so they
-//   stick until changed. Pitch rides the osc's freq const (f, default
-//   440 Hz = no shift — logfreq coefficients combine additively, so
-//   440*2^(semitones/12) transposes the sample); offset is the osc's
-//   persistent trigger_phase (P).
+// Level (channel strip / CC 7): a drum kit has no control osc, so the
+// channel level is an osc-less amp broadcast `i<ch>a<level>` — AMY fans it
+// out to every per-drum osc. Since each drum's amp is vol*level, a level
+// change also rewrites every sound's per-note line with the new product
+// (update_drum_amps_for_level, debounced; the broadcast keeps the level live
+// during a drag). In the knob log the broadcast line always precedes the
+// per-note lines (they are re-inserted after it), so a replay applies the
+// level first and the per-drum refinements on top. A hardware CC 7 sweep
+// only plays the broadcast (its ic template can't fan out per-drum values),
+// so it transiently flattens vol ratios until the next per-note send/replay.
 //
-//   vol — the kit-balancing gain lives in the note mapping's velocity max
-//   (X field), so this one knob still REWRITES the drum's io line(s), with
-//   the template kept in the kit's canonical `v<k>n<base>l%vi%i` form. (If
-//   amy ever bakes the per-note gain into the osc's amp coefficients
-//   instead, this last io rewrite goes away too.)
-//
-// Both line forms are sent live and recorded in the knob log (one last-wins
-// slot per note per form, keyed by the line's structural key, so
-// sketch-loaded lines and live moves collapse together). Only edited sounds
-// get lines in _auto_generated_knobs.
-//
-// Sketches saved before amy#913 recorded io lines in the old one-osc-per-VOICE
-// form (template baking p<preset> and the edited Q/G/F/R/P, no v<osc>).
-// refresh_drum_knob_values() migrates them: their params are recovered, the
-// kit patch is re-sent to restore pristine mappings/oscs, every logged sound
-// is re-sent in the new two-line form, and the stale slots are dropped.
+// Sketches saved before this scheme recorded io lines (pre-amy#913 templates
+// baking p<preset>/params, or this PR's earlier velocity-max form) and/or a
+// v0a level line. refresh_drum_knob_values() migrates them: params are
+// recovered, the kit patch is re-sent to restore pristine mappings, every
+// logged sound is re-sent in the current per-note form, and the stale slots
+// are dropped.
 
 (function() {
   var PCM_PHASE_DENOM = 1 << 23;   // AMY PCM phase is frame_index / 2^PCM_INDEX_BITS
@@ -104,7 +102,15 @@
     return String(Number(n.toFixed(7)));
   }
 
+  function channel_level(ch) {
+    var lvl = (typeof window.get_synth_level === "function") ? Number(window.get_synth_level(ch)) : 1;
+    return (Number.isFinite(lvl) && lvl >= 0) ? lvl : 1;
+  }
+
   // ── kit patch parsing ───────────────────────────────────────────────────────
+  // Only used to GROUP the kit into drum sounds for the UI (note → osc →
+  // preset for the row labels and audition) and to recover values from
+  // legacy io lines during migration — knob edits never depend on it.
 
   // Parse one CURRENT-form mapping template: v<osc>n<base>l%vi%i.
   // Returns null for anything else (i.e. a pre-amy#913 template).
@@ -136,8 +142,9 @@
 
   // The kit's patch wire string is a Z-separated list: per-drum osc setup
   // segments `v<k>w7p<preset>` followed by note-map entries like
-  // `io35,0,0,4.02,0,v0n60l%vi%i` (velMax = the drum's kit-balancing gain).
-  // Returns [{note, velMax, osc, baseNote, preset}].
+  // `io35,0,0,4.02,0,v0n60l%vi%i` (velMax = the drum's kit-balancing gain,
+  // kept here only for legacy-line vol recovery).
+  // Returns [{note, velMax, baseNote, preset}].
   function parse_kit_entries(kitPatch) {
     var codes = window.patch_code_for_patch_number;
     var s = (codes && typeof codes[kitPatch] === "string") ? codes[kitPatch] : "";
@@ -158,7 +165,6 @@
       entries.push({
         note: parseInt(m[1], 10),
         velMax: Number.isFinite(parseFloat(m[4])) ? parseFloat(m[4]) : 1,
-        osc: tmpl.osc,
         baseNote: tmpl.baseNote,
         preset: oscPreset[tmpl.osc],
       });
@@ -194,7 +200,7 @@
   function default_params(entry) {
     return {
       pitch: 0,
-      vol: 1,   // multiplier on the kit's baked velocity gain (entry.velMax)
+      vol: 1,   // multiplier on the channel level (osc amp = vol * level)
       offset: 0,
       cutoff: CUTOFF_MAX_HZ,
       res: 0.7,
@@ -212,50 +218,50 @@
 
   // ── knob log <-> per-sound params ───────────────────────────────────────────
 
-  // A pre-amy#913 io line bakes the preset (and any edited params) into the
-  // template instead of referencing the drum's dedicated osc (v<k>).
-  function io_line_is_legacy(line) {
-    var m = /^i\d+io\d+,(?:[^,]*,){4}(.*)$/.exec(line);
-    return !!(m && !parse_template(m[1]));
-  }
-
-  // One pass over the knob log for this channel: note -> recorded io line,
-  // note -> recorded osc-params line (i<ch>n<note>Q...), plus the log keys of
-  // any legacy-format io lines (for migration).
+  // One pass over the knob log for this channel: note -> recorded osc-params
+  // line tail (i<ch>n<note>...), the channel level (i<ch>a<val>), plus stale
+  // lines from earlier formats (io note-map rewrites, v0a level) for
+  // migration.
   function log_lines_for_channel(ch) {
-    var out = { ioByNote: {}, paramsByNote: {}, legacyKeys: [], legacyLevel: null };
+    var out = { paramsByNote: {}, level: null,
+                ioByNote: {}, legacyKeys: [], legacyLevel: null };
     if (!(window.knob_log instanceof Map)) return out;
-    var ioRe = new RegExp("^i" + ch + "io(\\d+),");
     var paramRe = new RegExp("^i" + ch + "n(\\d+)([fQGFR].*)$");
-    // Pre-amy#913 drum Level line: amp on the (then) control osc — under the
-    // per-drum-osc model v0 is the first drum, so this must migrate to the
-    // osc-less broadcast form (i<ch>a<val>).
-    var levelRe = new RegExp("^i" + ch + "v0a(-?[\\d.]+)$");
+    var levelRe = new RegExp("^i" + ch + "a(-?[\\d.]+)$");
+    // Stale forms: io rewrites (pre-amy#913 baked-template lines or this
+    // PR's earlier velocity-max form) and the pre-amy#913 control-osc level.
+    var ioRe = new RegExp("^i" + ch + "io(\\d+),");
+    var oldLevelRe = new RegExp("^i" + ch + "v0a(-?[\\d.]+)$");
     window.knob_log.forEach(function(entry, key) {
       if (!entry || Number(entry.synth) !== ch) return;
       var line = String(entry.line || "");
-      var m = ioRe.exec(line);
-      if (m) {
-        out.ioByNote[parseInt(m[1], 10)] = line;
-        if (io_line_is_legacy(line)) out.legacyKeys.push(key);
-        return;
-      }
-      m = paramRe.exec(line);
+      var m = paramRe.exec(line);
       if (m) {
         out.paramsByNote[parseInt(m[1], 10)] = m[2];
         return;
       }
       m = levelRe.exec(line);
+      if (m) {
+        out.level = parseFloat(m[1]);
+        return;
+      }
+      m = ioRe.exec(line);
+      if (m) {
+        out.ioByNote[parseInt(m[1], 10)] = line;
+        out.legacyKeys.push(key);
+        return;
+      }
+      m = oldLevelRe.exec(line);
       if (m) out.legacyLevel = { key: key, val: parseFloat(m[1]) };
     });
     return out;
   }
 
   // Recover a sound's params from its first note's recorded lines (if any).
-  // ioLine carries vol (or, for a legacy line, everything); paramsTail (the
-  // f/Q/G/F/R/P tail of an i<ch>n<note> line) carries
-  // pitch/pan/cutoff/res/offset.
-  function params_from_log(sound, entry, ioLine, paramsTail) {
+  // paramsTail (the f/a/Q/G/F/R/P tail of an i<ch>n<note> line) is the
+  // current form; ioLine is a stale rewrite kept only for migration.
+  // level divides the recorded amp back into the vol knob's multiplier.
+  function params_from_log(sound, entry, ioLine, paramsTail, level) {
     var params = default_params(entry);
     var found = false;
     if (ioLine) {
@@ -266,9 +272,10 @@
         var velBase = Number(entry.velMax) || 1;
         var tmpl = parse_template(m[5]);
         if (tmpl) {
+          // This PR's earlier form: vol rode the mapping's velocity max.
           if (Number.isFinite(velMax)) params.vol = velMax / velBase;
         } else {
-          // Legacy line: every edited param was baked into the template.
+          // Pre-amy#913 line: every edited param was baked into the template.
           var lt = parse_legacy_template(m[5]);
           if (Number.isFinite(velMax)) params.vol = velMax / velBase;
           if (Number.isFinite(lt.baseNote)) params.pitch = lt.baseNote - entry.baseNote;
@@ -290,6 +297,11 @@
       if (pm && parseFloat(pm[1]) > 0) {
         params.pitch = Math.round(12 * Math.log2(parseFloat(pm[1]) / 440) * 100) / 100;
       }
+      pm = /a(-?[\d.]+)/.exec(paramsTail);
+      if (pm) {
+        var lvl = (Number.isFinite(level) && level > 0) ? level : 1;
+        params.vol = parseFloat(pm[1]) / lvl;
+      }
       pm = /Q(-?[\d.]+)/.exec(paramsTail); if (pm) params.pan = parseFloat(pm[1]);
       pm = /G(\d+)F(-?[\d.]+)/.exec(paramsTail);
       if (pm) {
@@ -306,24 +318,12 @@
     return found ? params : null;
   }
 
-  // Rebuild one note's mapping line from a sound's current params: only vol
-  // lives here (the mapping's velocity max = vol * kit gain); the template is
-  // exactly the kit's canonical `v<k>n<base>l%vi%i` form. The fixed shape
-  // keeps the line's structural key stable (one log slot per note).
-  function build_io_line(ch, entry, sound) {
-    var p = sound.params;
-    var t = "v" + entry.osc + "n" + fmt(entry.baseNote) + "l%vi%i";
-    // Same command form as CC-mapping lines (i1ic70,...): i<ch> selects the
-    // synth, then the synth-level `io` note-map command. A bare `o` after the
-    // channel digits would parse as the top-level `algorithm` command.
-    return "i" + ch + "io" + entry.note + ",0,0," + fmt(p.vol * (Number(entry.velMax) || 1)) + ",0," + t;
-  }
-
   // Build one note's persistent osc-params line: pitch (freq const, 440 Hz =
-  // no shift), pan, cutoff, res and offset (trigger_phase) set directly on
-  // the drum's dedicated osc, addressed by note (routed through the note
-  // mapping as a velocity-less "fake note on", amy#913). Full fixed shape
-  // (f/Q/G/F/R/P) so the structural key stays stable.
+  // no shift), amp (vol * channel level), pan, cutoff, res and offset
+  // (trigger_phase), set directly on the drum's dedicated osc, addressed by
+  // note (routed through the note mapping as a velocity-less "fake note on",
+  // amy#913). Full fixed shape (f/a/Q/G/F/R/P) so the structural key stays
+  // stable.
   function build_param_line(ch, entry, sound) {
     var p = sound.params;
     var open = p.cutoff >= CUTOFF_MAX_HZ - 1;
@@ -333,6 +333,7 @@
     }
     return "i" + ch + "n" + entry.note
       + "f" + fmt(440 * Math.pow(2, p.pitch / 12))
+      + "a" + fmt(p.vol * channel_level(ch))
       + "Q" + fmt(p.pan)
       + "G" + (open ? 0 : 4)
       + "F" + fmt(Math.round(p.cutoff))
@@ -340,14 +341,39 @@
       + "P" + fmtPhase(phase);
   }
 
-  // Send (live) + record (knob log) both line forms for one sound's notes.
-  function send_sound(ch, sound) {
+  // Send (live) + record (knob log) one sound's per-note lines. reposition
+  // moves the lines to the END of the log (delete + re-insert), used by
+  // level changes so the per-note refinements always replay AFTER the
+  // channel's i<ch>a<level> broadcast line.
+  function send_sound(ch, sound, reposition) {
     if (typeof window.send_amy_message_in_sketch !== "function") return;
     for (var i = 0; i < sound.entries.length; i++) {
-      window.send_amy_message_in_sketch(build_io_line(ch, sound.entries[i], sound), { synth: ch });
-      window.send_amy_message_in_sketch(build_param_line(ch, sound.entries[i], sound), { synth: ch });
+      var line = build_param_line(ch, sound.entries[i], sound);
+      if (reposition && typeof window._knob_log_struct_key === "function") {
+        window.send_amy_message_in_sketch("", {
+          key: window._knob_log_struct_key(line), remove: true, silent: true,
+        });
+      }
+      window.send_amy_message_in_sketch(line, { synth: ch });
     }
   }
+
+  // A channel-level change makes every drum's amp (vol * level) stale — the
+  // live broadcast already set all oscs to the bare level, so re-send every
+  // sound's per-note line to restore the vol ratios (and record the products
+  // after the broadcast line in the log). Debounced: a slider drag fires
+  // many input events, and each rewrite is one line per mapped note.
+  var _level_rewrite_timer = {};
+  window.update_drum_amps_for_level = function(channel) {
+    var ch = Number(channel);
+    var state = _drum_state[ch];
+    if (!window.get_channel_drum_kit(ch) || !state) return;
+    if (_level_rewrite_timer[ch]) clearTimeout(_level_rewrite_timer[ch]);
+    _level_rewrite_timer[ch] = setTimeout(function() {
+      _level_rewrite_timer[ch] = null;
+      state.sounds.forEach(function(sound) { send_sound(ch, sound, /* reposition */ true); });
+    }, 150);
+  };
 
   // Audition one drum sound: send a MIDI note-on (and a note-off, which kit
   // synths ignore — synth_flags bit 2) exactly as a keyboard would, so it
@@ -384,7 +410,7 @@
         knobs.push({
           drum: true,
           no_device_cc: true,   // CC works via move_knob (web) only — a device
-                                // ic mapping can't nest the io note template.
+                                // ic mapping can't target a per-note osc.
           section: section,
           display_name: def.display_name,
           cc: "",
@@ -433,29 +459,50 @@
     var state = _drum_state[ch];
     if (!state || !knobs.length) return;
     var log = log_lines_for_channel(ch);
+    // The channel level divides recorded amps back into vol multipliers; a
+    // pre-amy#913 v0a line stands in until it is migrated below.
+    var level = Number.isFinite(log.level) ? log.level
+      : (log.legacyLevel ? log.legacyLevel.val : 1);
+    if (!(Number.isFinite(level) && level >= 0)) level = 1;
     state.sounds.forEach(function(sound) {
       var params = null;
       for (var i = 0; i < sound.entries.length && !params; i++) {
         var note = sound.entries[i].note;
         if (log.ioByNote[note] || log.paramsByNote[note]) {
           params = params_from_log(sound, sound.entries[i],
-                                   log.ioByNote[note], log.paramsByNote[note]);
+                                   log.ioByNote[note], log.paramsByNote[note], level);
         }
       }
       sound.params = params || default_params(sound.entries[0]);
     });
-    // Migrate pre-amy#913 io lines to the two-line form in one shot. The
-    // stale lines were replayed into AMY on load and their templates don't
-    // reference the per-drum oscs (a hit through one would broadcast to every
-    // osc in the voice), so first re-send the kit patch to restore pristine
-    // mappings/oscs, then re-send every logged sound in the current form
-    // (live + logged under the current structural keys) and drop the stale
+    // Position the Level slider from the recorded level.
+    if ((Number.isFinite(log.level) || log.legacyLevel)
+      && typeof window.setSynthLevelFromAmy === "function") {
+      window.setSynthLevelFromAmy(ch, level);
+    }
+    // Migrate stale-format lines to the current per-note form in one shot.
+    // Stale io rewrites were replayed into AMY on load (a pre-amy#913
+    // template doesn't reference the per-drum oscs, so a hit through one
+    // would broadcast to every osc in the voice), so first re-send the kit
+    // patch to restore pristine mappings/oscs and re-apply the level, then
+    // re-send every logged sound in the current form and drop the stale
     // slots.
-    if (log.legacyKeys.length && typeof window.send_amy_message_in_sketch === "function") {
+    if ((log.legacyKeys.length || log.legacyLevel)
+      && typeof window.send_amy_message_in_sketch === "function") {
       if (typeof window.amy_add_log_message === "function") {
         // Live-only: the kit's K line is already in the log (normalized to
         // iv1 on load) — this just restores AMY's runtime state.
         window.amy_add_log_message("i" + ch + "K" + state.kit + "iv1Z");
+        window.amy_add_log_message("i" + ch + "a" + fmt(level) + "Z");
+      }
+      if (log.legacyLevel) {
+        // Move the level to its current broadcast form (recorded so it
+        // replays — and so vol recovery can divide it back out).
+        window.send_amy_message_in_sketch("i" + ch + "a" + fmt(level), { synth: ch, silent: true });
+        window.send_amy_message_in_sketch("", { key: log.legacyLevel.key, remove: true, silent: true });
+        if (typeof window.setSynthLevelFromAmy === "function") {
+          window.setSynthLevelFromAmy(ch, level);
+        }
       }
       state.sounds.forEach(function(sound) {
         var logged = sound.entries.some(function(e) {
@@ -466,16 +513,6 @@
       log.legacyKeys.forEach(function(key) {
         window.send_amy_message_in_sketch("", { key: key, remove: true, silent: true });
       });
-    }
-    // Migrate a pre-amy#913 Level line (amp on osc 0 — now just the first
-    // drum) to the osc-less broadcast form, and position the slider.
-    if (log.legacyLevel && Number.isFinite(log.legacyLevel.val)
-      && typeof window.send_amy_message_in_sketch === "function") {
-      window.send_amy_message_in_sketch("i" + ch + "a" + log.legacyLevel.val.toFixed(3), { synth: ch });
-      window.send_amy_message_in_sketch("", { key: log.legacyLevel.key, remove: true, silent: true });
-      if (typeof window.setSynthLevelFromAmy === "function") {
-        window.setSynthLevelFromAmy(ch, log.legacyLevel.val);
-      }
     }
     // Push the refreshed values into the knob configs (init_knobs reads
     // default_value at render time).

@@ -2126,6 +2126,13 @@
             if (typeof window.send_amy_message_in_sketch === "function") {
               window.send_amy_message_in_sketch(code, { synth: ch, silent: true });
             }
+            // Each drum osc's amp is (its vol knob) * level, so a level change
+            // re-sends every sound's per-note line with the new product
+            // (debounced in editor_drums.js; the broadcast above keeps the
+            // level live during the drag).
+            if (isDrumCh && typeof window.update_drum_amps_for_level === "function") {
+              window.update_drum_amps_for_level(ch);
+            }
           }
         }
         function syncSynthLevelForChannel() {
@@ -2137,6 +2144,8 @@
           synthLevelSlider.addEventListener("input", function() { setSynthLevel(levelSliderToValue(synthLevelSlider.value), true); });
         }
         window.syncSynthLevelForChannel = syncSynthLevelForChannel;
+        // Read access for editor_drums.js: each drum osc's amp is vol * level.
+        window.get_synth_level = getSynthLevel;
         window.setSynthLevelFromAmy = function(ch, val) {
           val = Number(val);
           if (!Number.isFinite(val) || val < 0) val = 1;
