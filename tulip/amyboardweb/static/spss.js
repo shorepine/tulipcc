@@ -1802,16 +1802,7 @@ function build_knob_cc_value(knob, channel) {
     max_val = (knob.cc_max_value !== undefined) ? knob.cc_max_value : knob.max_value;
     offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
   }
-  // Drum channels use a knob's drum_change_code variant when it defines one
-  // (the Level knob: i%ia%v with no v0 — a drum kit has no control osc, and
-  // an osc-less amp broadcasts to every per-drum osc, amy#913).
-  var changeCode = knob.change_code;
-  if (typeof knob.drum_change_code === "string"
-    && typeof window.get_channel_drum_kit === "function"
-    && window.get_channel_drum_kit(channel)) {
-    changeCode = knob.drum_change_code;
-  }
-  return ccNum + "," + log + "," + min_val + "," + max_val + "," + offset + "," + changeCode;
+  return ccNum + "," + log + "," + min_val + "," + max_val + "," + offset + "," + knob.change_code;
 }
 
 function send_all_knob_cc_mappings(channel) {
