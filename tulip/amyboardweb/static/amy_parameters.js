@@ -590,8 +590,16 @@ window.addEventListener("DOMContentLoaded", function() {
     if (!changeCode) {
       return false;
     }
-    const perChannelKnobs = (Array.isArray(window.amy_channel_knobs) && Array.isArray(window.amy_channel_knobs[channel]))
+    let perChannelKnobs = (Array.isArray(window.amy_channel_knobs) && Array.isArray(window.amy_channel_knobs[channel]))
       ? window.amy_channel_knobs[channel] : [];
+    // A DX7 channel's surface knobs take precedence: several share change
+    // codes with the (disabled) Juno mirrors ("i%iv0F%v", ...), and the
+    // mapping must land on the knob the user can actually see.
+    if (typeof window.get_channel_dx7_patch === "function"
+      && window.get_channel_dx7_patch(channel)
+      && typeof window.get_dx7_knobs_for_channel === "function") {
+      perChannelKnobs = window.get_dx7_knobs_for_channel(channel).concat(perChannelKnobs);
+    }
     // FX (bus) knobs: apply the CC mapping to the bus this channel is on.
     const globalKnobs = window.get_bus_knobs(window.get_channel_bus(channel));
     let knob = perChannelKnobs.find(function(entry) {
@@ -786,28 +794,41 @@ window.addEventListener("DOMContentLoaded", function() {
     const ch = Number(window.current_synth || 1);
     // Render the channel's knob SURFACE for its patch (see the surface plan
     // at update_knob_sections_for_patch in spss.js): drum kit channels get
-    // the per-drum parameter grid instead of the synthesis sections (which
-    // don't apply to a note->sample kit); everything else gets the Juno
-    // surface (a future DX7 surface will slot in here the same way). The FX
+    // the per-drum parameter grid, DX7 preset channels get the tabbed FM
+    // surface (editor_dx7.js), everything else gets the Juno surface. The FX
     // (bus) grid renders the same either way.
     const drumKit = (typeof window.get_channel_drum_kit === "function")
       ? window.get_channel_drum_kit(ch) : null;
+    const dx7Patch = (!drumKit && typeof window.get_channel_dx7_patch === "function")
+      ? window.get_channel_dx7_patch(ch) : null;
     const channelGrid = document.getElementById("knob-grid-channel");
-    if (channelGrid) channelGrid.classList.toggle("knob-grid-drums", !!drumKit);
-    const channelKnobs = drumKit
-      ? (typeof window.get_drum_knobs_for_channel === "function"
-        ? (window.refresh_drum_knob_values(ch), window.get_drum_knobs_for_channel(ch))
-        : [])
-      : window.get_channel_knobs(ch);
+    if (channelGrid) {
+      channelGrid.classList.toggle("knob-grid-drums", !!drumKit);
+      channelGrid.classList.toggle("knob-grid-dx7", !!dx7Patch);
+    }
+    let channelKnobs;   // rendered in the channel grid
+    if (drumKit && typeof window.get_drum_knobs_for_channel === "function") {
+      window.refresh_drum_knob_values(ch);
+      channelKnobs = window.get_drum_knobs_for_channel(ch);
+    } else if (dx7Patch && typeof window.get_dx7_knobs_for_channel === "function") {
+      window.refresh_dx7_knob_values(ch);
+      channelKnobs = window.get_dx7_knobs_for_channel(ch);
+    } else {
+      channelKnobs = drumKit ? [] : window.get_channel_knobs(ch);
+    }
     const globalKnobs = window.get_global_knobs();
-    const knobs = channelKnobs.concat(globalKnobs);
     if (typeof init_knobs === "function") {
-      init_knobs(channelKnobs, "knob-grid-channel");
+      // The DX7 grid gets an onChange hook so its envelope plots redraw live.
+      init_knobs(channelKnobs, "knob-grid-channel",
+        dx7Patch ? window.dx7_on_knob_change : undefined);
       init_knobs(globalKnobs, "knob-grid-global");
+    }
+    if (dx7Patch && typeof window.render_dx7_chrome === "function") {
+      window.render_dx7_chrome(ch);  // the ENV PLOT row
     }
     if (typeof window.onKnobCcChange === "function") {
       const disabledSections = window._disabled_sections || {};
-      for (const knob of knobs) {
+      for (const knob of channelKnobs.concat(globalKnobs)) {
         if (knob.drum) continue;  // drum knobs never emit device CC mappings
         if (disabledSections[knob.section]) continue;
         if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half"
