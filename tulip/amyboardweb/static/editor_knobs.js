@@ -1126,8 +1126,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
       : "col-12 knob-section";
     sectionWrap.className = sectionClass;
     // Re-apply DX7/drum section greying across grid re-renders (the class
-    // lives on the DOM node, which this render just replaced).
-    if (window._disabled_sections && window._disabled_sections[section.name]) {
+    // lives on the DOM node, which this render just replaced). DX7-surface
+    // sections are exempt: their names can collide with the disabled Juno
+    // sections ("VCF", "VCF ENV", "LFO") but they are the live replacement.
+    const isDx7Section = section.items.some(function(item) { return item.config && item.config.dx7; });
+    if (window._disabled_sections && window._disabled_sections[section.name] && !isDx7Section) {
       sectionWrap.classList.add("section-disabled");
     }
     if (section.items.some(function(item) { return item.config && item.config.drum; })) {
