@@ -4881,10 +4881,12 @@ async function load_knobs_from_sketch() {
     if (!knobs) {
         // First run: set up channel 1 with default Juno patch 257, 6 voices,
         // and the GM drum kit on channel 10 — the device boot defaults.
+        // Drum kits are single-voice (amy#913): iv1, or the ~38-osc-per-voice
+        // allocation exhausts the osc pool.
         amy_add_log_message("i1ic255Z");
         amy_add_log_message("i1K257iv6Z");
         send_all_knob_cc_mappings(1);
-        amy_add_log_message("i" + window.DRUM_CHANNEL + "K" + window.DRUM_DEFAULT_PATCH + "iv6Z");
+        amy_add_log_message("i" + window.DRUM_CHANNEL + "K" + window.DRUM_DEFAULT_PATCH + "iv1Z");
         return;
     }
     var lines = knobs.split(/\r?\n/);
@@ -6590,9 +6592,12 @@ async function start_audio() {
   if (mp && !_url_env_pending) {
     // Init synth 1 with default Juno patch (and the GM drum kit on channel 10)
     // before run_sketch applies knobs. Without it, synth 1 doesn't exist and
-    // _apply_knobs_text fails with "synth not defined".
+    // _apply_knobs_text fails with "synth not defined". Drum kits are
+    // single-voice (amy#913): iv1 — iv6 here made startup try to allocate
+    // 6 x ~38 oscs and log "cannot find 38 oscs for patch 384" for the
+    // voices that didn't fit.
     amy_add_message("i1K257iv6Z");
-    amy_add_message("i" + window.DRUM_CHANNEL + "K" + window.DRUM_DEFAULT_PATCH + "iv6Z");
+    amy_add_message("i" + window.DRUM_CHANNEL + "K" + window.DRUM_DEFAULT_PATCH + "iv1Z");
     // Let AMY process the synth init before running Python.
     await new Promise(function(resolve) { setTimeout(resolve, 100); });
     try {
