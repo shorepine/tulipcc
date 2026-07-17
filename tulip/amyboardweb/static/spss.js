@@ -232,9 +232,11 @@ function _knob_log_struct_key(message) {
   }
   // A LEADING i<synth>n<note> is note-addressing (the drum editor's per-drum
   // osc-param lines, e.g. i10n39Q0.5...) — keep the note literal so each drum
-  // gets its own last-wins slot. An 'n' anywhere else is a note VALUE (e.g.
-  // the n<base> inside an io template, which the pitch knob edits) and must
-  // normalize to '#' so value changes collapse onto one line.
+  // gets its own last-wins slot. Same for n<note> after an i%i placeholder
+  // (the drum knobs' ic templates, i10ic77,...,i%in35f%v — without this,
+  // pitch-CC lines for different drums would collapse onto one slot). An 'n'
+  // anywhere else is a note VALUE (e.g. the n<base> inside an io template)
+  // and must normalize to '#' so value changes collapse onto one line.
   var mNote = /^i(\d+)n(\d+)/.exec(s);
   if (i === 0 && mNote) {
     out += 'i' + mNote[1] + 'n' + mNote[2];
@@ -242,7 +244,12 @@ function _knob_log_struct_key(message) {
   }
   while (i < s.length) {
     var c = s.charAt(i);
-    if ((c === 'i' || c === 'v' || c === 'o') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
+    if (c === 'n' && s.slice(i - 2, i) === '%i'
+      && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
+      // i%in<note> — note-addressed template inside an ic mapping.
+      out += c; i++;
+      while (i < s.length && s.charCodeAt(i) >= 48 && s.charCodeAt(i) <= 57) { out += s.charAt(i); i++; }
+    } else if ((c === 'i' || c === 'v' || c === 'o') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
       // i<synth> / v<osc> selector — keep the letter and its digits literally.
       // 'o' too: in a note-mapping line (i10o35,...) the digits are the MIDI
       // note being mapped — each note needs its own last-wins slot.
@@ -1424,10 +1431,11 @@ function onKnobCcChange(knob, previousCc) {
     }
   }
 
-  // Drum kit knobs keep their CC in the knob config only (used by move_knob's
-  // web-side routing): a device-side ic mapping can't be installed for them —
-  // the io note template's own %v/%i placeholders would collide with the ic
-  // template substitution. Nothing to send or log.
+  // Knobs flagged no_device_cc keep their CC in the knob config only (used
+  // by move_knob's web-side routing) — nothing to send or log. (Drum knobs
+  // used to be in this bucket; since the per-drum-osc rework their
+  // change_code is a plain note-addressed single-param template, so they
+  // install real device ic mappings like any other knob.)
   if (knob.no_device_cc) {
     return;
   }
@@ -1538,9 +1546,11 @@ function move_knob(channel, cc, value) {
     return;
   }
   // Drum kit channels: the per-drum knobs (editor_drums.js) respond to CC
-  // too. They have no device-side ic mapping (their io note templates can't
-  // nest inside one), so unlike regular knobs the move must SEND to AMY —
-  // set_knob_ui_value(..., true) below routes through their drum_send.
+  // too. They install device-side ic mappings like regular knobs, but their
+  // drum_send also owns cross-param state (vol*level products in the full
+  // per-note line), so the web move still routes through drum_send —
+  // set_knob_ui_value(..., true) below — keeping the recorded sketch in
+  // step with what a web CC move plays.
   const drumKnobs = (typeof window.get_channel_drum_kit === "function"
     && window.get_channel_drum_kit(channel)
     && typeof window.get_drum_knobs_for_channel === "function")
@@ -1785,8 +1795,11 @@ function build_knob_cc_value(knob, channel) {
     offset = 0;
   } else {
     log = knob.knob_type === "log" ? 1 : 0;
-    min_val = knob.min_value;
-    max_val = knob.max_value;
+    // cc_min/max_value override the UI range when the knob's wire value uses
+    // different units (the drum offset knob: UI is a 0..0.95 sample fraction,
+    // the wire value is an absolute trigger_phase).
+    min_val = (knob.cc_min_value !== undefined) ? knob.cc_min_value : knob.min_value;
+    max_val = (knob.cc_max_value !== undefined) ? knob.cc_max_value : knob.max_value;
     offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
   }
   // Drum channels use a knob's drum_change_code variant when it defines one

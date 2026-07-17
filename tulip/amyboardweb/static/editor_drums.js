@@ -16,10 +16,10 @@
 // preset; a GM kit maps several notes onto some sounds, e.g. the toms —
 // each such note has its own osc, so a sound's edit is sent to every one):
 //
-//   pitch   -24..+24 semitones  → the osc's freq const, f440*2^(st/12)
-//                                 (440 Hz = no shift; logfreq coefficients
+//   pitch   log 220..880 Hz     → the osc's freq const (AMY-native value;
+//                                 440 Hz = no shift; logfreq coefficients
 //                                 combine additively, so the const transposes
-//                                 the sample)
+//                                 the sample — an octave down to an octave up)
 //   vol     0..1.2              → the osc's amp const, TIMES the channel
 //                                 level: a<vol*level> (see Level below)
 //   offset  0..0.95             → sample start point, the osc's persistent
@@ -63,6 +63,8 @@
   var PCM_PHASE_DENOM = 1 << 23;   // AMY PCM phase is frame_index / 2^PCM_INDEX_BITS
   var CUTOFF_MAX_HZ = 16000;       // knob at max = filter bypassed (G0)
   var CUTOFF_MIN_HZ = 50;
+  var PITCH_MIN_HZ = 220;          // pitch = AMY-native freq const; 440 = no
+  var PITCH_MAX_HZ = 880;          // shift, so this range is ±1 octave
 
   // ── per-channel drum view state ─────────────────────────────────────────────
   // _channel_drum_kit[ch] = kit patch number while the channel's patch is a
@@ -199,8 +201,8 @@
 
   function default_params(entry) {
     return {
-      pitch: 0,
-      vol: 1,   // multiplier on the channel level (osc amp = vol * level)
+      pitch: 440,   // AMY-native freq const; 440 = no shift
+      vol: 1,       // multiplier on the channel level (osc amp = vol * level)
       offset: 0,
       cutoff: CUTOFF_MAX_HZ,
       res: 0.7,
@@ -278,7 +280,12 @@
           // Pre-amy#913 line: every edited param was baked into the template.
           var lt = parse_legacy_template(m[5]);
           if (Number.isFinite(velMax)) params.vol = velMax / velBase;
-          if (Number.isFinite(lt.baseNote)) params.pitch = lt.baseNote - entry.baseNote;
+          if (Number.isFinite(lt.baseNote)) {
+            // Old pitch was a semitone shift of the template's base note —
+            // convert to the native freq const.
+            params.pitch = Math.min(PITCH_MAX_HZ, Math.max(PITCH_MIN_HZ,
+              440 * Math.pow(2, (lt.baseNote - entry.baseNote) / 12)));
+          }
           if (Number.isFinite(lt.pan)) params.pan = lt.pan;
           if (lt.ftype === 4 && Number.isFinite(lt.ffreq)) {
             params.cutoff = Math.min(Math.max(lt.ffreq, CUTOFF_MIN_HZ), CUTOFF_MAX_HZ);
@@ -295,7 +302,7 @@
       var pm;
       pm = /^f([\d.]+)/.exec(paramsTail);
       if (pm && parseFloat(pm[1]) > 0) {
-        params.pitch = Math.round(12 * Math.log2(parseFloat(pm[1]) / 440) * 100) / 100;
+        params.pitch = Math.min(PITCH_MAX_HZ, Math.max(PITCH_MIN_HZ, parseFloat(pm[1])));
       }
       pm = /a(-?[\d.]+)/.exec(paramsTail);
       if (pm) {
@@ -332,7 +339,7 @@
       phase = Math.floor(p.offset * sound.frames) / PCM_PHASE_DENOM;
     }
     return "i" + ch + "n" + entry.note
-      + "f" + fmt(440 * Math.pow(2, p.pitch / 12))
+      + "f" + fmt(p.pitch)
       + "a" + fmt(p.vol * channel_level(ch))
       + "Q" + fmt(p.pan)
       + "G" + (open ? 0 : 4)
@@ -393,27 +400,40 @@
 
   // ── knob configs ────────────────────────────────────────────────────────────
 
+  // wire: the single-param template suffix for this knob's device MIDI-CC
+  // (ic) mapping — one note-addressed command per mapped note, Z-joined in
+  // build_knob_configs. The ic mapping carries ONLY this knob's parameter.
   var DRUM_KNOB_DEFS = [
-    { key: "pitch",  display_name: "pitch",  min_value: -24,  max_value: 24 },
-    { key: "offset", display_name: "offset", min_value: 0,    max_value: 0.95 },
-    { key: "pan",    display_name: "pan",    min_value: 0,    max_value: 1 },
-    { key: "vol",    display_name: "vol",    min_value: 0,    max_value: 1.2 },
-    { key: "cutoff", display_name: "cutoff", min_value: CUTOFF_MIN_HZ, max_value: CUTOFF_MAX_HZ, knob_type: "log" },
-    { key: "res",    display_name: "res",    min_value: 0.1,  max_value: 8 },
+    { key: "pitch",  display_name: "pitch",  min_value: PITCH_MIN_HZ, max_value: PITCH_MAX_HZ, knob_type: "log", wire: "f%v" },
+    { key: "offset", display_name: "offset", min_value: 0,    max_value: 0.95, wire: "P%v" },
+    { key: "pan",    display_name: "pan",    min_value: 0,    max_value: 1,    wire: "Q%v" },
+    { key: "vol",    display_name: "vol",    min_value: 0,    max_value: 1.2,  wire: "a%v" },
+    // Cutoff's template pins the filter type (G4 = LPF24) so a CC sweep is
+    // audible from any state; unlike the knob it has no bypass-at-max.
+    { key: "cutoff", display_name: "cutoff", min_value: CUTOFF_MIN_HZ, max_value: CUTOFF_MAX_HZ, knob_type: "log", wire: "G4F%v" },
+    { key: "res",    display_name: "res",    min_value: 0.1,  max_value: 8,    wire: "R%v" },
   ];
 
   function build_knob_configs(ch, state) {
     var knobs = [];
     state.sounds.forEach(function(sound) {
       var section = sound_header(sound);
+      // Device MIDI-CC (ic) template per knob: the knob's single param on
+      // each of the sound's notes, e.g. bass-drum pitch on CC 77 installs
+      // `i10ic77,1,220,880,0,i%in35f%vZ`. Multi-note sounds (the toms) get a
+      // Z-joined multi-command template, same as K257's dual-osc knobs.
+      // NOTE the vol template sets the osc amp to the RAW CC value: a
+      // hardware sweep bypasses the vol*level product the web knob applies
+      // (an ic mapping can't multiply), so it plays the amp directly.
       DRUM_KNOB_DEFS.forEach(function(def, di) {
-        knobs.push({
+        var config = {
           drum: true,
-          no_device_cc: true,   // CC works via move_knob (web) only — a device
-                                // ic mapping can't target a per-note osc.
           section: section,
           display_name: def.display_name,
           cc: "",
+          change_code: sound.entries.map(function(e) {
+            return "i%in" + e.note + def.wire;
+          }).join("Z"),
           knob_type: def.knob_type,
           min_value: def.min_value,
           max_value: def.max_value,
@@ -429,7 +449,15 @@
             sound.params[def.key] = value;
             send_sound(channel, sound);
           },
-        });
+        };
+        if (def.key === "offset" && sound.frames > 0) {
+          // The offset knob's UI range is a 0..0.95 fraction of the sample,
+          // but its wire value is an absolute trigger_phase — give the ic
+          // mapping the phase range for this sound's sample length.
+          config.cc_min_value = 0;
+          config.cc_max_value = Math.floor(0.95 * sound.frames) / PCM_PHASE_DENOM;
+        }
+        knobs.push(config);
       });
     });
     return knobs;
