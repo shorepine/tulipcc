@@ -7,9 +7,9 @@
 //          algo_source O2,3,4,5,6,7, bp0 = the PITCH envelope (5 time,ratio
 //          pairs), freq coefs "0,1,0,1,0,<pitch lfo amp>" (NOTE + EG0 + MOD),
 //          mod_source 1. bp1/EG1 is unused by fm.py — the preset-load VCF coda
-//          (editor/index.html) claims it for the filter envelope, so the Main
-//          tab's VCF / VCF ENV sections use the SAME change codes as the Juno
-//          surface (F/R/B on osc 0).
+//          (editor/index.html) claims it for the filter envelope, so the VCF /
+//          VCF ENV sections use the SAME change codes as the Juno surface
+//          (F/R/B on osc 0).
 //   osc 1  the LFO: wave, freq const.
 //   osc 2-7  operators — in fm.py order op6 first, so osc = 8 - opN
 //          (algorithms.c's tables are op6..op1 too). Each has amp coefs
@@ -17,9 +17,16 @@
 //          envelope (5 time,level pairs), and either I<ratio> (ratio-tuned)
 //          or f<hz> (fixed-frequency), per the original DX7 op.
 //
-// The surface is TABBED: "Main" (FM / LFO / Pitch Env / VCF / VCF ENV) and
-// "Op 1".."Op 6" (Tuning + Amp Env). Envelope sections render a live plot of
-// their breakpoints that redraws as the knobs move.
+// The surface is one scrollable grid (drum-view height), two sections per row:
+//
+//   FM        | PITCH ENV        (algorithm/feedback/LFO + pitch env knobs)
+//   VCF       | VCF ENV
+//   ENV PLOT  | ENV PLOT         (all 7 envelope plots: pitch + op 1-6)
+//   OP 1      | OP 1 AMP ENV
+//   ...       | ...
+//   OP 6      | OP 6 AMP ENV
+//
+// The plots redraw live as their envelope knobs move.
 //
 // Envelope knobs edit the AMY representation directly: 4 segment times (ms)
 // and 4 target levels, i.e. bp0 pairs 1-4. Pair 0 is (0, initial level) and
@@ -45,9 +52,9 @@
   // _channel_dx7_patch[ch] = preset number while the channel's patch is a DX7
   // preset (128-255), else null. Owned by update_knob_sections_for_patch.
   var _channel_dx7_patch = {};
-  // _dx7_state[ch] = { patch, tab, knobs, byTab, plots } built lazily per
-  // (channel, patch); knob configs persist so CC assignments and range edits
-  // survive re-renders. Values are re-read by refresh_dx7_knob_values().
+  // _dx7_state[ch] = { patch, knobs, plots } built lazily per (channel, patch);
+  // knob configs persist so CC assignments and range edits survive re-renders.
+  // Values are re-read by refresh_dx7_knob_values().
   var _dx7_state = {};
 
   window.set_channel_dx7_patch = function(channel, patchNumber) {
@@ -151,13 +158,13 @@
     return "i%iv" + osc + "A,%v,,,,,,,,%v";
   }
 
-  // One envelope section's 8 knobs (T1..T4 + L1..L4 interleaved as T1 L1 T2
-  // L2 ... so the pairs read left to right). `lv` describes the level knobs.
-  function env_knob_defs(osc, section, tab, lv) {
+  // One envelope section's 8 knobs (T1 L1 T2 L2 ... so the pairs read left to
+  // right). `lv` describes the level knobs.
+  function env_knob_defs(osc, section, lv) {
     var defs = [];
     for (var seg = 1; seg <= 4; seg++) {
       defs.push({
-        dx7: true, dx7_tab: tab, section: section,
+        dx7: true, section: section,
         display_name: "T" + seg, cc: "",
         change_code: bp0_code(osc, 2 * seg),
         knob_type: "log", min_value: 0, max_value: 30000, offset: 2,
@@ -165,7 +172,7 @@
         dx7_env: { osc: osc, seg: seg, field: "time" },
       });
       defs.push({
-        dx7: true, dx7_tab: tab, section: section,
+        dx7: true, section: section,
         display_name: "L" + seg, cc: "",
         change_code: seg === 4 ? bp0_release_level_code(osc) : bp0_code(osc, 2 * seg + 1),
         knob_type: "log", min_value: lv.min, max_value: lv.max, offset: lv.offset,
@@ -184,9 +191,9 @@
     merge_events(baseline, patch_events(patchNumber));
     var knobs = [];
 
-    // ---- Main tab ----
+    // ---- Row 1: FM | PITCH ENV ----
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "FM", display_name: "algorithm", cc: "",
+      dx7: true, section: "FM", display_name: "algorithm", cc: "",
       knob_type: "selection",
       options: Array.from({ length: 32 }, function(_, i) { return String(i + 1); }),
       option_values: Array.from({ length: 32 }, function(_, i) { return i + 1; }),
@@ -194,80 +201,84 @@
       default_value: 1,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "FM", display_name: "feedback", cc: "",
+      dx7: true, section: "FM", display_name: "feedback", cc: "",
       change_code: "i%iv" + MAIN_OSC + "b%v",
       knob_type: "log", min_value: 0, max_value: 0.32, offset: 0.00125,
       default_value: 0,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "LFO", display_name: "wave", cc: "",
+      dx7: true, section: "FM", display_name: "LFO wave", cc: "",
       knob_type: "selection", options: LFO_WAVE_OPTIONS, option_values: LFO_WAVE_VALUES,
       change_code: "i%iv" + LFO_OSC + "w%v",
       default_value: 0,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "LFO", display_name: "freq", cc: "",
+      dx7: true, section: "FM", display_name: "LFO freq", cc: "",
       change_code: "i%iv" + LFO_OSC + "f%v",
       knob_type: "log", min_value: 0.05, max_value: 50, offset: 0,
       default_value: 6,
     });
     knobs.push({
       // Pitch LFO depth: freq MOD coef on the ALGO osc (octaves at LFO peak).
-      dx7: true, dx7_tab: 0, section: "LFO", display_name: "pitch", cc: "",
+      dx7: true, section: "FM", display_name: "LFO pitch", cc: "",
       change_code: "i%iv" + MAIN_OSC + "f,,,,,%v",
       knob_type: "log", min_value: 0, max_value: 1.5, offset: 0.005,
       default_value: 0,
     });
-    knobs = knobs.concat(env_knob_defs(MAIN_OSC, "Pitch Env", 0, PITCH_LEVELS));
-    // VCF + VCF ENV: identical commands to the Juno surface (osc 0 F/R + EG1
-    // via B). The preset-load VCF coda sets filter_type/eg1_type so these are
-    // live on any UI-loaded DX7 preset; defaults below mirror the coda.
+    knobs = knobs.concat(env_knob_defs(MAIN_OSC, "Pitch Env", PITCH_LEVELS));
+
+    // ---- Row 2: VCF | VCF ENV — identical commands to the Juno surface
+    // (osc 0 F/R + EG1 via B). The preset-load VCF coda sets
+    // filter_type/eg1_type so these are live on any UI-loaded DX7 preset;
+    // defaults below mirror the coda.
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "VCF", display_name: "freq", cc: 74,
+      dx7: true, section: "VCF", display_name: "freq", cc: 74,
       change_code: "i%iv" + MAIN_OSC + "F%v",
       knob_type: "log", min_value: 20, max_value: 8000,
       default_value: 8000,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "VCF", display_name: "resonance", cc: 71,
+      dx7: true, section: "VCF", display_name: "resonance", cc: 71,
       change_code: "i%iv" + MAIN_OSC + "R%v",
       knob_type: "log", min_value: 0.5, max_value: 16,
       default_value: 0.7,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "VCF", display_name: "kbd", cc: "",
+      dx7: true, section: "VCF", display_name: "kbd", cc: "",
       change_code: "i%iv" + MAIN_OSC + "F,%v",
       min_value: 0, max_value: 1, default_value: 1,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "VCF", display_name: "env", cc: "",
+      dx7: true, section: "VCF", display_name: "env", cc: "",
       change_code: "i%iv" + MAIN_OSC + "F,,,,%v",
       min_value: -10, max_value: 10, default_value: 4,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "VCF ENV", display_name: "attack", cc: "",
+      dx7: true, section: "VCF ENV", display_name: "attack", cc: "",
       change_code: "i%iv" + MAIN_OSC + "B%v,1,,,,0",
       min_value: 0, max_value: 1000, default_value: 0,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "VCF ENV", display_name: "decay", cc: "",
+      dx7: true, section: "VCF ENV", display_name: "decay", cc: "",
       change_code: "i%iv" + MAIN_OSC + "B,1,%v,,,0",
       knob_type: "log", min_value: 0, max_value: 2000, offset: 50,
       default_value: 0,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "VCF ENV", display_name: "sustain", cc: "",
+      dx7: true, section: "VCF ENV", display_name: "sustain", cc: "",
       change_code: "i%iv" + MAIN_OSC + "B,1,,%v,,0",
       min_value: 0, max_value: 1, default_value: 1,
     });
     knobs.push({
-      dx7: true, dx7_tab: 0, section: "VCF ENV", display_name: "release", cc: "",
+      dx7: true, section: "VCF ENV", display_name: "release", cc: "",
       change_code: "i%iv" + MAIN_OSC + "B,1,,,%v,0",
       knob_type: "log", min_value: 0, max_value: 10000, offset: 50,
       default_value: 10000,
     });
 
-    // ---- Op tabs ----
+    // ---- (the ENV PLOT row is inserted by render_dx7_chrome, not knobs) ----
+
+    // ---- Rows: OP N | OP N AMP ENV ----
     for (var opN = 1; opN <= NUM_OPS; opN++) {
       var osc = op_osc(opN);
       var b = osc_of(baseline, osc);
@@ -275,29 +286,29 @@
       // I<ratio> or f<hz>); the knob edits whichever mode the op uses.
       var isRatio = Number.isFinite(b.ratio) || !Number.isFinite(b.freq[0]);
       knobs.push({
-        dx7: true, dx7_tab: opN, section: "Op " + opN, display_name: "level", cc: "",
+        dx7: true, section: "Op " + opN, display_name: "level", cc: "",
         change_code: "i%iv" + osc + "a%v",
         knob_type: "log", min_value: 0, max_value: 2, offset: 0.002,
         default_value: 1,
       });
       knobs.push(isRatio ? {
-        dx7: true, dx7_tab: opN, section: "Op " + opN, display_name: "ratio", cc: "",
+        dx7: true, section: "Op " + opN, display_name: "ratio", cc: "",
         change_code: "i%iv" + osc + "I%v",
         knob_type: "log", min_value: 0.25, max_value: 32,
         default_value: 1,
       } : {
-        dx7: true, dx7_tab: opN, section: "Op " + opN, display_name: "freq", cc: "",
+        dx7: true, section: "Op " + opN, display_name: "freq", cc: "",
         change_code: "i%iv" + osc + "f%v",
         knob_type: "log", min_value: 1, max_value: 10000,
         default_value: 440,
       });
       knobs.push({
         // Amp LFO depth for this op: amp MOD coef (fm.py's ampmodsens gate).
-        dx7: true, dx7_tab: opN, section: "Op " + opN, display_name: "amp lfo", cc: "",
+        dx7: true, section: "Op " + opN, display_name: "amp lfo", cc: "",
         change_code: "i%iv" + osc + "a,,,,,%v",
         min_value: 0, max_value: 1, default_value: 0,
       });
-      knobs = knobs.concat(env_knob_defs(osc, "Amp Env", opN, AMP_LEVELS));
+      knobs = knobs.concat(env_knob_defs(osc, "Op " + opN + " Amp Env", AMP_LEVELS));
     }
     return knobs;
   }
@@ -309,23 +320,16 @@
     if (!pn) return null;
     var state = _dx7_state[ch];
     if (!state || state.patch !== pn) {
-      state = { patch: pn, tab: 0, knobs: build_knob_configs(ch, pn), plots: [] };
+      state = { patch: pn, knobs: build_knob_configs(ch, pn), plots: [] };
       _dx7_state[ch] = state;
     }
     return state;
   }
 
-  // ALL of the surface's knobs (every tab) — for CC routing/dedup/bulk sends.
+  // The surface's knobs in render order — the channel grid shows all of them.
   window.get_dx7_knobs_for_channel = function(channel) {
     var state = get_state(Number(channel));
     return state ? state.knobs : [];
-  };
-
-  // The active tab's knobs, in render order — what the channel grid shows.
-  window.get_dx7_active_knobs_for_channel = function(channel) {
-    var state = get_state(Number(channel));
-    if (!state) return [];
-    return state.knobs.filter(function(k) { return k.dx7_tab === state.tab; });
   };
 
   // Re-read every knob's value from the preset baseline + the channel's
@@ -350,9 +354,9 @@
       var sec = k.section, name = k.display_name;
       if (sec === "FM" && name === "algorithm") k.default_value = val(main.algorithm, 1);
       else if (sec === "FM" && name === "feedback") k.default_value = val(main.feedback, 0);
-      else if (sec === "LFO" && name === "wave") k.default_value = val(lfo.wave, 0);
-      else if (sec === "LFO" && name === "freq") k.default_value = val(lfo.freq[0], 6);
-      else if (sec === "LFO" && name === "pitch") k.default_value = val(main.freq[5], 0);
+      else if (sec === "FM" && name === "LFO wave") k.default_value = val(lfo.wave, 0);
+      else if (sec === "FM" && name === "LFO freq") k.default_value = val(lfo.freq[0], 6);
+      else if (sec === "FM" && name === "LFO pitch") k.default_value = val(main.freq[5], 0);
       else if (sec === "VCF" && name === "freq") k.default_value = val(main.ff[0], 8000);
       else if (sec === "VCF" && name === "resonance") k.default_value = val(main.resonance, 0.7);
       else if (sec === "VCF" && name === "kbd") k.default_value = val(main.ff[1], 1);
@@ -515,62 +519,70 @@
     });
   };
 
-  // ── tab bar + plot chrome ───────────────────────────────────────────────────
+  // ── the ENV PLOT row ────────────────────────────────────────────────────────
+
+  // One plot cell: a knob-style (non-clickable) title above the canvas.
+  // `span` is the cell's flex weight within its section.
+  function make_plot_cell(state, title, osc, kind, span) {
+    var cell = document.createElement("div");
+    cell.className = "dx7-env-plot";
+    cell.style.flex = String(span);
+    var label = document.createElement("div");
+    label.className = "knob-label small";
+    label.textContent = title;
+    var canvas = document.createElement("canvas");
+    cell.appendChild(label);
+    cell.appendChild(canvas);
+    state.plots.push({ canvas: canvas, osc: osc, kind: kind });
+    return cell;
+  }
+
+  function make_plot_section(cells) {
+    var wrap = document.createElement("div");
+    wrap.className = "col-12 knob-section knob-section-main dx7-plot-section";
+    var header = document.createElement("div");
+    header.className = "knob-section-header";
+    header.textContent = "Env Plot";
+    var row = document.createElement("div");
+    row.className = "dx7-env-plots-row";
+    for (var i = 0; i < cells.length; i++) row.appendChild(cells[i]);
+    wrap.appendChild(header);
+    wrap.appendChild(row);
+    return wrap;
+  }
 
   // Called by refresh_knobs_for_channel right after init_knobs rendered the
-  // active tab's sections into #knob-grid-channel: prepend the tab bar and
-  // drop an envelope plot into each Env section.
+  // knob sections into #knob-grid-channel: insert the ENV PLOT row (all 7
+  // envelope plots, pitch + op 1-6) between the VCF ENV and OP 1 rows.
   window.render_dx7_chrome = function(channel) {
     var ch = Number(channel);
     var state = get_state(ch);
     var grid = document.getElementById("knob-grid-channel");
     if (!state || !grid) return;
 
-    var bar = document.createElement("div");
-    bar.className = "col-12 dx7-tab-bar";
-    var tabNames = ["Main", "Op 1", "Op 2", "Op 3", "Op 4", "Op 5", "Op 6"];
-    tabNames.forEach(function(name, t) {
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "dx7-tab-btn" + (state.tab === t ? " is-active" : "");
-      btn.textContent = name;
-      btn.addEventListener("click", function() {
-        if (state.tab === t) return;
-        state.tab = t;
-        if (typeof window.refresh_knobs_for_channel === "function") {
-          var prev = !!window.suppress_knob_cc_send;
-          window.suppress_knob_cc_send = true;
-          try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = prev; }
-        }
-      });
-      bar.appendChild(btn);
-    });
-    var title = document.createElement("span");
-    title.className = "dx7-tab-title";
-    var patchName = (window.amy_patches && window.amy_patches[state.patch]) || ("K" + state.patch);
-    title.textContent = patchName;
-    bar.appendChild(title);
-    grid.insertBefore(bar, grid.firstChild);
-
-    // Envelope plots: one per Env section on the active tab.
     state.plots = [];
-    var envSections = state.tab === 0
-      ? [{ name: "Pitch Env", osc: MAIN_OSC, kind: "pitch" }]
-      : [{ name: "Amp Env", osc: op_osc(state.tab), kind: "amp" }];
+    var left = make_plot_section([
+      make_plot_cell(state, "pitch", MAIN_OSC, "pitch", 2),
+      make_plot_cell(state, "op 1", op_osc(1), "amp", 1),
+      make_plot_cell(state, "op 2", op_osc(2), "amp", 1),
+    ]);
+    var right = make_plot_section([
+      make_plot_cell(state, "op 3", op_osc(3), "amp", 1),
+      make_plot_cell(state, "op 4", op_osc(4), "amp", 1),
+      make_plot_cell(state, "op 5", op_osc(5), "amp", 1),
+      make_plot_cell(state, "op 6", op_osc(6), "amp", 1),
+    ]);
+
+    // Insert before the "Op 1" section so the plot row sits between the
+    // VCF/VCF ENV row and the per-op rows.
+    var anchor = null;
     var sections = grid.querySelectorAll(".knob-section");
-    envSections.forEach(function(spec) {
-      for (var i = 0; i < sections.length; i++) {
-        var header = sections[i].querySelector(".knob-section-header");
-        if (!header || header.textContent.trim() !== spec.name) continue;
-        var wrap = document.createElement("div");
-        wrap.className = "dx7-env-plot";
-        var canvas = document.createElement("canvas");
-        wrap.appendChild(canvas);
-        sections[i].appendChild(wrap);
-        state.plots.push({ canvas: canvas, osc: spec.osc, kind: spec.kind });
-        break;
-      }
-    });
+    for (var i = 0; i < sections.length; i++) {
+      var header = sections[i].querySelector(".knob-section-header");
+      if (header && header.textContent.trim() === "Op 1") { anchor = sections[i]; break; }
+    }
+    grid.insertBefore(left, anchor);
+    grid.insertBefore(right, anchor);
     redraw_plots(ch);
   };
 })();

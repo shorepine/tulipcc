@@ -804,18 +804,14 @@ window.addEventListener("DOMContentLoaded", function() {
       channelGrid.classList.toggle("knob-grid-dx7", !!dx7Patch);
     }
     let channelKnobs;   // rendered in the channel grid
-    let ccScanKnobs;    // eligible for the device-CC pass below (all tabs)
     if (drumKit && typeof window.get_drum_knobs_for_channel === "function") {
       window.refresh_drum_knob_values(ch);
       channelKnobs = window.get_drum_knobs_for_channel(ch);
-      ccScanKnobs = channelKnobs;
-    } else if (dx7Patch && typeof window.get_dx7_active_knobs_for_channel === "function") {
+    } else if (dx7Patch && typeof window.get_dx7_knobs_for_channel === "function") {
       window.refresh_dx7_knob_values(ch);
-      channelKnobs = window.get_dx7_active_knobs_for_channel(ch);
-      ccScanKnobs = window.get_dx7_knobs_for_channel(ch);
+      channelKnobs = window.get_dx7_knobs_for_channel(ch);
     } else {
       channelKnobs = drumKit ? [] : window.get_channel_knobs(ch);
-      ccScanKnobs = channelKnobs;
     }
     const globalKnobs = window.get_global_knobs();
     if (typeof init_knobs === "function") {
@@ -825,11 +821,11 @@ window.addEventListener("DOMContentLoaded", function() {
       init_knobs(globalKnobs, "knob-grid-global");
     }
     if (dx7Patch && typeof window.render_dx7_chrome === "function") {
-      window.render_dx7_chrome(ch);  // tab bar + envelope plots
+      window.render_dx7_chrome(ch);  // the ENV PLOT row
     }
     if (typeof window.onKnobCcChange === "function") {
       const disabledSections = window._disabled_sections || {};
-      for (const knob of ccScanKnobs.concat(globalKnobs)) {
+      for (const knob of channelKnobs.concat(globalKnobs)) {
         if (knob.drum) continue;  // drum knobs never emit device CC mappings
         // knob.dx7 exemption: DX7 section names collide with disabled Juno ones.
         if (disabledSections[knob.section] && !knob.dx7) continue;

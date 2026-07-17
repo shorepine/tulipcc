@@ -1533,8 +1533,8 @@ function move_knob(channel, cc, value) {
   if (Array.isArray(drumKnobs) && drumKnobs.length) {
     knobList = drumKnobs.concat(knobList);
   }
-  // DX7 channels: the surface's knobs (all tabs) respond to CC; a knob on a
-  // hidden tab has no rendered control, so its value is tracked directly below.
+  // DX7 channels: the surface's knobs respond to CC too (they carry real
+  // device-side ic mappings, so the move itself is UI-only like Juno knobs).
   const dx7Knobs = (typeof window.get_channel_dx7_patch === "function"
     && window.get_channel_dx7_patch(channel)
     && typeof window.get_dx7_knobs_for_channel === "function")
@@ -1584,8 +1584,8 @@ function move_knob(channel, cc, value) {
     }
     // Regular knobs: UI-only (the device/AMY-side ic mapping already applied
     // the change). Drum knobs: send too — there is no device-side mapping.
-    // A DX7 knob on a non-visible tab has no rendered control; track the value
-    // in its config so switching to that tab shows the moved position.
+    // A DX7 knob with no rendered control yet (CC arriving before the first
+    // grid render) still tracks the value so the next render shows it.
     if (!set_knob_ui_value(knob, scaled_value, !!knob.drum) && knob.dx7) {
       knob.default_value = scaled_value;
     }

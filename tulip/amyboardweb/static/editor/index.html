@@ -336,8 +336,15 @@
         padding-bottom: 2px;
       }
 
-      /* DX7 view: tabbed Main / Op 1..6 surface (editor_dx7.js). Small knobs
-         like the drum view — the envelope sections pack 8 knobs per row. */
+      /* DX7 view: one scrollable surface (editor_dx7.js) — FM/PITCH ENV,
+         VCF/VCF ENV, the ENV PLOT row, then one row per operator. Small
+         knobs like the drum view (envelope sections pack 8 knobs per row),
+         same height cap + scroll as the drum view. */
+      .knob-grid-dx7 {
+        max-height: 597px;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
       .knob-grid-dx7 .amy-knob {
         width: 34px;
         height: 34px;
@@ -367,44 +374,18 @@
       .knob-grid-dx7 .amy-select-display {
         font-size: 0.6rem;
       }
-      .dx7-tab-bar {
+      .dx7-env-plots-row {
         display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 2px 2px 0 2px;
-      }
-      .dx7-tab-btn {
-        border: 1px solid #444;
-        border-radius: 7px 7px 0 0;
-        background: #2b2b2b;
-        color: #bbb;
-        font-size: 11px;
-        line-height: 1;
-        padding: 5px 10px;
-        cursor: pointer;
-      }
-      .dx7-tab-btn:hover {
-        color: #fff;
-      }
-      .dx7-tab-btn.is-active {
-        background: #1fd17a;
-        border-color: #1fd17a;
-        color: #111;
-        font-weight: 600;
-      }
-      .dx7-tab-title {
-        margin-left: auto;
-        font-size: 10px;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        color: #ddd;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        gap: 6px;
+        padding: 4px 6px 6px 6px;
       }
       .dx7-env-plot {
-        margin-top: 4px;
-        padding: 0 2px 2px 2px;
+        min-width: 0;
+      }
+      .dx7-env-plot .knob-label {
+        text-align: center;
+        font-size: 0.6rem;
+        margin-bottom: 2px;
       }
       .dx7-env-plot canvas {
         display: block;
