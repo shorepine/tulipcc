@@ -6046,6 +6046,18 @@ async function reset_amyboard() {
                 await mp.runPythonAsync("import amyboard; amyboard.factory_reset()");
             } catch (e) {
                 console.warn('reset: amyboard.factory_reset() failed', e);
+                // The Python reset died somewhere — possibly BEFORE its AMY
+                // teardown reached the synth engine. The UI below resets to
+                // factory state regardless, so enforce the same on AMY from
+                // here: clear all synths and reinstall the boot defaults
+                // (idempotent with what restart_sketch sends). Without this,
+                // a silent failure left AMY still playing the old session's
+                // synths (e.g. a DX7 on a channel the UI showed as empty).
+                if (typeof amy_add_log_message === 'function' && typeof AMY !== 'undefined') {
+                    amy_add_log_message('S' + AMY.RESET_SYNTHS + 'Z');
+                    amy_add_log_message('i1K257iv6Z');
+                    amy_add_log_message('i' + window.DRUM_CHANNEL + 'K' + window.DRUM_DEFAULT_PATCH + 'iv1Z');
+                }
             }
             sync_persistent_fs();
             // SYNC 2: clear the knob log so a later Write doesn't re-emit the old
