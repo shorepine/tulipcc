@@ -62,6 +62,7 @@
     <script type="text/javascript" src="pcm_presets.generated.js"></script>
     <script type="text/javascript" src="drum_presets.generated.js"></script>
     <script type="text/javascript" src="editor_drums.js"></script>
+    <script type="text/javascript" src="editor_dx7.js"></script>
     <script type="text/javascript" src="amy_api.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
     <script>
@@ -333,6 +334,99 @@
       .knob-grid-drums .knob-section {
         background: rgba(210, 200, 170, 0.65);
         padding-bottom: 2px;
+      }
+
+      /* DX7 view: one scrollable surface (editor_dx7.js) — FM/PITCH ENV,
+         VCF/VCF ENV, the ENV PLOT row, then one row per operator. Small
+         knobs like the drum view (envelope sections pack 8 knobs per row),
+         same height cap + scroll as the drum view. */
+      .knob-grid-dx7 {
+        max-height: 597px;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      .knob-grid-dx7 .amy-knob {
+        width: 34px;
+        height: 34px;
+      }
+      .knob-grid-dx7 .amy-knob-indicator {
+        top: 3px;
+        width: 4px;
+        height: 4px;
+      }
+      .knob-grid-dx7 .knob-label {
+        font-size: 0.6rem;
+        margin-bottom: 0.15rem !important;
+      }
+      .knob-grid-dx7 .knob-value {
+        font-size: 0.55rem;
+        padding: 0.1rem 0.15rem;
+        margin-top: 0.15rem !important;
+      }
+      .knob-grid-dx7 .knob-section-grid {
+        --bs-gutter-x: 0.5rem;
+        --bs-gutter-y: 0.35rem;
+      }
+      .knob-grid-dx7 .knob-section {
+        background: rgba(190, 205, 170, 0.65);
+        padding-bottom: 2px;
+      }
+      .knob-grid-dx7 .amy-select-display {
+        font-size: 0.6rem;
+      }
+      /* Envelope plots: the row-2 pitch plot (full width of its section) and
+         the amp-env plot appended to the right of each op's knobs. */
+      .dx7-env-canvas {
+        display: block;
+        width: 100%;
+        height: 64px;
+        background: #1c1c1c;
+        border-radius: 8px;
+      }
+      .dx7-plot-body {
+        padding: 4px 6px 6px 6px;
+      }
+      .dx7-op-plot-col {
+        display: flex;
+        align-items: center;
+        padding-bottom: 2px;
+      }
+      .dx7-op-plot-col .dx7-env-canvas {
+        height: 60px;
+      }
+      /* Algorithm guide: a cropped thumbnail that opens the full chart in a
+         click-to-dismiss modal. */
+      .dx7-guide-body {
+        padding: 4px 6px 6px 6px;
+      }
+      .dx7-guide-img {
+        display: block;
+        width: 100%;
+        height: 64px;
+        object-fit: cover;
+        object-position: top left;
+        border-radius: 8px;
+        background: #fff;
+        cursor: zoom-in;
+      }
+      .dx7-algo-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 3000;
+        background: rgba(0, 0, 0, 0.8);
+        align-items: center;
+        justify-content: center;
+        cursor: zoom-out;
+        padding: 24px;
+      }
+      .dx7-algo-modal img {
+        max-width: 95%;
+        max-height: 95%;
+        object-fit: contain;
+        background: #fff;
+        border-radius: 6px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
       }
 
       .amy-select-btn::before {
@@ -2339,9 +2433,11 @@
                 // SYNC 2: clear this synth's lines in the knob log first, then
                 // record every preset wire command we send so the preset's full
                 // patch detail (including DX7, which the visible knobs can't
-                // represent) is captured in the sketch.
+                // represent) is captured in the sketch. defaultPatch: false —
+                // we record our own K<patch> line below, so reset must not
+                // also load (and replay on every boot) the K257 default.
                 if (typeof reset_synth_in_sketch === "function") {
-                  reset_synth_in_sketch(presetSynth);
+                  reset_synth_in_sketch(presetSynth, { defaultPatch: false });
                 }
                 // Send AMY reset + wire commands for the preset patch.
                 if (typeof amy_send === "function") {
@@ -2373,9 +2469,10 @@
                     var _codaMsg = amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
                     if (typeof log_preset_message === "function") log_preset_message(presetSynth, _codaMsg);
                   }
-                  // Mark disabled panes before sending CC mappings so disabled-section
-                  // knobs don't blast initial ic updates to AMY for DX7 presets. Also
-                  // re-enables the drum-greyed sections when a preset replaces a drum kit.
+                  // Select the channel's knob surface (Juno / DX7 / drum) and,
+                  // for a drum kit, grey the Juno sections so the CC send below
+                  // skips them. A DX7 channel's knob set already excludes the
+                  // Juno synthesis knobs, so nothing needs greying there.
                   if (typeof window.update_knob_sections_for_patch === "function") {
                     window.update_knob_sections_for_patch(patch);
                   }
@@ -2394,12 +2491,12 @@
                   window.active_channels[presetSynth] = true;
                   syncActiveCheckboxForChannel();
                 }
-                // Read knob values from AMY's live synth state (async, waits
-                // for AMY to process queued deltas including VCF coda). Skipped
-                // for drum kits: every synthesis knob is greyed out, and the
-                // kit's PCM control osc holds nothing the knobs can represent.
-                if (!isDrumPreset) window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
-                if (!isDrumPreset && typeof sync_channel_knobs_from_synth_to_ui === "function") {
+                // Juno presets read their knob values back from AMY's live
+                // synth state (async, waits for AMY to process the queued
+                // deltas). Skipped for both DX7 and drum kits: they render
+                // their own surface, positioned from the sketch/patch by
+                // update_knob_sections_for_patch above — no synth readback.
+                if (!isDrumPreset && !isDX7Preset && typeof sync_channel_knobs_from_synth_to_ui === "function") {
                   sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
                     if (typeof window.update_knob_sections_for_patch === "function") {
                       window.update_knob_sections_for_patch(patch);

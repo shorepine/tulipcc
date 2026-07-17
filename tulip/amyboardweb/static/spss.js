@@ -204,8 +204,16 @@ window.knob_log = (window.knob_log instanceof Map) ? window.knob_log : new Map()
 var _KNOB_LOG_SEP = '';  // unit separator — never appears in section/name
 
 function _knob_log_parse_synth(line) {
-  var m = /^i(\d+)/.exec(String(line || ''));
-  return m ? parseInt(m[1], 10) : null;
+  // Match the synth token anywhere in the line, not just at the front: lines
+  // recorded before log_preset_message normalized amy_send's field order
+  // (K257i2iv6, ...G4i2) live on in existing sketches. Without this they get
+  // synth: null on reload, so _knob_log_clear_synth can't claim them and a
+  // stale K line survives every later preset load on that channel. Same token
+  // rule as apply_zd_dump_to_knobs: i<digits> not preceded by a letter or %
+  // (two-char codes like iv/ic have a non-digit second char; %i templates
+  // carry no digits).
+  var m = /(^|[^A-Za-z%])i(\d+)/.exec(String(line || ''));
+  return m ? parseInt(m[2], 10) : null;
 }
 
 function _knob_log_ensure_z(line) {
@@ -242,10 +250,13 @@ function _knob_log_struct_key(message) {
   }
   while (i < s.length) {
     var c = s.charAt(i);
-    if ((c === 'i' || c === 'v' || c === 'o') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
+    if ((c === 'i' || c === 'v' || (c === 'o' && s.charAt(i - 1) === 'i'))
+        && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
       // i<synth> / v<osc> selector — keep the letter and its digits literally.
-      // 'o' too: in a note-mapping line (i10o35,...) the digits are the MIDI
-      // note being mapped — each note needs its own last-wins slot.
+      // The 'o' of a note-mapping command (io35,...) too: the digits are the
+      // MIDI note being mapped — each note needs its own last-wins slot. Only
+      // when it follows a literal 'i', though: a bare o<digits> is the
+      // algorithm command (i1v0o22) and its VALUE must collapse to '#'.
       out += c; i++;
       while (i < s.length && s.charCodeAt(i) >= 48 && s.charCodeAt(i) <= 57) { out += s.charAt(i); i++; }
     } else if ((c >= '0' && c <= '9') ||
@@ -366,16 +377,23 @@ function _knob_log_clear_synth(synth) {
 }
 
 // Reset a synth in the block to the amyboard default (clear CC maps + default
-// Juno patch, 6 voices) and send the same live. Used by channel-activate, the
-// per-synth Clear button, and as the first step of a preset load.
-function reset_synth_in_sketch(synth) {
+// Juno patch, 6 voices) and send the same live. Used by channel-activate and
+// the per-synth Clear button. The Load Preset handler passes
+// { defaultPatch: false }: it records its own K<patch> line right after, so
+// loading (and replaying, on every boot) the K257 default first would be
+// wasted work — and the two K lines would sit un-collapsed in the block.
+function reset_synth_in_sketch(synth, opts) {
   synth = Number(synth);
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
+  opts = opts || {};
   _knob_log_clear_synth(synth);
   send_amy_message_in_sketch('i' + synth + 'ic255', { synth: synth });
-  send_amy_message_in_sketch('i' + synth + 'K257iv6', { synth: synth });
-  // K257iv6 re-creates the instrument, which puts it back on bus 0 (and the
-  // synth's i<ch>y line was just cleared from the log) — mirror that.
+  if (opts.defaultPatch !== false) {
+    send_amy_message_in_sketch('i' + synth + 'K257iv6', { synth: synth });
+  }
+  // The K<patch>iv<N> load (ours above, or the preset's that follows)
+  // re-creates the instrument, which puts it back on bus 0 (and the synth's
+  // i<ch>y line was just cleared from the log) — mirror that.
   _reset_channel_bus_ui(synth);
 }
 window.reset_synth_in_sketch = reset_synth_in_sketch;
@@ -472,9 +490,23 @@ window.record_all_cc_for_channel = record_all_cc_for_channel;
 // it live via amy_send/amy_add_log_message). Auto structural key: distinct preset
 // commands have distinct structures, and reset_synth_in_sketch() clears the synth
 // before another preset loads. Used by the Load Preset handler.
+//
+// The recorded line is normalized to a LEADING i<synth> token: amy_send()
+// serializes fields in AMY_KW_MAP declaration order, which puts the synth
+// token mid/end-line (K128i2iv6, ...G4i2). Field order within one wire event
+// doesn't matter to AMY, but the canonical i-prefixed shape keeps the block
+// readable, matches every hand-built line (i2K257iv6, knob moves), and gives
+// the structural-key dedup one consistent shape to collapse against.
 function log_preset_message(synth, message) {
   if (!message) return;
-  send_amy_message_in_sketch(message, { synth: synth, silent: true });
+  var msg = String(message).replace(/Z+$/, '');
+  // Same token match as apply_zd_dump_to_knobs: i<digits> not preceded by a
+  // letter or % (two-char codes like iv/ic have a non-digit second char).
+  var sm = /(^|[^A-Za-z%])i(\d+)/.exec(msg);
+  if (sm && parseInt(sm[2], 10) === Number(synth)) {
+    msg = 'i' + synth + msg.slice(0, sm.index + sm[1].length) + msg.slice(sm.index + sm[0].length);
+  }
+  send_amy_message_in_sketch(msg, { synth: synth, silent: true });
 }
 window.log_preset_message = log_preset_message;
 
@@ -693,21 +725,20 @@ function is_drum_patch(patchNumber) {
 window.is_drum_patch = is_drum_patch;
 
 // Grey out the knob sections that don't apply to a channel's patch:
-// - DX7 presets (K128-255): Osc A/B + ADSR (per-voice FM oscs/EGs the analog
-//   knobs can't represent; the VCF coda still applies).
-// - Drum patches: every per-channel section — a drum kit maps each MIDI note to
-//   its own preconfigured sample, so only the FX knobs (per-bus, in the global
-//   grid) and the dedicated Level slider still make sense.
-// The FX sections and the Level slider (section "Synth"/"Bus") are never touched.
-var DX7_DISABLED_SECTIONS = { "Osc A": true, "Osc B": true, "ADSR": true };
+// Only Drum patches need this now: a drum kit maps each MIDI note to its own
+// preconfigured sample, and its per-drum knobs live outside the Juno list
+// (editor_drums.js), so the Juno synthesis sections are greyed to keep them
+// out of the bulk-send paths. DX7 does NOT grey anything: a DX7 channel's knob
+// set (get_knobs_for_channel) is already just the DX7 surface knobs + Level +
+// bus, so there are no hidden Juno knobs to hide. The Level slider (section
+// "Synth") and the FX/Bus sections are never greyed.
 var CHANNEL_KNOB_SECTIONS = ["Osc A", "Osc B", "ADSR", "VCF", "VCF ENV", "LFO"];
-// The channel grid is a per-patch knob SURFACE. The plan is three of them,
-// selected here from the channel's detected patch:
+// The channel grid is a per-patch knob SURFACE — three of them, selected here
+// from the channel's detected patch:
 //   1. Juno surface (K257 default): the 2-osc + LFO + VCF grid — what
-//      amy_parameters.js renders today.
-//   2. DX7 surface (K128-255): algorithm + per-op FM parameters. NOT BUILT
-//      YET — for now DX7 keeps the Juno surface with the sections it can't
-//      represent (Osc A/B, ADSR) greyed via set_section_disabled.
+//      amy_parameters.js renders by default.
+//   2. DX7 surface (K128-255): FM + per-op parameters with live envelope
+//      plots and the algorithm guide (editor_dx7.js).
 //   3. Drum surface (K258/K384+): per-drum-sample knobs (editor_drums.js).
 // This function is the switch point: every patch-change path (preset load,
 // channel switch, sketch load, Clear) funnels through it.
@@ -716,14 +747,12 @@ function update_knob_sections_for_patch(patchNumber) {
   var pn = Number(patchNumber);
   var isDX7 = Number.isInteger(pn) && pn >= 128 && pn <= 255;
   var isDrums = is_drum_patch(pn);
-  // Drum kits swap the whole channel grid for the per-drum knob view
-  // (editor_drums.js; rendered by refresh_knobs_for_channel). The section
-  // disabled flags are still set below so send_all_knob_cc_mappings /
-  // send_all_knob_values skip the (hidden) synthesis knobs for drum channels.
+  // Drum kits and DX7 presets swap the whole channel grid for their own knob
+  // view (editor_drums.js / editor_dx7.js; rendered by refresh_knobs_for_channel).
   var needsRender = false;
+  var ch = Number(window.current_synth || 1);
   if (typeof window.set_channel_drum_kit === 'function'
     && typeof window.get_channel_drum_kit === 'function') {
-    var ch = Number(window.current_synth || 1);
     var prevKit = window.get_channel_drum_kit(ch);
     window.set_channel_drum_kit(ch, isDrums ? pn : null);
     // Re-render on any view change — entering/leaving the drum view or
@@ -731,9 +760,16 @@ function update_knob_sections_for_patch(patchNumber) {
     // the channel's recorded drum tweaks back to kit defaults.
     needsRender = isDrums || !!prevKit;
   }
+  if (typeof window.set_channel_dx7_patch === 'function'
+    && typeof window.get_channel_dx7_patch === 'function') {
+    var prevDX7 = window.get_channel_dx7_patch(ch);
+    window.set_channel_dx7_patch(ch, isDX7 ? pn : null);
+    // Same re-render rule as drums: entering/leaving the DX7 view, switching
+    // presets, or a same-preset reload (whose reset cleared recorded tweaks).
+    needsRender = needsRender || isDX7 || !!prevDX7;
+  }
   for (var i = 0; i < CHANNEL_KNOB_SECTIONS.length; i++) {
-    var section = CHANNEL_KNOB_SECTIONS[i];
-    window.set_section_disabled(section, isDrums || (isDX7 && !!DX7_DISABLED_SECTIONS[section]));
+    window.set_section_disabled(CHANNEL_KNOB_SECTIONS[i], isDrums);
   }
   if (needsRender && typeof window.refresh_knobs_for_channel === 'function') {
     var prevSuppress = !!window.suppress_knob_cc_send;
@@ -1548,6 +1584,15 @@ function move_knob(channel, cc, value) {
   if (Array.isArray(drumKnobs) && drumKnobs.length) {
     knobList = drumKnobs.concat(knobList);
   }
+  // DX7 channels: the surface's knobs respond to CC too (they carry real
+  // device-side ic mappings, so the move itself is UI-only like Juno knobs).
+  const dx7Knobs = (typeof window.get_channel_dx7_patch === "function"
+    && window.get_channel_dx7_patch(channel)
+    && typeof window.get_dx7_knobs_for_channel === "function")
+    ? window.get_dx7_knobs_for_channel(channel) : [];
+  if (Array.isArray(dx7Knobs) && dx7Knobs.length) {
+    knobList = dx7Knobs.concat(knobList);
+  }
   for (const knob of knobList) {
     if (knob.cc != cc) {
       continue;
@@ -1590,7 +1635,11 @@ function move_knob(channel, cc, value) {
     }
     // Regular knobs: UI-only (the device/AMY-side ic mapping already applied
     // the change). Drum knobs: send too — there is no device-side mapping.
-    set_knob_ui_value(knob, scaled_value, !!knob.drum);
+    // If the knob has no rendered control yet (a CC arriving before the first
+    // grid render), still track the value so the next render shows it.
+    if (!set_knob_ui_value(knob, scaled_value, !!knob.drum)) {
+      knob.default_value = scaled_value;
+    }
     return;
   }
 }
@@ -1623,6 +1672,11 @@ function build_patch_save_messages(channel, patchNumber) {
   if (Array.isArray(knobList) && typeof window.make_change_code === "function") {
     for (const knob of knobList) {
       if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
+        continue;
+      }
+      // Patch-save is the Juno (K257 baseline) format; DX7-surface knobs
+      // don't belong in it.
+      if (knob.dx7) {
         continue;
       }
       const value = Number(knob.default_value);
@@ -1755,13 +1809,27 @@ window.clear_patch_state = clear_patch_state;
 
 function get_knobs_for_channel(channel) {
   var ch = Number(channel);
+  var isDX7 = typeof window.get_channel_dx7_patch === "function"
+    && !!window.get_channel_dx7_patch(ch)
+    && typeof window.get_dx7_knobs_for_channel === "function";
+  // A DX7 channel shows its own surface, so its knob set is just those surface
+  // knobs plus the channel Level (Synth section / dedicated slider — the algo
+  // osc's amp IS the DX7 output level, i%iv0a) plus this channel's bus FX. The
+  // Juno synthesis knobs (Osc A/B, ADSR, VCF, LFO...) don't apply and are left
+  // out entirely — so there's nothing to grey out (see update_knob_sections_for_patch).
+  function dx7Set(fx) {
+    var level = window.get_channel_knobs(ch).filter(function(k) { return k && k.section === "Synth"; });
+    return level.concat(window.get_dx7_knobs_for_channel(ch), fx);
+  }
   if (typeof window.get_channel_knobs === "function" && typeof window.get_bus_knobs === "function"
     && typeof window.get_channel_bus === "function") {
     // FX knobs come from the bus THIS channel is on (not the current channel's).
-    return window.get_channel_knobs(ch).concat(window.get_bus_knobs(window.get_channel_bus(ch)));
+    var bus = window.get_bus_knobs(window.get_channel_bus(ch));
+    return isDX7 ? dx7Set(bus) : window.get_channel_knobs(ch).concat(bus);
   }
   if (typeof window.get_channel_knobs === "function" && typeof window.get_global_knobs === "function") {
-    return window.get_channel_knobs(ch).concat(window.get_global_knobs());
+    return isDX7 ? dx7Set(window.get_global_knobs())
+                 : window.get_channel_knobs(ch).concat(window.get_global_knobs());
   }
   return window.get_current_knobs ? window.get_current_knobs() : [];
 }
@@ -6273,13 +6341,6 @@ function apply_zd_dump_to_knobs(dumpText) {
         if (typeof window.syncBusSelectForChannel === 'function') window.syncBusSelectForChannel();
         if (typeof window.syncFxLevelForBus === 'function') window.syncFxLevelForBus();
     }
-    // Apply CC mappings (ic lines) to per-channel knob config so CC numbers,
-    // ranges, log flag, and offset reflect the saved sketch state.
-    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
-        for (var chCC = 1; chCC <= 16; chCC++) {
-            window.apply_knob_cc_mappings_from_patch_source(chCC, dumpText);
-        }
-    }
     // Active state is OWNED by the caller: set_knobs_from_sketch sets the
     // boot-aware window.active_channels before calling us (channel 1 on by
     // default; i<ch>iv0 off). We must NOT overwrite it from the dump's "has any
@@ -6298,7 +6359,9 @@ function apply_zd_dump_to_knobs(dumpText) {
     // In SYNC 2 the block carries only the patch number (K128-255 = DX7 presets,
     // K258/K384+ = drums), not a full per-voice osc dump, so detect from K.
     // Done before the !bootActive return so switching to an inactive channel
-    // doesn't keep the previous channel's surface (drum grid or greyed sections).
+    // doesn't keep the previous channel's surface (drum grid or greyed sections),
+    // and before the CC-mapping pass below so a DX7 channel's ic lines can find
+    // the DX7-surface knobs (which only exist once the surface state is set).
     if (typeof window.update_knob_sections_for_patch === "function") {
         var effPatch = (currentSynth === window.DRUM_CHANNEL) ? window.DRUM_DEFAULT_PATCH : 257;
         var kLines = perSynth[currentSynth] || [];
@@ -6310,6 +6373,13 @@ function apply_zd_dump_to_knobs(dumpText) {
         // (fully greyed below) — its patch only matters once it's activated.
         if (!bootActive) effPatch = 257;
         window.update_knob_sections_for_patch(effPatch);
+    }
+    // Apply CC mappings (ic lines) to per-channel knob config so CC numbers,
+    // ranges, log flag, and offset reflect the saved sketch state.
+    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+        for (var chCC = 1; chCC <= 16; chCC++) {
+            window.apply_knob_cc_mappings_from_patch_source(chCC, dumpText);
+        }
     }
     // Populate knobs for the current synth.
     if (!bootActive) {
