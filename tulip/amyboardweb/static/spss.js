@@ -160,7 +160,7 @@ const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
 window.current_synth = 1;
 // GM MIDI convention: channel 10 is the drum channel. The device boots a GM
-// drum kit on it (i10K384iv6 in amyboard.py start_amy/_apply_knobs_text), so
+// drum kit on it (i10K384iv1 in amyboard.py start_amy/_apply_knobs_text), so
 // the web editor treats channel 10 as active-with-drums by default too.
 // This is a BOOT-only default: once the user changes channel 10 (deactivates
 // it, loads a preset, clears it), the UI never re-assumes drums — the channel
@@ -230,6 +230,16 @@ function _knob_log_struct_key(message) {
     out += 'y'; i = 1;
     while (i < s.length && s.charCodeAt(i) >= 48 && s.charCodeAt(i) <= 57) { out += s.charAt(i); i++; }
   }
+  // A LEADING i<synth>n<note> is note-addressing (the drum editor's per-drum
+  // osc-param lines, e.g. i10n39Q0.5...) — keep the note literal so each drum
+  // gets its own last-wins slot. An 'n' anywhere else is a note VALUE (e.g.
+  // the n<base> inside an io template, which the pitch knob edits) and must
+  // normalize to '#' so value changes collapse onto one line.
+  var mNote = /^i(\d+)n(\d+)/.exec(s);
+  if (i === 0 && mNote) {
+    out += 'i' + mNote[1] + 'n' + mNote[2];
+    i = mNote[0].length;
+  }
   while (i < s.length) {
     var c = s.charAt(i);
     if ((c === 'i' || c === 'v' || c === 'o') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
@@ -249,6 +259,9 @@ function _knob_log_struct_key(message) {
   }
   return out;
 }
+// editor_drums.js repositions its per-note lines (delete + re-insert) so they
+// replay after the channel's level broadcast — it needs the same keys.
+window._knob_log_struct_key = _knob_log_struct_key;
 
 // Serialize the log to the block body: one Z-terminated wire line per entry.
 function serialize_knob_log() {
@@ -449,7 +462,7 @@ function record_all_cc_for_channel(ch) {
   for (var i = 0; i < knobs.length; i++) {
     var knob = knobs[i];
     if (!knob || disabled[knob.section]) continue;
-    var ccVal = build_knob_cc_value(knob);
+    var ccVal = build_knob_cc_value(knob, ch);
     if (ccVal) log_knob_cc(ch, knob, ccVal);
   }
 }
@@ -514,13 +527,26 @@ window.reflect_knob_log_to_editor = reflect_knob_log_to_editor;
 // Rebuild the in-memory log from a block of wire lines (verbatim). Used after
 // Read / download / pageload so a subsequent Write re-emits exactly what was
 // loaded, with later knob tweaks layered on top.
+// Drum kits are single-voice since amy#913 (one voice holding one osc per
+// drum sound) — sketches saved earlier recorded i<ch>K<kit>iv6, which would
+// now allocate 6 x ~38 oscs and exhaust the pool. Normalize on load; the
+// device applies the same fix in amyboard.py _apply_knobs_text.
+function _normalize_drum_kit_line(line) {
+  return String(line).replace(/K(\d+)iv(\d+)/, function(full, patch, nv) {
+    if (is_drum_patch(parseInt(patch, 10)) && parseInt(nv, 10) > 1) {
+      return 'K' + patch + 'iv1';
+    }
+    return full;
+  });
+}
+
 function rebuild_knob_log_from_block(blockText) {
   window.knob_log.clear();
   var lines = String(blockText || '').split(/\r?\n/);
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i].trim();
     if (!line || line.charAt(0) === '#') continue;
-    var clean = line.replace(/Z+$/, '');
+    var clean = _normalize_drum_kit_line(line.replace(/Z+$/, ''));
     // Key by the structural key (same as live knob moves), so a later move
     // collapses onto the loaded line instead of duplicating it — and any
     // duplicate already in the loaded block self-heals to a single entry.
@@ -752,7 +778,7 @@ window.set_channel_active = function(channel, active, opts) {
       // and silence the Juno (the bug where activating ch2 dumped ~50 commands).
       // Instead we reset to the K257 default and position the UI knobs to match,
       // like startup. This applies to channel 10 too: its GM-drum default is a
-      // BOOT-only default (the device and simulator boot with i10K384iv6) —
+      // BOOT-only default (the device and simulator boot with i10K384iv1) —
       // once the user touches the channel we never re-assume drums; activating
       // an empty channel 10 loads K257 like any other channel. And if the
       // channel already has a patch in the log (e.g. a preset loaded while the
@@ -783,7 +809,9 @@ window.set_channel_active = function(channel, active, opts) {
     if (ch === window.DRUM_CHANNEL) {
       // Drum default, exactly as the device boot does. No CC-map flood: the
       // kit has no knob-controllable params (see update_knob_sections_for_patch).
-      amy_add_log_message("i" + ch + "K" + window.DRUM_DEFAULT_PATCH + "iv6Z");
+      // Drum kits are single-voice (amy#913): one voice holding one dedicated
+      // osc per drum sound, so iv1 — more voices would exhaust osc resources.
+      amy_add_log_message("i" + ch + "K" + window.DRUM_DEFAULT_PATCH + "iv1Z");
     } else {
       amy_add_log_message("i" + ch + "ic255Z");
       amy_add_log_message("i" + ch + "K257iv6Z");
@@ -1403,7 +1431,7 @@ function onKnobCcChange(knob, previousCc) {
   if (knob.no_device_cc) {
     return;
   }
-  var ccVal = build_knob_cc_value(knob);
+  var ccVal = build_knob_cc_value(knob, synthChannel);
   if (window.suppress_knob_cc_send) {
     return;
   }
@@ -1738,7 +1766,7 @@ function get_knobs_for_channel(channel) {
   return window.get_current_knobs ? window.get_current_knobs() : [];
 }
 
-function build_knob_cc_value(knob) {
+function build_knob_cc_value(knob, channel) {
   if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half"
     || knob.knob_type === "pushbutton" || knob.no_device_cc) {
     return "";
@@ -1761,7 +1789,16 @@ function build_knob_cc_value(knob) {
     max_val = knob.max_value;
     offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
   }
-  return ccNum + "," + log + "," + min_val + "," + max_val + "," + offset + "," + knob.change_code;
+  // Drum channels use a knob's drum_change_code variant when it defines one
+  // (the Level knob: i%ia%v with no v0 — a drum kit has no control osc, and
+  // an osc-less amp broadcasts to every per-drum osc, amy#913).
+  var changeCode = knob.change_code;
+  if (typeof knob.drum_change_code === "string"
+    && typeof window.get_channel_drum_kit === "function"
+    && window.get_channel_drum_kit(channel)) {
+    changeCode = knob.drum_change_code;
+  }
+  return ccNum + "," + log + "," + min_val + "," + max_val + "," + offset + "," + changeCode;
 }
 
 function send_all_knob_cc_mappings(channel) {
@@ -1771,7 +1808,7 @@ function send_all_knob_cc_mappings(channel) {
   var disabledSections = window._disabled_sections || {};
   for (var i = 0; i < knobs.length; i++) {
     if (knobs[i] && disabledSections[knobs[i].section]) continue;
-    var ccVal = build_knob_cc_value(knobs[i]);
+    var ccVal = build_knob_cc_value(knobs[i], ch);
     if (ccVal) {
       amy_send({synth: ch, midi_cc: ccVal}, true);
     }
@@ -5877,7 +5914,7 @@ async function _reset_amyboard_send_and_cleanup() {
         window.reset_amy_knobs_to_defaults();
     }
     // Reset channel state: channel 1 (Juno) and channel 10 (GM drums —
-    // factory_reset's sketch restart re-applies i10K384iv6 on the board) active.
+    // factory_reset's sketch restart re-applies i10K384iv1 on the board) active.
     if (!Array.isArray(window.active_channels)) window.active_channels = [];
     window.active_channels[1] = true;
     for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = (_ch === window.DRUM_CHANNEL);
@@ -5971,7 +6008,7 @@ async function reset_amyboard() {
                 reset_global_effects();
             }
             // Reset channel active state: channel 1 (Juno) and channel 10
-            // (GM drums — amyboard.py's restart re-applies i10K384iv6) active
+            // (GM drums — amyboard.py's restart re-applies i10K384iv1) active
             // after reset. Assign directly rather than calling
             // set_channel_active() so we don't re-send redundant inits to AMY.
             if (!Array.isArray(window.active_channels)) window.active_channels = [];

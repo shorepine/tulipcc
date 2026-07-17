@@ -40,10 +40,15 @@ window.addEventListener("DOMContentLoaded", function() {
       // Level slider: i<ch>v0a<val> (amp on the control osc). Default CC 7 = the
       // MIDI standard "Channel Volume". The log range 0..9.9 with offset 0.1 is
       // the same pseudo-log curve as the UI slider: 10^(2(p-0.5)) - 0.1.
+      // Drum channels have no control osc (amy#913: one dedicated osc per drum
+      // sound), so there the level is an osc-less amp — broadcast to every
+      // per-drum osc (drum_change_code, picked by make_change_code /
+      // build_knob_cc_value when the channel holds a drum kit).
       section: "Synth",
       cc: 7,
       display_name: "level",
       change_code: "i%iv" + CTL_OSC + "a%v",
+      drum_change_code: "i%ia%v",
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,

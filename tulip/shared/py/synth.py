@@ -177,12 +177,15 @@ class DrumSynth(PatchSynth):
     Each MIDI note plays a separately-configured sound.
     """
 
-    def __init__(self, num_voices=4, channel=None, patch=384):
+    def __init__(self, num_voices=1, channel=None, patch=384):
         # The GM note->sample mapping lives in the drum kit patches (384 TR-808,
         # 385 TR-909, 386 Linn 9000, 387 MR-12, 388 Tokyo Synthetics, 389 Power,
-        # 390 Percussion); the patch also bakes in the x5 PCM level scaling.
+        # 390 Percussion); the patch also bakes in the PCM level scaling.
         # synth_flags 3 = route notes through the patch's MIDI note map and
         # ignore note offs.
+        # Drum kits are single-voice (amy#913): the one voice is a container
+        # holding one dedicated osc per drum sound (~38 oscs), so num_voices
+        # must stay 1 — more voices would exhaust AMY's osc pool.
         super().__init__(num_voices=num_voices, channel=channel, patch=patch, synth_flags=3)
 
 
