@@ -72,10 +72,16 @@ amy.send(synth=0, vel=0)
 amy.send(synth=0, patch=13)  # Load a different Juno patch, it will remain 4-voice.
 # You can release all the voices/oscs being used by a synth by setting its num_voices to zero.
 amy.send(synth=0, num_voices=0)
+# Each synth has an overall level (`synth_level`, wire code `iV`), default 1.0,
+# applied to all of its oscs' audio output at render time. It's a master volume
+# for the synth, independent of any osc amp settings (and the natural way to
+# scale a drum-kit synth, whose per-drum oscs each carry their own amp):
+amy.send(synth=0, synth_level=0.5)
 # As a special case, you can use `synth_flags` to set up a MIDI drum synth
 # that will translate GM note events into PCM presets. Load one of the drum kit
-# patches (384-390, see the Drum kits section):
-amy.send(synth=10, num_voices=6, patch=384, synth_flags=3)
+# patches (384-390, see the Drum kits section). Drum kits are single-voice:
+# the one voice holds a dedicated osc per drum sound, so num_voices must be 1:
+amy.send(synth=10, num_voices=1, patch=384, synth_flags=3)
 amy.send(synth=10, note=38, vel=1)  # acoustic snare (GM note numbers)
 amy.send(synth=10, patch=389)       # hot-swap the synth to the 80s Power Kit
 # You can also use `patch_string` to directly define a patch using a wire-command string.

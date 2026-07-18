@@ -37,18 +37,16 @@ window.addEventListener("DOMContentLoaded", function() {
       // the channel strip (dedicated_slider -> kept out of the knob grid), but
       // registered as a channel knob so its MIDI CC rides the same
       // save/restore/bulk-send path as every other knob. Same AMY command as the
-      // Level slider: i<ch>v0a<val> (amp on the control osc). Default CC 7 = the
-      // MIDI standard "Channel Volume". The log range 0..9.9 with offset 0.1 is
-      // the same pseudo-log curve as the UI slider: 10^(2(p-0.5)) - 0.1.
-      // Drum channels have no control osc (amy#913: one dedicated osc per drum
-      // sound), so there the level is an osc-less amp — broadcast to every
-      // per-drum osc (drum_change_code, picked by make_change_code /
-      // build_knob_cc_value when the channel holds a drum kit).
+      // Level slider: i<ch>iV<val> — the per-instrument level, which AMY
+      // applies to every osc of the synth at render, so one command covers
+      // melodic and drum channels alike (matches the ic7 mapping baked into
+      // the K257 patch). Default CC 7 = the MIDI standard "Channel Volume".
+      // The log range 0..9.9 with offset 0.1 is the same pseudo-log curve as
+      // the UI slider: 10^(2(p-0.5)) - 0.1.
       section: "Synth",
       cc: 7,
       display_name: "level",
-      change_code: "i%iv" + CTL_OSC + "a%v",
-      drum_change_code: "i%ia%v",
+      change_code: "i%iiV%v",
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,
@@ -891,7 +889,7 @@ function set_knobs_from_events(events, synth, opts) {
     let osc_preset = [null, null, null];
     let osc_duty = [0.5, 0.5, 0.5];  // duty_coefs[CONST] = 0.5
     let osc_gain = [1, 1, 1];      // amp_coefs[EG0] = 1.0
-    let synthLevel = 1;            // amp_coefs[CONST] on osc 0 (CTL_OSC)
+    let synthLevel = 1;            // per-instrument level (iV), default 1
     function knobDefault(section, name) {
       var busZero = (typeof window.get_bus_knobs === "function") ? window.get_bus_knobs(0) : [];
       var allKnobs = busZero.concat(knobs || []);
@@ -975,10 +973,13 @@ function set_knobs_from_events(events, synth, opts) {
           lfoDelay = event.eg0_times[0];
         }
       }
+      // Per-instrument level (iV) appears in the synth's setup preamble when
+      // it isn't 1. The control osc's amp const is patch data now (pre-iV it
+      // doubled as the level), so it no longer feeds the slider.
+      if (Number.isFinite(event.synth_level)) {
+        synthLevel = event.synth_level;
+      }
       if (event.osc == CTL_OSC) {
-        if (event.amp && Number.isFinite(event.amp[0])) {
-          synthLevel = event.amp[0];
-        }
         if (event.filter_freq) {
           if (Number.isFinite(event.filter_freq[0])) {
             filterFreq = event.filter_freq[0];

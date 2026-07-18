@@ -2203,28 +2203,28 @@
           _synthLevels[ch] = val;
           if (synthLevelSlider) synthLevelSlider.value = levelValueToSlider(val);
           if (send && typeof window.amy_add_log_message === "function") {
-            // Drum channels have no control osc (amy#913: one dedicated osc
-            // per drum sound) — send an osc-less amp instead, which AMY
-            // broadcasts to every per-drum osc.
-            var isDrumCh = typeof window.get_channel_drum_kit === "function"
-              && !!window.get_channel_drum_kit(ch);
-            var code = isDrumCh
-              ? "i" + ch + "a" + val.toFixed(3)
-              : "i" + ch + "v0a" + val.toFixed(3);
+            // Per-instrument level (iV): AMY scales every osc of the synth at
+            // render, so one command works for melodic and drum channels
+            // alike (amy#913 drum kits have no control osc for a v0a level).
+            var code = "i" + ch + "iV" + val.toFixed(3);
             window.amy_add_log_message(code);
             // Record the level in the knob log so it persists in the sketch — the
             // dedicated slider bypasses the knob grid's send_change_code path.
             // silent: the live send already happened above. Structural key
-            // (i<ch>v0a# / i<ch>a#) collapses repeats and matches a loaded line.
+            // i<ch>iV# collapses repeats and matches a loaded line.
             if (typeof window.send_amy_message_in_sketch === "function") {
               window.send_amy_message_in_sketch(code, { synth: ch, silent: true });
-            }
-            // Each drum osc's amp is (its vol knob) * level, so a level change
-            // re-sends every sound's per-note line with the new product
-            // (debounced in editor_drums.js; the broadcast above keeps the
-            // level live during the drag).
-            if (isDrumCh && typeof window.update_drum_amps_for_level === "function") {
-              window.update_drum_amps_for_level(ch);
+              // Retire any pre-iV level slot for this channel (control-osc amp
+              // on melodic channels, osc-less amp broadcast on drums) — left
+              // alone it would replay alongside iV and scale the level twice.
+              if (typeof window._knob_log_struct_key === "function") {
+                window.send_amy_message_in_sketch("", {
+                  key: window._knob_log_struct_key("i" + ch + "v0a0"), remove: true, silent: true,
+                });
+                window.send_amy_message_in_sketch("", {
+                  key: window._knob_log_struct_key("i" + ch + "a0"), remove: true, silent: true,
+                });
+              }
             }
           }
         }
@@ -2237,8 +2237,6 @@
           synthLevelSlider.addEventListener("input", function() { setSynthLevel(levelSliderToValue(synthLevelSlider.value), true); });
         }
         window.syncSynthLevelForChannel = syncSynthLevelForChannel;
-        // Read access for editor_drums.js: each drum osc's amp is vol * level.
-        window.get_synth_level = getSynthLevel;
         window.setSynthLevelFromAmy = function(ch, val) {
           val = Number(val);
           if (!Number.isFinite(val) || val < 0) val = 1;
