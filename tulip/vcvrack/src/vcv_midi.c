@@ -2,7 +2,7 @@
 //
 // Publishes a virtual MIDI in/out pair named "AMYboard VCV" so amyboard.com's
 // editor (Chrome WebMIDI, "control" mode) sees the Rack module exactly like a
-// hardware AMYboard: sketch transfer (zT), knobs (zA), run-python (zP), dumps
+// hardware AMYboard: sketch transfer (zT), run-python (zP), dumps
 // (zD), ping (zI) all flow over sysex.
 //
 // Backends: CoreMIDI virtual source/destination on macOS, an ALSA sequencer
@@ -64,7 +64,7 @@ static void handle_sysex_frame(uint8_t *frame, int len) {
                 amyboard_vcv_exec("import amyboard; amyboard.restart_sketch()");
             return;
         }
-        // Everything else (zT/zD/zP/zA/zY, base64 transfer chunks): process
+        // Everything else (zT/zD/zP/zY, base64 transfer chunks): process
         // on the MP thread, which acks after handling.
         amyboard_vcv_sysex_push(payload, plen);
         return;

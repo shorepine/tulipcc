@@ -408,34 +408,6 @@ void mp_exec_hook(const char *code) {
 #endif
 }
 
-void mp_update_file_hook(const char *filename) {
-#if defined(AMYBOARD) || defined(AMYBOARD_VCV)
-    // Call amyboard.update_sketch_knobs(filename) synchronously. This runs
-    // from the C-side zA handler, so any unhandled Python exception would
-    // NLR-longjmp out of the sysex parser mid-message and the subsequent zD
-    // would never be processed (Pull would hang). Wrap the call in an NLR
-    // buffer so exceptions get swallowed and the parser can continue.
-    nlr_buf_t nlr;
-#ifdef AMYBOARD_VCV
-    char vcv_path[512];
-    filename = vcv_relocate_wire_path(filename, vcv_path, sizeof(vcv_path));
-#endif
-    if (nlr_push(&nlr) == 0) {
-        mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
-        mp_obj_t fn = mp_load_attr(mod, MP_QSTR_update_sketch_knobs);
-        mp_obj_t path = mp_obj_new_str(filename, strlen(filename));
-        mp_call_function_1(fn, path);
-        nlr_pop();
-    } else {
-        // Python raised — swallow so the sysex parser can continue to zD.
-        fprintf(stderr, "mp_update_file_hook: update_sketch_knobs raised, ignoring\n");
-        mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
-    }
-#else
-    (void)filename;
-#endif
-}
-
 void mp_file_transfer_done_hook(const char *filename) {
 #if defined(AMYBOARD) || defined(AMYBOARD_VCV)
     if (filename == NULL || filename[0] == '\0') {
@@ -515,7 +487,6 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_fread_hook = mp_fread_hook;
     amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
     amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
-    amy_config.amy_external_update_file_hook = mp_update_file_hook;
     amy_config.amy_external_exec_hook = mp_exec_hook;
     amy_config.amy_external_reboot_hook = mp_reboot_hook;
     amy_config.amy_external_overload_hook = tulip_amy_overload_hook;
@@ -644,7 +615,6 @@ void run_amy(void) {
     amy_config.amy_external_fread_hook = mp_fread_hook;
     amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
     amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
-    amy_config.amy_external_update_file_hook = mp_update_file_hook;
     amy_config.amy_external_exec_hook = mp_exec_hook;
     amy_config.amy_external_reboot_hook = mp_reboot_hook;
 #ifdef GAMMA9001

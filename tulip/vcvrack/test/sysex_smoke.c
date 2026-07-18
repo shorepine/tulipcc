@@ -1,5 +1,5 @@
 // Simulates amyboard.com's control mode against the VCV firmware build:
-// zT sketch transfer (header + base64 chunks), zP restart, zA knobs, zD dump.
+// zT sketch transfer (header + base64 chunks), zP restart, zD dump.
 // midi_out is OUR capturing version (vcv_midi.c is not linked here).
 #include <stdio.h>
 #include <stdint.h>
@@ -125,19 +125,6 @@ int main(void) {
         printf("== sketch.py on disk: %d bytes, marker %s\n", (int)n, file_ok ? "FOUND" : "MISSING");
     } else {
         printf("== sketch.py NOT FOUND at %s\n", path);
-    }
-
-    // --- zA: write knobs block into the sketch ---
-    push_and_expect_ack("zAZ", "zA knobs");
-    render_ms(300);
-    f = fopen(path, "rb");
-    if (f) {
-        char buf[65536];
-        size_t n = fread(buf, 1, sizeof(buf) - 1, f);
-        buf[n] = 0;
-        fclose(f);
-        printf("== knobs block after zA: %s\n",
-               strstr(buf, "_auto_generated_knobs") ? "PRESENT" : "missing");
     }
 
     // --- zD state dump: expect one or more 0/C/E frames then the AK ---
