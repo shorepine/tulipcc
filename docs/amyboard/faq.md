@@ -354,7 +354,7 @@ See the **"CV triggering"** examples in [Modular Synth Setup](modular.md#cv-trig
 
 ### How do I add more CV / analog inputs?
 
-AMYboard uses the **ADS1115** ADC for CV in. Easy add-on options over I2C: the [Adafruit ADS1115 breakout](https://www.adafruit.com/product/1085) (needs soldering), an [NCD screw-terminal ADS1115](https://store.ncd.io/product/ads1115-16-bit-4-channel-precision-analog-to-digital-converter-i2c-mini-module/), or the single-channel [M5Stack ADS1110 unit](https://docs.m5stack.com/en/unit/Unit-ADC_V1.1). For CV/DAC out, the GP8413 unit is documented in [Accessories](accessories.md).
+AMYboard uses the **ADS1015** ADC for CV in. Easy add-on options over I2C: the [Adafruit ADS1115 breakout](https://www.adafruit.com/product/1085) (needs soldering), an [NCD screw-terminal ADS1115](https://store.ncd.io/product/ads1115-16-bit-4-channel-precision-analog-to-digital-converter-i2c-mini-module/), or the single-channel [M5Stack ADS1110 unit](https://docs.m5stack.com/en/unit/Unit-ADC_V1.1). For CV/DAC out, the GP8413 unit is documented in [Accessories](accessories.md).
 
 ### How do you scale ±10V Eurorack signals to the ADC?
 
