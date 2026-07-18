@@ -40,7 +40,7 @@ You configure the `voices` in a `synth` by using a `patch`, which is a number re
 
 (Note that when you use voices/synths, you'll need to include the `synth` arg when addressing oscillators, and AMY will automatically route your command to the relevant oscillators in each voice of the synth's set -- there's no other way to tell which oscillators are being used by which voices.)
 
-To play a patch -- for instance the built-in patches emulating Juno and DX7 synthesizers and a piano -- you create a synth configured with that patch, then send note events, or parameter moidifications, to the synth. We ship patches 0-127 for Juno, 128-255 for DX7, 256 for our [built-in piano](https://shorepine.github.io/amy/piano.html), and -- on devices with the Gamma9001 drum banks (Tulip, AMYboard, AMY on the web) -- seven GM drum kits at patches 384-390 (see [Drum kits](#drum-kits)). For example, a multitimbral Juno/DX7 synth can be set up like this:
+To play a patch -- for instance the built-in patches emulating Juno and DX7 synthesizers and a piano -- you create a synth configured with that patch, then send note events, or parameter moidifications, to the synth. We ship patches 0-127 for Juno, 128-255 for DX7, 256 for our [built-in piano](https://shorepine.github.io/amy/piano.html), and -- on devices with the Gamma9001 drum banks (Tulip, AMYboard, AMY on the web, the CPython `amy` module) -- seven GM drum kits at patches 384-390 (see [Drum kits](#drum-kits)). For example, a multitimbral Juno/DX7 synth can be set up like this:
 
 ```python
 amy.send(synth=1, num_voices=4, patch=1)     # 4 voices of Juno patch #1 on synth 1
@@ -324,7 +324,7 @@ Please see our [piano voice documentation](https://shorepine.github.io/amy/piano
 
 ## PCM and Sampler
 
-AMY comes with a bank of drum-like PCM samples baked in, as they are normally hard to render with additive, subtractive or FM synthesis. Use the type `PCM` with a `preset` number to play them; their native pitch is used if you don't give a frequency or note parameter. The default build bakes in an 11-sample TR-808 set (presets 0-10). Builds with the Gamma9001 banks enabled (Tulip, AMYboard, AMY on the web) instead bake the full 19-sample TR-808 bank as presets 0-18 and add 136 more samples at presets 256-391: TR-909, Linn 9000, Univox MR-12, Tokyo Synthetics, the 80s Power Kit, and a large acoustic percussion bank. You can update the baked-in PCM sample bank using `amy/headers.py`.
+AMY comes with a bank of drum-like PCM samples baked in, as they are normally hard to render with additive, subtractive or FM synthesis. Use the type `PCM` with a `preset` number to play them; their native pitch is used if you don't give a frequency or note parameter. The default build bakes in an 11-sample TR-808 set (presets 0-10). Builds with the Gamma9001 banks enabled (Tulip, AMYboard, AMY on the web, the CPython `amy` module) instead bake the full 19-sample TR-808 bank as presets 0-18 and add 136 more samples at presets 256-391: TR-909, Linn 9000, Univox MR-12, Tokyo Synthetics, the 80s Power Kit, and a large acoustic percussion bank. You can update the baked-in PCM sample bank using `amy/headers.py`.
 
 ### Drum kits
 
