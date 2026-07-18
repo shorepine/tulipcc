@@ -319,7 +319,7 @@ These per-oscillator parameters use [CtrlCoefs](synth.md) notation
 
 ### Drum kits (GAMMA9001 builds)
 
-Devices built with `-DGAMMA9001` (Tulip, AMYboard, AMY on the web) carry the Gamma9001 drum sample banks: the full TR-808 bank is baked in as PCM presets 0-18, and 136 more samples (TR-909, Linn 9000, Univox MR-12, Tokyo Synthetics, 80s Power Kit, Percussion) live at presets 256-391, served from a platform-provided blob (linked into the wasm on web; an mmapped `drums` flash partition on ESP32-S3). All of them play directly with `wave=PCM, preset=P`.
+Devices built with `-DGAMMA9001` (Tulip, AMYboard, AMY on the web, the CPython `amy` module) carry the Gamma9001 drum sample banks: the full TR-808 bank is baked in as PCM presets 0-18, and 136 more samples (TR-909, Linn 9000, Univox MR-12, Tokyo Synthetics, 80s Power Kit, Percussion) live at presets 256-391, served from a platform-provided blob (linked into the binary on web and CPython; an mmapped `drums` flash partition on ESP32-S3). All of them play directly with `wave=PCM, preset=P`.
 
 Patches **384-390** are ready-made General MIDI drum kits over these banks -- load one on a synth with `synth_flags=3` and GM note numbers trigger the mapped samples:
 
