@@ -294,6 +294,8 @@ Not yet with the built-in echo -- it's a single delay on the master sum, not a r
 
 In an Arduino sketch, call `amy_simple_fill_buffer()` in `loop()` to get an `int16*` buffer of finished samples, process it, and send it to the I2S out yourself. (`amy_external_render_hook` is for *generating* oscillator buffers, not post-processing the final mix.) See [Arduino Setup](arduino.md).
 
+In AMYboard itself you can use the (new, very alpha) [on-board C compiler for certain types of effects and oscillators.](https://github.com/shorepine/tulipcc/blob/main/docs/user_c_dsp.md)
+
 ### My audio clips or distorts on some presets
 
 A few things to check, roughly in order:
