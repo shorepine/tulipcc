@@ -1088,15 +1088,24 @@
         // Show a welcome modal that forces a click (required by browser audio
         // policy). A click anywhere on the modal (button, content, or backdrop)
         // dismisses it and starts audio via start_audio().
+        //
+        // If the user already clicked/keyed during the WASM boot above, the
+        // global body listeners have started audio — the modal's job is done,
+        // so don't show it at all.
         var welcomeEl = document.getElementById('simulateWelcomeModal');
-        if (welcomeEl && window.bootstrap) {
+        if (welcomeEl && window.bootstrap && !audio_started && !_audio_starting) {
           var welcomeModal = bootstrap.Modal.getOrCreateInstance(welcomeEl, { backdrop: 'static', keyboard: false });
           var dismissed = false;
           welcomeEl.addEventListener('click', function() {
-            if (dismissed) return;
             dismissed = true;
             welcomeModal.hide();
             if (typeof start_audio === 'function') { start_audio(); }
+          });
+          // hide() during the fade-in is silently ignored by Bootstrap's
+          // transition guard, which would strand the modal on screen — re-hide
+          // once fully shown if it was dismissed (or audio started) meanwhile.
+          welcomeEl.addEventListener('shown.bs.modal', function() {
+            if (dismissed || audio_started || _audio_starting) welcomeModal.hide();
           });
           welcomeModal.show();
         }
