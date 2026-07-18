@@ -37,6 +37,21 @@ All orders, payments, and shipping are handled by [Makerfabs](https://www.makerf
 
 Three ways, and AMYboard uses the highest voltage present: **USB-C** (5V), **Eurorack 10-pin** (+12V), or the **I2C host / Grove** port (3.3V, e.g. from a Tulip). You don't need a computer -- a plain USB power supply is fine. See [Power Supplies](README.md#power-supplies).
 
+### Is the audio output stereo?
+
+Yes -- the line in, line out, and S/PDIF jacks are all **stereo 3.5mm** connectors. Use AMY's `pan` parameter to place sounds in the field.
+
+### Can I try AMYboard without the hardware?
+
+Two ways:
+
+- The **Simulate** mode of the [web editor](https://amyboard.com/editor) runs the whole firmware (synth, sketches, OLED, an emulated encoder) in your browser.
+- The **AMYboard VCV Rack plugin** runs the full firmware as a Rack module -- point AMYboard Online's MIDI ports at the virtual VCV MIDI endpoint instead of a USB AMYboard and everything (sketches, knobs, presets) works the same. Grab the `.vcvplugin` from the [amyboard release](https://github.com/shorepine/tulipcc/releases/tag/amyboard) (Linux/Windows/Mac) and drop it in Rack's plugins folder. Inside VCV Rack Pro it can also run as a VST in your DAW.
+
+### What does "AMY" stand for?
+
+AMY once stood for "**A**dditive **M**usic synthesizer librar**Y**" -- and is a nod to the Atari AMY chip, which never shipped. Its early days focused on additive synthesis (sine waves with breakpoints); it grew into today's multi-synth engine, but the additive heart lives on in [the piano voice](https://shorepine.github.io/amy/piano.html).
+
 ---
 
 ## Connecting over USB
@@ -100,6 +115,12 @@ Some panels (especially off-brand ones) come up sideways. For SH1107 you can fix
 amyboard.set_display_rotation(90)   # or 180 / 270
 ```
 
+Put the call anywhere **above** the `def loop():` line -- everything above it runs once at startup. Rotation only works on SH1107 panels (on the SSD1327 and in the web simulator it's a harmless no-op).
+
+### Can I connect two OLED displays at once?
+
+In theory -- but the built-in `amyboard.display` class picks the first display it finds, so you'd have to drive the second one with your own MicroPython driver, and the two panels must be jumpered to different I2C addresses. Definitely an advanced-mode project.
+
 ### My OLED text shows nothing, or my custom screen gets overwritten
 
 - Use color value **1** (not 255) for text on these OLEDs.
@@ -144,6 +165,11 @@ enc.switch()      # M5Stack toggle (False on other devices)
 
 The sketch generator on AMYboard World uses this API too, so generated sketches no longer assume a specific encoder. Note that many older World sketches were written for a *specific* encoder -- if a sketch "runs but nothing happens," check whether it expects a single encoder for preset selection while you only have the 8-pack (or vice versa).
 
+Two power-user notes:
+
+- If you have **more than one encoder accessory connected** (say, the Adafruit single *and* the M5Stack 8-pack), autodetect picks one -- force the one you want with `amyboard.Encoder(type="adafruit_single")`.
+- The API supports up to **8** encoders. You *can* run two 8-packs (16 knobs) if you reprogram the second unit's I2C address, but you'll need to address the second one with your own code.
+
 ### How do I read the M5Stack 8-Angle (8 pots) or 8-Encoder?
 
 ```python
@@ -173,6 +199,10 @@ Either works -- `tulip.defer()` uses the same sequencer as `loop()`, it just let
 ### I edit `sketch.py` but it reverts to the default on reboot
 
 AMYboard tries to **self-heal**: if your `sketch.py` crashes hard at boot, it restores the default sketch. So a revert usually means your sketch errored. Recent firmware + the [web editor](online.md) now **show you the sketch's error** (with a traceback and line number) instead of silently reverting, so upgrade if you're flying blind. Hold **BOOT** while powering on to skip the sketch (this also runs a hardware self-test), then fix or delete it. The live sketch is at `/user/current/sketch.py`. See [Board won't boot / crashes](troubleshooting.md#board-wont-boot--crashes-on-startup).
+
+### Sketch writes keep failing with weird errors (e.g. `RuntimeError: name too long`)
+
+When the board gets into a strange state -- sketches that fail to write with odd errors, a stuck "syntax error" from the default sketch, missing drum samples -- the universal fix is a **"Full erase and re-flash"** from the firmware updater (the slower option, not the quick upgrade), then press **RST** and reload the browser. This rewrites the whole filesystem, including the sample banks, and has cleared every case of this we've seen on Discord.
 
 ### The editor used to auto-sync my sketch -- now it asks me to "read" and "write." What changed?
 
@@ -241,13 +271,32 @@ Yes -- it's fine to have TRS MIDI, USB MIDI, and multiple power sources (USB + E
 
 ### How do I play drum sounds?
 
-Set up a synth with a **GM drum-kit patch (384-390: TR-808, TR-909, Linn 9000, MR-12, Tokyo Synthetics, 80s Power Kit, Percussion)** -- the note→sample mapping lives in the patch, so plain note numbers won't make drum sounds without it:
+Easiest: **MIDI channel 10 is a GM drum kit by default** on current firmware -- just play GM drum note numbers (36 = kick, 38 = snare, 42 = closed hat, 46 = open hat, 49 = crash...) on channel 10. In a sketch, set up a synth with a **GM drum-kit patch (384-390: TR-808, TR-909, Linn 9000, MR-12, Tokyo Synthetics, 80s Power Kit, Percussion)** -- the note→sample mapping lives in the patch, so plain note numbers won't make drum sounds without it:
 
 ```python
 amy.send(synth=10, patch=384, num_voices=1, synth_flags=3)
 ```
 
-`synth_flags=3` routes notes through the GM note map and ignores note-offs. Drum kits are **single-voice**: the one voice holds a dedicated osc per drum sound, so `num_voices` must be 1. Then play GM drum note numbers (36 = kick, 38 = snare, 42 = closed hat, 46 = open hat, 49 = crash...), either from your sketch with `amy.send(synth=10, note=36, vel=1)` or over **MIDI channel 10**.
+`synth_flags=3` routes notes through the GM note map and ignores note-offs. Drum kits are **single-voice**: the one voice holds a dedicated osc per drum sound, so `num_voices` must be 1. Then trigger from your sketch with `amy.send(synth=10, note=36, vel=1)` or over MIDI. If drums sound wrong or missing after an upgrade, do a **full erase and re-flash** -- the quick upgrade doesn't rewrite the sample banks.
+
+### Can I edit the individual drum sounds?
+
+Yes -- when a drum kit is loaded on a channel, the [web editor](online.md) swaps the Juno-style knobs for **per-drum parameter knobs**: every parameter of every drum sound (pitch, level, decay...) is editable and **MIDI-CC mappable** (click the knob title to assign a CC -- there are no default drum CCs), and the channel-strip **Level** slider / CC 7 controls the kit's volume. Use the **Load Preset** dropdown to put any kit on any channel, or to turn channel 10 back into a normal synth. It's a lot like our [drum synth demo](https://shorepine.github.io/amy/gamma9001/), but on your hardware.
+
+### Is there a master volume MIDI CC?
+
+Not built-in -- CC 7 is per-channel level. For a whole-board volume knob, add a MIDI callback in your sketch that listens to the CC of your choice and calls `amy.send(volume=x)` (the sketch generator will happily write this for you). Each bus also has its own Master Level knob in the editor's Effects panel, which can be CC-mapped.
+
+### Can AMYboard send MIDI clock to my other gear (be the master)?
+
+Yes -- put this at the top of your sketch (needs mid-July 2026 firmware or newer):
+
+```python
+import tulip
+tulip.external_midi_sync(send=True)
+```
+
+AMYboard then sends MIDI clock (F8) plus start/stop (FA/FC) at the AMY sequencer's tempo, generated at the hardware level -- much tighter than a Python timer callback. (Without `send=True` the same call makes AMYboard *follow* external clock instead.)
 
 ### Can I control AMY directly over SysEx?
 
@@ -278,9 +327,11 @@ amy.send(synth=1, osc=0, mod_source=1, filter_freq={'mod': 0.5})  # filter cutof
 
 If you want several LFOs you'll need to build the voice from scratch with enough `oscs_per_voice`.
 
-### How do I make an FM patch?
+### How do I make an FM patch? Can I edit the DX7 presets?
 
-AMY does **Yamaha-style phase modulation**, which only works with **SINE** operators (Prophet-style "analog FM" is on the roadmap -- AMY issue [#474](https://github.com/shorepine/amy/issues/474)). A 2-operator voice needs **3 oscs** -- the `ALGO` osc must be separate from the operator oscs. For a working example, see `fm_note_patch` in [xanadu.py](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/xanadu.py).
+The easy way now: load any **DX7 preset** into a channel in the [web editor](online.md) and you get a full **FM editing surface** -- a tab per operator with live envelope plots, plus algorithm, feedback, and LFO controls, all MIDI-CC mappable. (We dare you to wire "algorithm" to a CC and play it live.) All the shipped DX7 presets are 6-operator, but you can build patches with fewer (see `woodpiano`).
+
+In code: AMY does **Yamaha-style phase modulation**, which only works with **SINE** operators (Prophet-style "analog FM" is on the roadmap -- AMY issue [#474](https://github.com/shorepine/amy/issues/474)). A 2-operator voice needs **3 oscs** -- the `ALGO` osc must be separate from the operator oscs. For a working example, see `fm_note_patch` in [xanadu.py](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/xanadu.py).
 
 ### Can I pass external audio through AMYboard / use it as an effect?
 
@@ -288,7 +339,7 @@ Yes. Load the **`audiopassthru`** sketch in the [web editor](https://amyboard.co
 
 ### Can I build a ping-pong / multi-tap delay?
 
-Not yet with the built-in echo -- it's a single delay on the master sum, not a routable audio graph. Multi-bus support (AMY issue [#686](https://github.com/shorepine/amy/issues/686)) is in progress and should eventually allow several delay lines. For now, custom routing means writing your own DSP (below).
+Not exactly -- the echo isn't a routable audio graph. But multi-bus support (from AMY [#686](https://github.com/shorepine/amy/issues/686)) has landed: you can now run up to **4 buses, each with its own independent echo/FX**, and assign synths to them (see the buses question above), which covers "different delays on different sounds." True ping-pong/multi-tap routing still means writing your own DSP (below).
 
 ### How do I write my own DSP effect over the AMY output?
 
@@ -300,14 +351,22 @@ In AMYboard itself you can use the (new, very alpha) [on-board C compiler for ce
 
 A few things to check, roughly in order:
 
+- **Upgrade your firmware.** We normalized the volume of ~30 overly loud Juno presets in early July 2026 after user reports. (Two DX7 presets -- 158 "DX7 TRAIN" and 230 "DX7 SYN-CLAV 3" -- are known-broken and can make loud noises.)
 - **Headroom.** High note velocities from your controller/sequencer, or a high per-channel output volume, will clip. Setting the synth output volume around **2.5–3.5** leaves plenty of headroom.
-- **Too many voices.** When AMY runs out of CPU/RAM with lots of simultaneous voices, the output degrades. Reduce `num_voices` or simplify patches.
+- **Too many voices.** When AMY runs out of CPU with lots of simultaneous voices, the output degrades -- see the next question. Reduce `num_voices` or simplify patches.
+- **Line level.** The DIP switches on the back of the board set the line-out amplitude; if you're slamming a mixer input, check those. Crackle/static that changes when you move cables is usually RF downstream of the board -- a ground-loop isolator on the line out fixes it.
+
+### My board plays a sad descending tone and pauses -- what is that?
+
+That's the **CPU overload failsafe** (July 2026 firmware): when a sketch overloads the AMY engine, the board pauses and plays a small descending tone instead of crackling, wedging, and needing a manual RST. If you're connected to the web editor you'll also see a message. Just edit your sketch and try again -- no re-flash needed.
+
+Think in terms of a rough **voice budget**: a Juno voice costs ~12% of the CPU, a DX7 voice ~8%, a PCM/drum note ~2%; OLED writes and Python math take time too. In practice that's ~8 simultaneous Juno voices, or ~12 DX7, or a mix. If you hit the sad tone, cut `num_voices` or polyphony. Advanced: `amy.set_render_load_threshold()` adjusts the trigger point.
 
 ### I set up a second synth channel, and now my first synth sounds different!
 
-The analog synth patches (modeled on Juno) use the global chorus and EQ FX to shape their sounds, but these FX are shared between all synths by default.  So if you set up Juno patch A11 (Brass set 1) on channel 1, which uses the famous Juno chorus effect, then switch to channel 2 and set up Juno patch A13 (Trumpet), which does not use chorus, it will turn off the chorus for channel 1 as well, which will make it sound very thin.
+The analog synth patches (modeled on Juno) use the chorus and EQ FX to shape their sounds, and by default every channel shares one set of FX.  So if you set up Juno patch A11 (Brass set 1) on channel 1, which uses the famous Juno chorus effect, then switch to channel 2 and set up Juno patch A13 (Trumpet), which does not use chorus, it will turn off the chorus for channel 1 as well, which will make it sound very thin.
 
-AMY has a mechanism for separating synths onto separate "buses", each of which can run independent FX, but it is not yet exposed in the AMYboard online web editor.  Essentially you'd need to do something like:
+The fix is **buses**: AMY can put synths on separate mix buses (0–3), each with its own independent FX. In the [web editor](online.md), use the **Bus** pull-down in the channel strip to move a channel onto its own bus -- the Effects column then shows (and edits) that bus's FX, and each bus gets its own Master Level knob. Dry drums on one bus, spacey chorused synths on another. In code it's:
 ```python
 amy.send(synth=1, num_voices=6, patch=0, bus=0)  # Set up Brass set 1 on synth 1, bus 0
 amy.send(synth=2, num_voices=6, patch=2, bus=1)  # Set up Trumpet on synth 2, bus 1
@@ -374,6 +433,8 @@ There's no commercial desktop case yet, but the community has shared several 3D-
 
 The board ships with a plain laser-cut acrylic faceplate. The **bicolor labeled panel** in some Discord photos is a custom 3D print with the [3mf file here](https://github.com/shorepine/tulipcc/blob/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Everything works the same with or without a faceplate.
 
+Note the stock panel's cutouts were measured for the **Adafruit SSD1327 OLED and the Adafruit single rotary encoder** -- other accessories (the quad encoder, the M5Stack 8-pack) *work* with AMYboard but won't physically fit those holes, so plan a custom panel (community members have shared DXF/SVG edits and cases for both). If the acrylic flexes when you press a clicky encoder, supporting the PCB itself in the case (standoffs on its mounting holes) stiffens things a lot.
+
 ### Two AMYboards in a small case -- how much room do I need?
 
 The PCB itself is only ~47 mm wide (under 10HP); the **front panel** is 10HP. In a rack nothing is plugged into USB-C, and an I2C "tulip" cable still fits between two adjacent boards. A 20HP case (e.g. a 4ms Pod) fits two. If you want USB-C accessible in the rack, leave a little extra HP on that side -- many people add a right-angle USB-C panel-mount cable (and an external reset button) to their faceplate.
@@ -389,6 +450,10 @@ Yes -- you don't need USB. You can send sketches and patches to AMYboard over **
 ### What SD cards work?
 
 It's a vanilla MicroPython SD interface: **FAT32** (up to 2 TB volumes / 4 GB files). If a card won't mount, reformat it as FAT32 or try another card. See [SD card not mounting](troubleshooting.md#sd-card-not-mounting).
+
+### How many of my own samples can I load? Why does SD streaming max out?
+
+There's about **3 MB of free SPIRAM** after boot for samples loaded with `amy.load_sample()` -- roughly **30 seconds** of mono 44.1kHz PCM, shared across all your samples. (Short, looped samples go a long way -- one user built a working "mini mellotron" in it.) Streaming from SD works for a stream or so, but the SD interface is 1-bit SPI (~1.5 MB/s theoretical), so it runs out fast with polyphony -- for more simultaneous samples, preload into RAM (`memorypcm`) or put files in flash.
 
 ---
 
