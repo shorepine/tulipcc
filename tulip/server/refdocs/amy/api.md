@@ -69,6 +69,51 @@ Default MIDI handlers:
 void amy_enable_juno_filter_midi_handler(); // assigns the Juno-6 MIDI CC handler
 ```
 
+## Cross-platform C API (table-driven)
+
+These C functions are exposed to every host language from a single function
+table in `scripts/gen_amy_c_api.py`. The generator emits the CPython module
+(`c_amy`), the MicroPython bindings (the `tulip` module on Tulip / AMYboard /
+Tulip Desktop / VCV), the web WASM bridge (`amy_c_api` in JS, wired back into
+MicroPython on the web builds), and the Godot `AmySynth` methods — so
+`amy.<name>(...)` in Python behaves identically on every platform. The
+`tulip.amy_*` names are legacy redirects to the same bindings.
+
+To add a function: edit the table in `scripts/gen_amy_c_api.py`, run
+`make c-api`, and commit the regenerated files (CI runs `make check-c-api`).
+The table below is generated from the same source.
+
+<!-- BEGIN GENERATED C API DOCS - scripts/gen_amy_c_api.py -->
+| Python (all platforms) | C function | MicroPython alias | Godot (`AmySynth`) | What it does |
+|---|---|---|---|---|
+| `amy.send_wire(message)` | `void amy_add_message(char * message)` | `tulip.amy_send` | — | Send a wire-protocol message to AMY |
+| `amy.send_wire_from_sysex(message)` *(CPython only)* | `void amy_add_message_from_sysex(char * message)` | — | — | Send a wire message as if from sysex (file-transfer routing applies) |
+| `amy.ticks_ms()` | `uint32_t amy_sysclock()` | `tulip.amy_ticks_ms` | — | Read the AMY millisecond clock |
+| `amy.reset_sysclock()` | `void amy_reset_sysclock()` | `tulip.amy_reset_sysclock` | `reset_sysclock` | Reset the AMY millisecond clock to zero |
+| `amy.render_load()` | `float amy_get_render_load()` | `tulip.amy_render_load` | `render_load` | Smoothed fraction of real time AMY spends rendering (0..1) |
+| `amy.set_render_load_threshold(threshold)` | `void amy_set_render_load_threshold(float threshold)` | `tulip.amy_set_render_load_threshold` | `set_render_load_threshold` | Set the render-load fraction that trips the overload failsafe (0 disables) |
+| `amy.bleep(start=0)` | `void amy_bleep(uint32_t start)` | `tulip.amy_bleep` | `bleep` | Play the startup bleep |
+| `amy.sequencer_ticks()` | `uint32_t sequencer_ticks()` | `tulip.amy_sequencer_ticks` | `sequencer_ticks` | Read the sequencer tick count |
+| `amy.process_single_midi_byte(byte, from_web_or_usb=1)` | `void amy_process_single_midi_byte(uint8_t byte, uint8_t from_web_or_usb)` | `tulip.amy_process_single_midi_byte` | — | Feed one MIDI byte to AMY's stream parser |
+| `amy.set_cv_from_osc(cv_channel, osc)` | `void set_cv_from_osc(int cv_channel, int osc)` | `tulip.amy_set_cv_from_osc` | — | Feed external CV input from a mod osc (testing support) |
+| `amy.get_synth_commands` (low-level; see below) | `void *yield_synth_commands(uint8_t synth, char *s, size_t len, bool include_fx, void *state)` | `tulip.amy_get_synth_commands` | — | Read the wire commands that reconstruct synth state (list of str) |
+| `amy.dump_state()` | `char *amy_dump_state_to_string(int *out_len)` | `tulip.amy_dump_state` | `dump_state` | Read the complete replayable AMY state as a wire-command string |
+| `amy.get_output_buffer()` | `int amy_get_output_buffer(int16_t *samples)` | `tulip.amy_get_output_buffer` | — | Read the most recent rendered audio block as bytes (None if none ready) |
+| `amy.get_input_buffer()` | `int amy_get_input_buffer(int16_t *samples)` | `tulip.amy_get_input_buffer` | — | Read the most recent captured input audio block as bytes (None if none ready) |
+
+Notes:
+
+- `amy.get_synth_commands(synth, ...)` is a hand-written wrapper in
+  `amy/__init__.py` adding `patch_num`/`dest_synth` handling on top of the
+  generated backend (which drives the C generator `yield_synth_commands`);
+  it returns the commands newline-joined into one string.
+- `amy.get_output_buffer()` / `amy.get_input_buffer()` return up to 1024
+  bytes of interleaved int16 samples (`None` when no block is ready).
+- `amy.dump_state()` returns the complete replayable engine state as a
+  newline-separated wire-command string.
+
+<!-- END GENERATED C API DOCS -->
+
 ## JavaScript API
 
 AMY provides a high-level JavaScript API (`amy_send`) that mirrors the Python `amy.send()` interface. It is auto-generated from the same source of truth (`amy/__init__.py` and `amy/constants.py`) so parameter names are always identical to Python. The connector and API are bundled into `amy.js`, so you only need two includes:
