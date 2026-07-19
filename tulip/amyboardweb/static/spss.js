@@ -18,6 +18,7 @@ var _url_env_pending = false;
 var _url_env_autoplay = false;
 var _url_env_loaded = false;
 var amy_yield_synth_commands = null;
+var amy_dump_state_to_string_c = null;
 
 var _python_error_buffer = "";
 var _python_error_timer = null;
@@ -949,6 +950,9 @@ if (typeof amyModule === 'function') _amy_wasm_ready = amyModule().then(async fu
   );
   amy_yield_synth_commands = am.cwrap(
     'yield_synth_commands', 'number', ['number', 'number', 'number', 'boolean', 'number']
+  );
+  amy_dump_state_to_string_c = am.cwrap(
+    'amy_dump_state_to_string', 'number', ['number']
   );
   amy_start_web_no_synths();
   amy_module = am;
@@ -4952,6 +4956,24 @@ async function load_knobs_from_sketch() {
     }
 }
 
+function amy_dump_state_js() {
+    // Call the C amy_dump_state_to_string via WASM. Returns the state text.
+    // AMY's WASM lives in a separate module from MicroPython's, so amy.dump_state()
+    // cannot reach the C symbol directly — this bridge is what backs
+    // tulip.amy_dump_state (and therefore amy.dump_state()) on the web build.
+    if (!amy_module || !amy_dump_state_to_string_c || !amy_module.HEAPU8) return '';
+    var lenPtr = amy_module._malloc(4);
+    var strPtr = amy_dump_state_to_string_c(lenPtr);
+    // Read 4-byte little-endian length from HEAPU8 (HEAPU32 isn't exported on this module).
+    var h = amy_module.HEAPU8;
+    var len = h[lenPtr] | (h[lenPtr + 1] << 8) | (h[lenPtr + 2] << 16) | (h[lenPtr + 3] << 24);
+    amy_module._free(lenPtr);
+    if (!strPtr || len <= 0) return '';
+    var result = read_c_string_from_heap(strPtr, len + 1);
+    amy_module._free(strPtr);
+    return result;
+}
+
 async function _send_text_file_to_amyboard(path, text) {
     // Upload a text file to the AMYboard via zT (base64-chunked over sysex).
     var encoder = new TextEncoder();
@@ -6549,6 +6571,8 @@ async function start_amyboard() {
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('amyboard_world_upload_file', amyboard_world_upload_file);
   await mp.registerJsModule('amy_get_output_buffer', get_output_audio_samples);
+  // AMY WASM lives in a separate module; bridge amy_dump_state for Python via JS.
+  await mp.registerJsModule('amy_dump_state_js', amy_dump_state_js);
 //  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
 //  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
 
@@ -6557,11 +6581,16 @@ async function start_amyboard() {
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import tulip, amy, amy_js_message, amy_sysclock, amy_get_output_buffer as _amy_get_output_buf_js
+    import tulip, amy, amy_js_message, amy_sysclock, amy_get_output_buffer as _amy_get_output_buf_js, amy_dump_state_js as _amy_dump_state_js
     amy.override_send = amy_js_message
     amy.ticks_ms = amy_sysclock
     tulip.amy_ticks_ms = amy_sysclock
     tulip.amy_get_output_buffer = _amy_get_output_buf_js
+    tulip.amy_dump_state = _amy_dump_state_js
+    # amy binds _dump_state from tulip.amy_dump_state at import time, which already
+    # happened on the import line above — so patch amy's own name too, exactly like
+    # amy.ticks_ms right above. Without this amy.dump_state() raises NameError.
+    amy._dump_state = _amy_dump_state_js
   `);
 
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
