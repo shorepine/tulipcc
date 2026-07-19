@@ -13,7 +13,7 @@ A single voice consists of one or more “oscs” (oscillators).  Oscillators ar
 
 Each osc within a voice may have a lot of individual parameters, but all the voices managed by a single synth will be identically configured, and you send the osc configuration commands to the synth, which then updates the oscs in all its voices.
 
-It’s possible to directly address individual oscs and voices using the AMY interface, but in most cases it’s easiest to control AMY through the synth layer.
+It’s possible to directly address individual oscs using the AMY interface, but in most cases it’s easiest to control AMY through the synth layer.
 
 ## Playing a repeating pattern
 

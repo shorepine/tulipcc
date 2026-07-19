@@ -72,4 +72,7 @@ sed "${SED_INPLACE[@]}" -e "s/micropython./tulipcc\-${timestamp}./g" stage/run/t
 # in AMY's AudioWorklet scope (which only ever loads amy.js). Appended after
 # the filename seds so its comments aren't rewritten.
 cat ../shared/user_c_dsp_web.js >> stage/run/amy-$timestamp.js
+# Generated table-driven C API bridge (amy_c_api_bind + AMY_C_API_PY_INSTALL),
+# used by spss.js. Regenerate in amy/ with `make c-api`.
+cat ../../amy/src/amy_c_api.generated.js >> stage/run/amy-$timestamp.js
 

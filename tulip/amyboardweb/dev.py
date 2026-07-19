@@ -192,6 +192,11 @@ def full_build(skip_amy=False):
         udsp_js = os.path.join(SCRIPT_DIR, "..", "shared", "user_c_dsp_web.js")
         with open(amy_js, "a") as out, open(udsp_js) as src:
             out.write("\n" + src.read())
+        # Generated table-driven C API bridge (amy_c_api_bind +
+        # AMY_C_API_PY_INSTALL), used by spss.js. Regenerate with `make c-api`.
+        capi_js = os.path.join(SCRIPT_DIR, "..", "..", "amy", "src", "amy_c_api.generated.js")
+        with open(amy_js, "a") as out, open(capi_js) as src:
+            out.write("\n" + src.read())
 
     amy_mjs = os.path.join(STAGE_DIR, f"amyboard-{ts}.mjs")
     if os.path.exists(amy_mjs):

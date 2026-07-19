@@ -405,7 +405,8 @@ var AMY = {
   AMYBOARD_MCLK: 3,
   AMYBOARD_MIDI_OUT_TYPE_A: 14,
   AMYBOARD_MIDI_OUT_TYPE_B: 15,
-  AMYBOARD_MIDI_IN: 21
+  AMYBOARD_MIDI_IN: 21,
+  AMY_NUM_MIDI_CHANNELS: 16
 };
 
 if (typeof globalThis !== "undefined") {
