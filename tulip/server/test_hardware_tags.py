@@ -37,6 +37,7 @@ check("description line doesn't count", tags("# DESCRIPTION: encoder controls th
 check("init_display", tags("import amyboard\namyboard.init_display()\namyboard.display.text('hi',0,0,255)\namyboard.display_refresh()") == ["display"])
 check("display.fill_rect", tags("import amyboard\namyboard.display.fill_rect(0,0,10,10,255)\namyboard.display.show()") == ["display"])
 check("draw_waveform helper", tags("import amyboard\ndef loop():\n    amyboard.draw_waveform()") == ["display"])
+check("set_display_rotation", tags("import amyboard\namyboard.set_display_rotation(180)\ndef loop(step):\n    pass\n") == ["display"])
 
 # --- encoder (unified API) ---
 check("amyboard.encoder()", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    v = enc.read(0)") == ["encoder"])
