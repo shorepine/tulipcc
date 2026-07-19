@@ -97,6 +97,14 @@ We've fixed a lot of USB issues recently, so [upgrade to the latest firmware](fi
    ```
  - Add this to your `sketch.py` to make it permanent.
 
+### Hum on the audio output when TRS MIDI in is connected
+
+ - A mains hum (60 Hz / 120 Hz, or 50/100 Hz in 50 Hz countries) that appears the moment you plug a synth or controller into **MIDI in** is a **ground loop**: current AMYboards ground the MIDI in jack's sleeve, and most MIDI gear grounds the cable shield at its MIDI out end (per the MIDI spec). Audio or power connections between the two devices complete the loop.
+ - Fix it by **breaking ground in the MIDI cable** -- MIDI is a current loop and doesn't use ground for data, so this is harmless:
+   - Use a **ground-lifted TRS adapter or cable** (sleeve disconnected), or
+   - Cut the shield at one end of a DIN MIDI cable.
+ - Future board revisions will lift the MIDI in sleeve in hardware -- see [issue #1198](https://github.com/shorepine/tulipcc/issues/1198).
+
 ## Board won't boot / crashes on startup
 
  - **Safe mode**: Hold the BOOT button while AMYboard is powering up. This skips running your `sketch.py` and also runs a hardware self-test (audio input, CV in/out). You'll hear a chime if all tests pass. Once it finishes you'll have a normal REPL where you can fix or delete your sketch.

@@ -265,6 +265,12 @@ print(amyboard.midi_type())   # -> 'A' or 'B', whichever is live
 
 This isn't persisted -- it resets to Type A on reboot -- so put the call in your sketch.
 
+### I hear a mains hum on the audio output when my MIDI gear is plugged into MIDI in
+
+That's a **ground loop**, not a broken board. Current AMYboards connect the TRS MIDI in jack's sleeve to ground, and most MIDI gear grounds the cable shield at its MIDI out (as the MIDI spec directs). If audio or power also connects the two devices, hum current (60 Hz / 120 Hz, or 50/100 Hz in 50 Hz countries) circulates through the shield and lands in your audio.
+
+The cure is to **break the ground in the MIDI cable** -- MIDI data rides a current loop that never uses ground, so nothing else is affected. Use a ground-lifted TRS adapter or cable (sleeve disconnected), or cut the shield at one end of a DIN cable. Future board revisions will lift the MIDI in sleeve in hardware ([issue #1198](https://github.com/shorepine/tulipcc/issues/1198)).
+
 ### Can I connect several MIDI inputs (and power sources) at the same time?
 
 Yes -- it's fine to have TRS MIDI, USB MIDI, and multiple power sources (USB + Eurorack) all connected at once; notes from all MIDI inputs are handled. Just remember the USB port is **device mode only** -- a USB MIDI connection works to a computer (or USB host), not from a controller plugged into the AMYboard (see [USB host](#can-i-plug-a-usb-midi-keyboard-straight-into-the-amyboard-usb-host)).

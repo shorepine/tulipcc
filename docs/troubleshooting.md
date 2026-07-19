@@ -99,6 +99,18 @@ If your USB computer keyboard is not working, please find us on [issues](https:/
 
 If you can't seem to control your modular synths with the DAC, please note that the current revision of the <a href="https://www.makerfabs.com/mabee-dac-gp8413.html">Mabee DAC</a>is set up for TRS (stereo 3.5mm) cables. To use with a mono modular patch cable, you will need a stereo to mono <a href="https://www.amazon.com/3-5mm-Stereo-Adapter-Plated-Female/dp/B0919C5D93">adapter</a> or <a href="https://www.amazon.com/Gold-Plated-Connector-Splitter-RFAdapter-Headphone/dp/B096XNHTH3/">cable</a> plugged in at the DAC end. You can also slightly pull out a mono cable's connector. We are working on fixing this for future batches and will update this when we do.
 
+## You hear a hum from Tulip's audio output when MIDI in is connected
+
+If a loud mains hum (60 Hz / 120 Hz, or 50 Hz / 100 Hz outside North America) appears on Tulip's audio output as soon as you connect another synth or controller to Tulip's **TRS MIDI in**, you're hearing a **ground loop**: current Tulip boards connect the MIDI in jack's sleeve to ground, and most MIDI gear grounds the cable shield at its MIDI out (as the MIDI spec says to). With audio cables also connecting the two devices, hum current flows through the loop and into the audio path.
+
+The fix is to **break the ground connection in the MIDI cable** -- MIDI data travels on a current loop that doesn't use ground at all, so nothing else changes:
+
+ * Use a **ground-lifted ("ground loop isolator") TRS adapter or cable**, or a TRS-to-DIN adapter with the sleeve unconnected.
+ * Or take a DIN MIDI cable and **cut the shield connection at one end**.
+ * Powering both devices from the same outlet/strip, or patching the MIDI through a device that doesn't create the loop, can also quiet it.
+
+Future board revisions will lift the MIDI in sleeve in hardware -- see [issue #1198](https://github.com/shorepine/tulipcc/issues/1198).
+
 ## Any other issues
 
 Please [reach out](#reach-us) with any other issues, and we'll add them here.
