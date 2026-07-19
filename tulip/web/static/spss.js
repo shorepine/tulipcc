@@ -599,17 +599,10 @@ async function start_tulip() {
   await mp.runPythonAsync(`
     import tulip, amy, amy_js_message, amy_sysclock
     import amy_get_synth_commands_js as _amy_gsc_js
-    # import amy_get_input_buffer, amy_set_external_input_buffer
     amy.override_send = amy_js_message
     tulip.amy_ticks_ms = amy_sysclock
     # put the js synth-state readback in the spot tulip.py expects (compiled out of modtulip.c on web)
     tulip.amy_get_synth_commands = lambda synth, include_fx=True: [c for c in _amy_gsc_js(synth, include_fx).split('\\n') if c]
-    #def amy_block_done_callback(f=None):
-    #    amy.block_cb = f
-    # put the js exported AMY shims in the spot tulip expects 
-    #tulip.amy_set_external_input_buffer = amy_set_external_input_buffer
-    #tulip.amy_get_input_buffer = amy_get_input_buffer
-    #tulip.amy_block_done_callback = amy_block_done_callback
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
