@@ -33,25 +33,11 @@
 
 
 #ifndef __EMSCRIPTEN__
-// on web this will get shim in with js 
-STATIC mp_obj_t tulip_amy_ticks_ms(size_t n_args, const mp_obj_t *args) {
-    return mp_obj_new_int(amy_sysclock());
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_ticks_ms_obj, 0, 0, tulip_amy_ticks_ms);
-
-// Smoothed fraction of real time AMY spends rendering (0..1); ~1.0 means overloaded.
-STATIC mp_obj_t tulip_amy_render_load(size_t n_args, const mp_obj_t *args) {
-    return mp_obj_new_float(amy_get_render_load());
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_render_load_obj, 0, 0, tulip_amy_render_load);
-
-STATIC mp_obj_t tulip_amy_set_render_load_threshold(size_t n_args, const mp_obj_t *args) {
-    // MicroPython version of amy/src/pyamy.c:set_render_load_threshold
-    amy_set_render_load_threshold(mp_obj_get_float(args[0]));
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_render_load_threshold_obj, 1, 1, tulip_amy_set_render_load_threshold);
-
+// Generated MicroPython wrappers for AMY's table-driven C API (tulip.amy_send,
+// tulip.amy_ticks_ms, tulip.amy_get_synth_commands, ...). On web these are
+// compiled out; the JS passthrough (amy/src/amy_c_api.generated.js) installs
+// the same names at runtime. Regenerate in amy/ with `make c-api`.
+#include "amy_c_api_mp.inc"
 #endif
 
 STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
@@ -136,28 +122,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_overload_callback_obj, 1, 1
 // AMY is a separate WASM module reachable only via the wire protocol.
 
 #ifndef __EMSCRIPTEN__
-extern int amy_get_output_buffer(int16_t *samples);
-extern int amy_get_input_buffer(int16_t *samples);
-extern void amy_set_external_input_buffer(int16_t * samples);
-
-STATIC mp_obj_t tulip_amy_get_output_buffer(size_t n_args, const mp_obj_t *args) {
-    uint8_t buf[1024];
-    int n = amy_get_output_buffer((int16_t*)buf);
-    if (n == 0) return mp_const_none;
-    mp_obj_t output_bytes = mp_obj_new_bytes(buf, n);
-    return output_bytes;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_output_buffer_obj, 0, 0, tulip_amy_get_output_buffer);
-
-STATIC mp_obj_t tulip_amy_get_input_buffer(size_t n_args, const mp_obj_t *args) {
-    uint8_t buf[1024];
-    int n = amy_get_input_buffer((int16_t*)buf);
-    if (n == 0) return mp_const_none;
-    mp_obj_t input_bytes = mp_obj_new_bytes(buf, n);
-    return input_bytes;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_input_buffer_obj, 0, 0, tulip_amy_get_input_buffer);
-
+// amy_get_output_buffer / amy_get_input_buffer / amy_get_synth_commands are
+// generated (amy_c_api_mp.inc above). Only the retained-pointer input-buffer
+// setter stays hand-written: it holds on to the caller's buffer, which the
+// table-driven kinds don't model.
 STATIC mp_obj_t tulip_amy_set_external_input_buffer(size_t n_args, const mp_obj_t *args) {
     mp_buffer_info_t bufinfo;
     mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
@@ -166,26 +134,6 @@ STATIC mp_obj_t tulip_amy_set_external_input_buffer(size_t n_args, const mp_obj_
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_input_buffer_obj, 1, 1, tulip_amy_set_external_input_buffer);
-
-STATIC mp_obj_t tulip_amy_get_synth_commands(size_t n_args, const mp_obj_t *args) {
-    // MicroPython version of amy/src/pyamy.c:get_synth_commands, to retrieve synth config from MP.
-    // We know we have exactlu one arg from the MP_DEFINE_CONST_FUN declaration below.
-    char s[MAX_MESSAGE_LEN];
-    void *state = NULL;
-    int synth = mp_obj_get_int(args[0]);
-    bool include_fx = true;
-    if (n_args > 1)  include_fx = mp_obj_get_int(args[1]);
-    // Make a new list object, append the retrieved (and converted) strings to it.
-    mp_obj_t list = mp_obj_new_list(0, NULL);
-    do {
-        state = yield_synth_commands(synth, s, MAX_MESSAGE_LEN, include_fx, state);
-        int slen = strlen(s);
-        if (slen)
-            mp_obj_list_append(list, mp_obj_new_str(s, slen));
-    } while (state != NULL);
-    return list;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_synth_commands_obj, 1, 2, tulip_amy_get_synth_commands);
 
 STATIC mp_obj_t tulip_sequencer_start(void) {
     extern void sequencer_midi_start(void);
@@ -374,11 +322,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_local_obj, 1, 1, tulip_mid
 
 
 #ifndef __EMSCRIPTEN__
-STATIC mp_obj_t tulip_amy_send(size_t n_args, const mp_obj_t *args) {
-    amy_add_message((char*)mp_obj_str_get_str(args[0]));
-    return mp_const_none;
-}
-MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
+// tulip.amy_send is generated (amy_capi_mp_send_wire in amy_c_api_mp.inc).
 
 STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
 #if SYSEX_COPY_SLOTS > 0
@@ -1831,10 +1775,11 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_overload_callback), MP_ROM_PTR(&tulip_amy_overload_callback_obj) },
 #ifndef __EMSCRIPTEN__
-    { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
-    { MP_ROM_QSTR(MP_QSTR_amy_get_output_buffer), MP_ROM_PTR(&tulip_amy_get_output_buffer_obj) },
+    // Generated table-driven AMY C API entries (amy_send, amy_ticks_ms,
+    // amy_get_synth_commands, amy_dump_state, ...). Regenerate in amy/ with
+    // `make c-api`.
+#include "amy_c_api_mp_table.inc"
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
-    { MP_ROM_QSTR(MP_QSTR_amy_get_synth_commands), MP_ROM_PTR(&tulip_amy_get_synth_commands_obj) },
     { MP_ROM_QSTR(MP_QSTR_sequencer_start), MP_ROM_PTR(&tulip_sequencer_start_obj) },
 #endif
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
@@ -1855,11 +1800,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #endif
 
 #ifndef __EMSCRIPTEN__
-    { MP_ROM_QSTR(MP_QSTR_amy_send), MP_ROM_PTR(&tulip_amy_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_send_sysex), MP_ROM_PTR(&tulip_amy_send_sysex_obj) },
-    { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
-    { MP_ROM_QSTR(MP_QSTR_amy_render_load), MP_ROM_PTR(&tulip_amy_render_load_obj) },
-    { MP_ROM_QSTR(MP_QSTR_amy_set_render_load_threshold), MP_ROM_PTR(&tulip_amy_set_render_load_threshold_obj) },
     { MP_ROM_QSTR(MP_QSTR_pcm_load_file), MP_ROM_PTR(&tulip_pcm_load_file_obj) },
 #endif
 

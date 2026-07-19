@@ -18,45 +18,35 @@ var amy_audioin_toggle = false;
 var editor_height = 200;
 var tulip_height = null; // gets set on launch
 var amy_module = null;
-var amy_yield_synth_commands = null;
+var amy_c_api = null;
 var res_ptr_in = null;
 var res_ptr_out = null;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
+  // Table-driven C API bridge (send_wire, ticks_ms, get_synth_commands, ...).
+  // amy_c_api_bind ships inside amy.js (amy/src/amy_c_api.generated.js,
+  // regenerate in amy/ with `make c-api`). The lifecycle/audio-worklet starters
+  // below are web-only setup and stay hand-wrapped.
+  amy_c_api = amy_c_api_bind(am);
   amy_live_start_web = am.cwrap(
-    'amy_live_start_web', null, null, {async: true}    
+    'amy_live_start_web', null, null, {async: true}
   );
   amy_live_start_web_audioin = am.cwrap(
-    'amy_live_start_web_audioin', null, null, {async: true}    
+    'amy_live_start_web_audioin', null, null, {async: true}
   );
   amy_live_stop = am.cwrap(
-    'amy_live_stop', null,  null, {async: true}    
-  );
-  amy_bleep = am.cwrap(
-    'amy_bleep', null, ['number']
+    'amy_live_stop', null,  null, {async: true}
   );
   amy_start_web_no_synths = am.cwrap(
     'amy_start_web_no_synths', null, null
   );
-  amy_add_message = am.cwrap(
-    'amy_add_message', null, ['string']
-  );
-  amy_reset_sysclock = am.cwrap(
-    'amy_reset_sysclock', null, null
-  );
-  amy_ticks = am.cwrap(
-    'sequencer_ticks', 'number', [null]
-  );
-  amy_sysclock = am.cwrap(
-    'amy_sysclock', 'number', [null]
-  );
-  amy_process_single_midi_byte = am.cwrap(
-    'amy_process_single_midi_byte', null, ['number, number']
-  );
-  amy_yield_synth_commands = am.cwrap(
-    'yield_synth_commands', 'number', ['number', 'number', 'number', 'boolean', 'number']
-  );
+  amy_bleep = amy_c_api.bleep;
+  amy_add_message = amy_c_api.send_wire;
+  amy_reset_sysclock = amy_c_api.reset_sysclock;
+  amy_ticks = amy_c_api.sequencer_ticks;
+  amy_sysclock = amy_c_api.ticks_ms;
+  amy_process_single_midi_byte = amy_c_api.process_single_midi_byte;
   amy_start_web_no_synths();
   amy_bleep(0); // won't play until live audio starts
   amy_module = am;
@@ -65,82 +55,25 @@ amyModule().then(async function(am) {
 
 });
 
-// Read a NUL-terminated C string out of the AMY WASM heap (used to read back the
-// wirecode strings yielded by yield_synth_commands).
-function read_c_string_from_heap(ptr, maxLen) {
-  if (!amy_module || !amy_module.HEAPU8) {
-    return "";
-  }
-  const heap = amy_module.HEAPU8;
-  const start = Number(ptr);
-  const limit = Math.max(0, Number(maxLen) || 0);
-  if (!Number.isInteger(start) || start <= 0 || limit <= 0) {
-    return "";
-  }
-  const end = Math.min(heap.length, start + limit);
-  let out = "";
-  for (let i = start; i < end; i += 1) {
-    const b = heap[i];
-    if (b === 0) {
-      break;
-    }
-    out += String.fromCharCode(b);
-  }
-  return out;
-}
-
-// Canonical JS bridge for AMY's get_synth_commands. The C convenience wrapper
-// exists for CPython (amy/src/pyamy.c) and for MicroPython as
-// tulip.amy_get_synth_commands (modtulip.c) -- but the MicroPython one is compiled
-// out on web (#ifndef __EMSCRIPTEN__) because here micropython does not link AMY;
-// AMY runs in a separate WASM worklet. So we bridge it from JS instead, driving
-// AMY's exported low-level generator yield_synth_commands. Reads back the wirecode
-// commands that reconstruct synth `synth` (0..63, AMY's default max_synths) from
-// AMY's current state and returns them as an array of strings (empty if the synth
-// has no state). include_fx (default true) also emits the global FX commands.
-// Throws if AMY's WASM module is not loaded or `synth` is out of range.
+// JS entry point for reading synth commands: array of wirecode strings that
+// reconstruct synth `synth` (empty if the synth has no state). include_fx
+// (default true) also emits the global FX commands. Backed by the generated
+// amy_c_api.get_synth_commands (which drives AMY's yield_synth_commands
+// generator and returns the commands newline-joined).
 function get_synth_commands(synth, include_fx = true) {
   const s = Number(synth);
   if (!Number.isInteger(s) || s < 0 || s > 63) {
     throw new Error("get_synth_commands: synth must be an integer 0..63.");
   }
-  if (!amy_module || typeof amy_yield_synth_commands !== "function") {
+  if (!amy_c_api) {
     throw new Error("get_synth_commands: AMY WASM module is not loaded.");
   }
-  const maxMessageLen = 1024;
-  const bufferPtr = amy_module._malloc(maxMessageLen);
-  if (!bufferPtr) {
-    throw new Error("get_synth_commands: failed to allocate AMY message buffer.");
-  }
-  const lines = [];
-  let state = 0;
-  let iterations = 0;
-  const MAX_ITERATIONS = 500;
-  try {
-    do {
-      state = amy_yield_synth_commands(s, bufferPtr, maxMessageLen, !!include_fx, state);
-      const wire = read_c_string_from_heap(bufferPtr, maxMessageLen).trim();
-      if (wire) {
-        lines.push(wire);
-      }
-      if (++iterations >= MAX_ITERATIONS) {
-        console.error("get_synth_commands: bailed after " + MAX_ITERATIONS + " iterations (state=" + state + ")");
-        break;
-      }
-    } while (state != 0);
-  } finally {
-    amy_module._free(bufferPtr);
-  }
-  return lines;
+  return amy_c_api.get_synth_commands(s, include_fx ? 1 : 0).split('\n').filter(function(c) { return c; });
 }
-// spss.js is loaded as a plain <script>, so this is already a global, but be
-// explicit that it is the intended JS entry point for reading synth commands.
 globalThis.get_synth_commands = get_synth_commands;
 
 // String-returning wrapper for the MicroPython bridge (one wire command per
-// line, "" if the synth is unconfigured or AMY isn't loaded yet). Installed as
-// tulip.amy_get_synth_commands in start_tulip so e.g. tulip.save_synth_state()
-// works on web like it does on firmware.
+// line, "" if the synth is unconfigured or AMY isn't loaded yet).
 function amy_get_synth_commands_js(synth, include_fx) {
   try {
     return get_synth_commands(synth, !!include_fx).join('\n');
@@ -583,26 +516,21 @@ async function start_tulip() {
   // Start midi
   await start_midi();
 
-  // Let micropython call an exported AMY function
-  await mp.registerJsModule('amy_js_message', amy_add_message);
-  await mp.registerJsModule('amy_sysclock', amy_sysclock);
+  // Let micropython call the exported AMY C API. amy_c_api holds every
+  // table-driven binding (see amy/src/amy_c_api.generated.js); the install
+  // snippet wires them up as the canonical amy.<name> backends plus the
+  // legacy tulip.amy_* redirects.
+  await mp.registerJsModule('amy_c_api_js', amy_c_api);
   await mp.registerJsModule('tulip_world_upload_file', tulip_world_upload_file);
-  // AMY WASM lives in a separate module; bridge synth-state readback for Python via JS.
-  await mp.registerJsModule('amy_get_synth_commands_js', amy_get_synth_commands_js);
-//  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
-//  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
 
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);
 
   // Set up the micropython context for AMY.
+  await mp.runPythonAsync(AMY_C_API_PY_INSTALL);
   await mp.runPythonAsync(`
-    import tulip, amy, amy_js_message, amy_sysclock
-    import amy_get_synth_commands_js as _amy_gsc_js
-    amy.override_send = amy_js_message
-    tulip.amy_ticks_ms = amy_sysclock
-    # put the js synth-state readback in the spot tulip.py expects (compiled out of modtulip.c on web)
-    tulip.amy_get_synth_commands = lambda synth, include_fx=True: [c for c in _amy_gsc_js(synth, include_fx).split('\\n') if c]
+    import amy
+    amy.override_send = amy._send_wire
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
