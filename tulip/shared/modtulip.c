@@ -140,19 +140,6 @@ extern int amy_get_output_buffer(int16_t *samples);
 extern int amy_get_input_buffer(int16_t *samples);
 extern void amy_set_external_input_buffer(int16_t * samples);
 
-mp_obj_t amy_block_done_callback = NULL;
-
-STATIC mp_obj_t tulip_amy_block_done_callback(size_t n_args, const mp_obj_t *args) {
-    if(n_args==0) {
-        amy_block_done_callback = NULL;
-    } else {
-        amy_block_done_callback = args[0];
-    }
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_block_done_callback_obj, 0, 1, tulip_amy_block_done_callback);
-
-
 STATIC mp_obj_t tulip_amy_get_output_buffer(size_t n_args, const mp_obj_t *args) {
     uint8_t buf[1024];
     int n = amy_get_output_buffer((int16_t*)buf);
@@ -1844,7 +1831,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_overload_callback), MP_ROM_PTR(&tulip_amy_overload_callback_obj) },
 #ifndef __EMSCRIPTEN__
-    { MP_ROM_QSTR(MP_QSTR_amy_block_done_callback), MP_ROM_PTR(&tulip_amy_block_done_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_output_buffer), MP_ROM_PTR(&tulip_amy_get_output_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
