@@ -278,7 +278,7 @@ Please see [AMY synthesizer details](synth.md) for more explanation on the synth
 A note on list parameters:  When an argument is a list of parameters, you can in general set any subset of those parameters by omitting the values you don't want to change - either by leaving them in their initial `AMY_UNSET` value in C, or by having missing values in Python lists.  For instance, you can set up an envelope that moves immediately to 1, then decase to a sutain level of 0.5 over 200ms, then has a 300ms decay to zero on note-off, with `bp0='0,1,200,0.5,300,0'.  Subsequently, you could change just the sustain level (the 4th value in the list) to 0.2 with `bp0=,,,0.2`.  However, there's at present no way to say ".. and the list should now only be 4 items long.  This only affects breakpoint sets which are variable length, but the net result is that once you have a certain number of breakpoints in a list, you cannot shorten it except by resetting the whole osc and building it all up again.
 
 
-### `synth`s and `voice`s:
+### `synth`s:
 
 | Wire code   | C `amy_event` | Python / JS   | Type-range  | Notes                                 |
 | ------ | -------- | ---------- | ----------  | ------------------------------------- |
@@ -293,11 +293,10 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 | `io`   | **TODO** | `midi_note_cmd`  | M,L,N,X,O,CMD | MIDI Note on/off command for this synth.  M=MIDI note number, or -1 for all notes.  Other args map the velocity, as for `ic`. `%n` is substituted with the note number. |
 | `ip`   | `pedal` | `pedal` | int | Non-zero means pedal is down (i.e., sustain).  Must be used with `synth`. |
 | `it`   | `to_synth` |  `to_synth` | 0-31 | New synth number, when changing the number (MIDI channel for n=1..16) of an entire synth. |
-| `iv`   | `num_voices` | `num_voices` | int | The number of voices to allocate when defining a synth, alternative to directly specifying voice numbers with `voices=`.  Only valid with `synth=X, patch[_number]=Y`. |
+| `iv`   | `num_voices` | `num_voices` | int | The number of voices to allocate when defining a synth.  Only valid with `synth=X`. |
 | `iV`   | `synth_level` | `synth_level` | float >= 0 | Per-instrument level, default 1.0.  Scales the audio of every osc in the synth at render time (applied at the output stage, just before the pan/bus mix), independent of any osc `amp` settings.  The natural target for a channel volume control (e.g. MIDI CC 7) — works for every synth type, including drum kits whose per-drum oscs carry their own amps. |
 | `iy`   | `bus`   | `bus`   | int | Bus onto which the synth outputs are added (synonym for `y`). |
 | `K`    | `patch_number` | `patch` | uint 0-X | Apply a saved or user patch to a specified synth or voice. Built-ins: 0-127 Juno, 128-255 DX7, 256 piano, 258 legacy GM drums, 384-390 Gamma9001 GM drum kits (see Drum kits below), 1024+ user patches. |
-| `r`    | `voices[]` | `voices` | int[,int] | Comma separated list of voices to send message to, or load patch into. |
 | `u`    | **TODO**| `patch_string` | string | Provide AMY message to define up to 32 patches in RAM with ID numbers (1024-1055) provided via `patch_number`, or directly configure a `synth`. |
 
 

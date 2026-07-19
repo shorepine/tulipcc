@@ -50,11 +50,11 @@ Once you've confirmed AMY is running on your chip, read our [tutorial](tutorial.
 ```c
 // Will play MIDI note 50 on patch 130
 amy_event e = amy_default_event();
-e.osc = 0;
+e.synth = 1;
+e.num_voices = 1;
 e.patch_number = 130;
 e.velocity = 1;
 e.midi_note = 50;
-e.voices[0] = 0;
 amy_add_event(&e);
 ```
 
