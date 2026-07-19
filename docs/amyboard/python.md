@@ -240,25 +240,36 @@ First, copy the files you want to the card on your computer. Then insert it into
 
 ## Working with MIDI in Python
 
+To receive MIDI, register a callback with `midi.add_callback()`. Your function is called once per incoming message, with the message as a `bytes` object:
+
 ```python
-import tulip
+import midi
 
-# Set up a MIDI callback
-def my_midi_callback(is_sysex):
-    if is_sysex:
-        return  # Ignore sysex
-    message = tulip.midi_in()
-    while message is not None and len(message) > 0:
-        # message is a bytes object
-        status = message[0]
-        if status & 0xF0 == 0x90:  # Note on
-            note = message[1]
-            vel = message[2]
-            print(f"Note on: {note} velocity: {vel}")
-        # Maybe there are more messages queued?
-        message = tulip.midi_in()
+def my_midi_callback(message):
+    status = message[0]
+    if status & 0xF0 == 0x90:  # Note on
+        note = message[1]
+        vel = message[2]
+        print(f"Note on: {note} velocity: {vel}")
 
-tulip.midi_callback(my_midi_callback)
+midi.add_callback(my_midi_callback)
+# ... later, to stop receiving:
+midi.remove_callback(my_midi_callback)
+```
+
+You can register as many callbacks as you like; they all receive every message. This is how AMYboard's own features (like `amyboard.show_midi_ccs()`) listen for MIDI, and the factory self-test uses the same pattern for its MIDI loopback check.
+
+Note that AMYboard's system MIDI dispatcher drains the incoming MIDI queue for you at boot, so polling `tulip.midi_in()` yourself will always return `None` — the dispatcher has already consumed each message and handed it to the registered callbacks. Likewise, don't call `tulip.midi_callback()` directly: that would replace the system dispatcher and silently break everything else listening for MIDI. Always use `midi.add_callback()` / `midi.remove_callback()`.
+
+For sysex messages, set `midi.sysex_callback` to a function; it receives the full sysex payload as `bytes`:
+
+```python
+import midi
+
+def my_sysex_callback(payload):
+    print("sysex:", payload.hex())
+
+midi.sysex_callback = my_sysex_callback
 ```
 
 ### Sending MIDI out
