@@ -571,7 +571,7 @@ def process_key( key ):
             note_num = 36 + 12 * math.log( ratio ) / math.log( 2 )
             print( f"note_num: {note_num}" )
                   
-            amy.send(voices=0,patch=patch_num,note=note_num,vel=1)
+            amy.send(synth=1,note=note_num,vel=1)
             
         pass
     
@@ -589,11 +589,11 @@ def process_key( key ):
         #print(1)
         patch_num += 1
         print(f'patch_num: {patch_num}')
-        amy.send(osc=0,vel=0)
+        amy.send(synth=1,patch=patch_num)
     elif key == 22:#print(-1)
         patch_num -= 1
         print(f'patch_num: {patch_num}')
-        amy.send(osc=0,vel=0)
+        amy.send(synth=1,patch=patch_num)
 
     else:   
         print("unhandled key: %d" % (key))
@@ -601,7 +601,8 @@ def process_key( key ):
 
 
 patch_num = 129
-amy.send(voices=0,patch=patch_num,note=45,vel=1)
+amy.send(synth=1,patch=patch_num,num_voices=1)
+amy.send(synth=1,note=45,vel=1)
 
 tulip.key_scan(1)
 tulip.keyboard_callback( process_key )
