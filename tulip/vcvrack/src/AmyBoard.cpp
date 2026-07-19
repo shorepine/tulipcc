@@ -318,6 +318,17 @@ struct AmyLabels : TransparentWidget {
     }
 };
 
+// Panel button that opens the AMYboard web editor in the system browser.
+struct ProgButton : app::SvgButton {
+    ProgButton() {
+        addFrame(Svg::load(asset::system("res/ComponentLibrary/TL1105_0.svg")));
+        addFrame(Svg::load(asset::system("res/ComponentLibrary/TL1105_1.svg")));
+    }
+    void onAction(const ActionEvent& e) override {
+        system::openBrowser("https://amyboard.com/editor");
+    }
+};
+
 struct AmyWidget : ModuleWidget {
     AmyWidget(AmyModule* module) {
         setModule(module);
@@ -335,9 +346,11 @@ struct AmyWidget : ModuleWidget {
         oled->box.size = mm2px(Vec(34.0, 34.0));
         addChild(oled);
 
-        // Encoder on the left, its push button beside it
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(14.0, 49.5)), module, AmyModule::ENC_PARAM));
-        addParam(createParamCentered<TL1105>(mm2px(Vec(36.0, 49.5)), module, AmyModule::BTN_PARAM));
+        // Encoder on the left, its push button directly beside it, and the
+        // PROG button (opens amyboard.com/editor) on the right.
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.5, 49.5)), module, AmyModule::ENC_PARAM));
+        addParam(createParamCentered<TL1105>(mm2px(Vec(22.5, 49.5)), module, AmyModule::BTN_PARAM));
+        addChild(createWidgetCentered<ProgButton>(mm2px(Vec(40.0, 49.5))));
 
         // Jack grid: rows of 2 columns
         static const float colL = 15.4, colR = 35.4;
@@ -354,8 +367,7 @@ struct AmyWidget : ModuleWidget {
         labels->box.size = box.size;
         labels->labels = {
             {25.4, 3.5, 9.f, "AMYBOARD"},
-            {14.0, 43.0, 8.f, "ENC"},
-            {36.0, 44.5, 8.f, "PUSH"},
+            {40.0, 44.5, 8.f, "PROG"},
             {25.4, 59.3, 8.f, "AUDIO IN"},
             {25.4, 74.3, 8.f, "AUDIO OUT"},
             {25.4, 89.3, 8.f, "CV IN"},
