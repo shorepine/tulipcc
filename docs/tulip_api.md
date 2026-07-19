@@ -498,9 +498,10 @@ You can use `amy.py` to control the AMY synthesizer directly.
 amy.drums() # plays a test song
 amy.volume(4) # change volume
 amy.reset() # stops all music / sounds playing
-amy.send(voices='0', load_patch=129, note=45, vel=1) # plays a tone
-amy.send(voices='0', pan=0) # set to the right channel
-amy.send(voices='0', pan=1) # set to the left channel
+amy.send(synth=1, patch=129, num_voices=1) # set up a DX7 patch on synth 1
+amy.send(synth=1, note=45, vel=1) # plays a tone
+amy.send(synth=1, pan=0) # set to the left channel
+amy.send(synth=1, pan=1) # set to the right channel
 
 # start mesh mode (control multiple speakers over wifi)
 # once mesh mode is set, you can't go back to local mode until you restart Tulip. 
@@ -509,8 +510,9 @@ alles.mesh(local_ip='192.168.50.4') # useful for setting a network on Tulip Desk
 
 alles.map() # returns booted Alles synths on the mesh
 
-amy.send(voices='0', load_patch=101, note=50, vel=1) # all Alles speakers in a mesh will respond
-amy.send(voices='0', load_patch=101, note=50, vel=1, client=2) # just a certain client
+amy.send(synth=1, patch=101, num_voices=1) # load a patch on every Alles speaker in the mesh
+amy.send(synth=1, note=50, vel=1) # all Alles speakers in a mesh will respond
+amy.send(synth=1, note=50, vel=1, client=2) # just a certain client
 ```
 
 To load your own WAVE files as samples you can play like an instrument, use `amy.load_sample`:

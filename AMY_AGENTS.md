@@ -27,7 +27,7 @@ invent names like `lfo_osc` / `lfo0_osc`:
 osc wave note vel amp freq duty feedback time reset phase pan client volume
 pitch_bend filter_freq resonance bp0 bp1 eg0 eg1 eg0_type eg1_type debug
 chained_osc mod_source eq filter_type ratio latency_ms algo_source load_sample
-transfer_file disk_sample algorithm chorus reverb echo patch voices
+transfer_file disk_sample algorithm chorus reverb echo patch
 external_channel portamento sequence tempo synth pedal synth_flags num_voices
 oscs_per_voice to_synth grab_midi_notes note_source synth_delay preset
 num_partials start_sample stop_sample bus midi_cc midi_note_cmd cv_trigger
