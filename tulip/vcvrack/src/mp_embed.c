@@ -102,7 +102,7 @@ static char *exec_pop(void) {
     return code;
 }
 
-// Shorepine control-API sysex payloads (zT/zD/zP/zA/zY + base64 transfer
+// Shorepine control-API sysex payloads (zT/zD/zP/zY + base64 transfer
 // chunks) queued from the CoreMIDI thread (vcv_midi.c). The MP thread
 // processes each with amy_add_message_from_sysex() and then emits the AK —
 // same process-then-ack contract as hardware's scheduled
@@ -144,7 +144,7 @@ static char *sysex_pop(void) {
 }
 
 // Process one control frame on the MP thread. amy_add_message_from_sysex
-// routes transfer chunks correctly and runs the zP/zA hooks, which call
+// routes transfer chunks correctly and runs the zP hook, which calls
 // into MicroPython — hence the NLR guard.
 static void process_sysex_msg(char *msg) {
     extern void midi_out(uint8_t *bytes, uint16_t len);

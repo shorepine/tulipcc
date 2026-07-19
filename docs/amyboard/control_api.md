@@ -86,7 +86,6 @@ an end-of-message marker that several commands accept/strip.
 | *(base64)* | **One file/sample data chunk.** During a `zT` (or sample) transfer, send the file bytes in ≤188-byte raw chunks, each base64-encoded, one chunk per SysEx frame, until `<size>` bytes have been delivered. |
 | `zD Z` | **Dump all synth state** back to the host as SysEx (see [Reading state](#reading-amy-state-zd)). |
 | `zD<path>Z` | **Read a file** off the board's filesystem, streamed back as SysEx. |
-| `zA Z` / `zA<path>Z` | **Write current AMY state into a sketch** on disk — updates the `_auto_generated_knobs` block of `/user/current/sketch.py` (or `<path>`). |
 | `zP<python>Z` | **Run a line of Python** on the board. e.g. `zPimport amyboard; amyboard.restart_sketch()Z`. |
 | `zY1Z` / `zY0Z` | **Sequencer transport** — start / stop the step sequencer without MIDI clock. |
 | `zB Z` / `zB0Z` | **Reboot to bootloader** — skip `sketch.py` on next boot (frees the scheduler). USB re-enumerates. |
@@ -155,7 +154,7 @@ each frame's base64 to get the file bytes.
 instrument plus the global effects (reverb / chorus / echo / EQ) — as a series of
 newline-separated **AMY wire-command lines**. Reassemble the frames as above; the
 decoded text is the wire protocol you could replay with `amy.send(...)` to restore
-that exact state. This is what `zA` writes into a sketch's knob block.
+that exact state.
 
 ### Run Python / restart the sketch (`zP`)
 
@@ -195,12 +194,6 @@ Traceback (most recent call last):
   File "/user/current/sketch.py", line 4, in <module>
 NameError: name 'foo' isn't defined
 ```
-
-### Save the current state into a sketch (`zA`)
-
-`zAZ` rewrites the `_auto_generated_knobs` section of `/user/current/sketch.py`
-with the board's current AMY state, so a later restart restores it. Pass a path
-(`zA/user/current/other.py Z`) to target a different file.
 
 ### Ping (`zI`)
 
@@ -275,7 +268,7 @@ instead of rolling your own.
 
 ## Where this is implemented (source of truth)
 
-- **Transfer-layer command dispatch** (`zT`, `zD`, `zA`, `zP`, `zY`, `zF`, `zS`,
+- **Transfer-layer command dispatch** (`zT`, `zD`, `zP`, `zY`, `zF`, `zS`,
   sample load): [`amy/src/parse.c`](https://github.com/shorepine/amy/blob/main/src/parse.c)
   — `amy_parse_transfer_layer_message()`.
 - **Reboot / ping / SysEx intake** (`zB`, `zI`, the `00 03 45` gate):

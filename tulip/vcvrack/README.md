@@ -40,7 +40,7 @@ branches on that exactly as it does for `AMYBOARD` / `AMYBOARD_WEB` /
   publishes a virtual MIDI in/out pair named **"AMYboard VCV"** (CoreMIDI on
   macOS, an ALSA sequencer client on Linux). Open
   [amyboard.com](https://amyboard.com), switch to control mode, and pick the
-  AMYboard VCV ports — sketch write (zT), knobs (zA), run-python (zP), dumps
+  AMYboard VCV ports — sketch write (zT), run-python (zP), dumps
   (zD) and ping (zI) all behave as on hardware, ACK'd per frame. Wire paths
   like /user/current/sketch.py are relocated onto ~/Documents/AMYboard/.
   (Don't also select "AMYboard VCV" as the module's Rack MIDI input — that

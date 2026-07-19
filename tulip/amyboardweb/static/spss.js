@@ -18,7 +18,6 @@ var _url_env_pending = false;
 var _url_env_autoplay = false;
 var _url_env_loaded = false;
 var amy_yield_synth_commands = null;
-var amy_dump_state_to_string_c = null;
 
 var _python_error_buffer = "";
 var _python_error_timer = null;
@@ -951,9 +950,6 @@ if (typeof amyModule === 'function') _amy_wasm_ready = amyModule().then(async fu
   amy_yield_synth_commands = am.cwrap(
     'yield_synth_commands', 'number', ['number', 'number', 'number', 'boolean', 'number']
   );
-  amy_dump_state_to_string_c = am.cwrap(
-    'amy_dump_state_to_string', 'number', ['number']
-  );
   amy_start_web_no_synths();
   amy_module = am;
   res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
@@ -1412,7 +1408,7 @@ window.clear_current_channel_patch = async function() {
   // SYNC 2: reset this channel to the default patch (K257 — even on channel 10,
   // whose drum default is boot-only) and position the UI knobs to its defaults —
   // no knob-value/CC flood (K257 reinstalls the channel's default CC map on the
-  // device), no zA AMY-state pull. position_current_channel_from_log also
+  // device), no AMY-state pull. position_current_channel_from_log also
   // greys/ungreys the knob sections for the reloaded patch.
   reset_synth_in_sketch(synth);          // sends + records i<synth>ic255, K257iv6
   // Clear on an inactive channel just sent its default patch live — the channel
@@ -4591,7 +4587,7 @@ async function upload_current_environment() {
 
     // SYNC 2: the knob log is the single source of truth — splice it into the
     // editor's code so the uploaded sketch.py carries the current knobs. No
-    // AMY-state grab (zA / update_sketch_knobs) in either mode.
+    // device-side AMY-state grab in either mode.
     if (editor) {
         editor.setValue(splice_knobs_into_sketch(editor.getValue(), serialize_knob_log()));
     }
@@ -4956,21 +4952,6 @@ async function load_knobs_from_sketch() {
     }
 }
 
-function generate_knobs_text_js() {
-    // Call the C amy_dump_state_to_string via WASM. Returns the state text.
-    if (!amy_module || !amy_dump_state_to_string_c || !amy_module.HEAPU8) return '';
-    var lenPtr = amy_module._malloc(4);
-    var strPtr = amy_dump_state_to_string_c(lenPtr);
-    // Read 4-byte little-endian length from HEAPU8 (HEAPU32 isn't exported on this module).
-    var h = amy_module.HEAPU8;
-    var len = h[lenPtr] | (h[lenPtr + 1] << 8) | (h[lenPtr + 2] << 16) | (h[lenPtr + 3] << 24);
-    amy_module._free(lenPtr);
-    if (!strPtr || len <= 0) return '';
-    var result = read_c_string_from_heap(strPtr, len + 1);
-    amy_module._free(strPtr);
-    return result;
-}
-
 async function _send_text_file_to_amyboard(path, text) {
     // Upload a text file to the AMYboard via zT (base64-chunked over sysex).
     var encoder = new TextEncoder();
@@ -5294,7 +5275,7 @@ function show_firmware_warning(date, latest, reason, opts) {
 // splice it into the editor's code to form the sketch, then transfer it and
 // restart the Python sketch (which resets AMY and replays the knob block on top
 // of a default synth 1 — see amyboard.py _apply_knobs_text). No implicit pull, no
-// merge, no zA, no bootloader reboot: the board becomes exactly what's in this
+// merge, no bootloader reboot: the board becomes exactly what's in this
 // editor. Live MIDI/CV tweaks and sketch-code effects are deliberately NOT saved.
 async function write_sketch_to_amyboard() {
     if (!editor) return;
@@ -5335,7 +5316,7 @@ async function write_sketch_to_amyboard() {
     } else {
         // Simulate: write the file to the in-browser MicroPython FS and restart
         // the sketch — the SAME restart_sketch primitive as hardware (reset AMY,
-        // replay knobs, run sketch). No AMY-state dump (update_sketch_knobs).
+        // replay knobs, run sketch). No AMY-state dump.
         if (!mp) return;
         try {
             mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', sketchText);
@@ -5351,7 +5332,7 @@ window.write_sketch_to_amyboard = write_sketch_to_amyboard;
 
 // SYNC 2 — Read from your AMYboard. Pull-only: replace the editor with the
 // board's sketch.py and position the knobs from its _auto_generated_knobs block.
-// Never writes to the board and never grabs live AMY state (no zA).
+// Never writes to the board and never grabs live AMY state.
 async function read_sketch_from_amyboard() {
     if (amyboard_mode === 'control') {
         // Fail-safe firmware check (only aborts if the user declines a confirmed-old board).
@@ -6150,8 +6131,7 @@ function sync_amy_state_async() {
 }
 
 // ── Control mode: Pull from AMYboard ────────────────────────────────────────
-// Pull = zA (update sketch.py with AMY state on disk) then zD (send it back).
-// The zA runs update_sketch_knobs() on hardware, then zD reads the file.
+// Pull = zD (read sketch.py straight off the board).
 
 // Max time to wait for the zD response. Large sketches (e.g. embedded MIDI
 // files) can easily exceed 16 KB once base64-encoded and wrapped in sysex;
@@ -6161,9 +6141,8 @@ var _SYNC_TIMEOUT_MS = 20000;
 
 async function sync_amy_state() {
     // SYNC 2: pull-only. Read sketch.py straight off the board with zD — the
-    // board's sketch.py is the single source of truth, so we no longer send zA
-    // to dump live AMY state into it first. Gates behind the green Pull button
-    // before sending any sysex.
+    // board's sketch.py is the single source of truth. Gates behind the green
+    // Pull button before sending any sysex.
     console.log('sync_amy_state: start');
     try {
         await _show_syncing_modal();
@@ -6190,8 +6169,7 @@ async function sync_amy_state() {
             if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('sync timeout')); }
         }
     }, _SYNC_TIMEOUT_MS);
-    // Pull the file directly. No zA AMY-state grab, so no wait for a device-side
-    // update_sketch_knobs() hook — just request sketch.py off the board.
+    // Pull the file directly — just request sketch.py off the board.
     console.log('sync_amy_state: sending zD');
     amy_add_log_message('zD/user/current/sketch.pyZ');
 }
@@ -6571,8 +6549,6 @@ async function start_amyboard() {
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('amyboard_world_upload_file', amyboard_world_upload_file);
   await mp.registerJsModule('amy_get_output_buffer', get_output_audio_samples);
-  // AMY WASM lives in a separate module; bridge amy_dump_state for Python via JS.
-  await mp.registerJsModule('amy_dump_state_js', generate_knobs_text_js);
 //  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
 //  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
 
@@ -6581,12 +6557,11 @@ async function start_amyboard() {
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import tulip, amy, amy_js_message, amy_sysclock, amy_get_output_buffer as _amy_get_output_buf_js, amy_dump_state_js as _amy_dump_state_js
+    import tulip, amy, amy_js_message, amy_sysclock, amy_get_output_buffer as _amy_get_output_buf_js
     amy.override_send = amy_js_message
     amy.ticks_ms = amy_sysclock
     tulip.amy_ticks_ms = amy_sysclock
     tulip.amy_get_output_buffer = _amy_get_output_buf_js
-    tulip.amy_dump_state = _amy_dump_state_js
   `);
 
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
