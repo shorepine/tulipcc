@@ -106,7 +106,12 @@ class AMYboardLink:
         self.transport = None
 
     def __enter__(self):
-        return self.open()
+        # idempotent: `with AMYboardLink(...).open() as link:` must not open a
+        # second transport — on ALSA two amidi readers fight over the rawmidi
+        # port and ACKs are lost
+        if not self.transport:
+            self.open()
+        return self
 
     def __exit__(self, *a):
         self.close()

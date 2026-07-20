@@ -6,8 +6,8 @@ Two interchangeable backends:
     mido is importable (macOS dev machines, most desktops).
   * AlsaTransport — the ALSA CLI tools (`amidi`). No Python MIDI libraries or
     root needed; the backend the Raspberry Pi HW-CI runner uses. Sends are
-    one-shot `amidi -S`; receives are a persistent line-buffered `amidi -d`
-    reader parsed into SysEx frames.
+    one-shot `amidi -S`; receives are a persistent unbuffered `amidi -d`
+    reader whose raw hex stream is parsed into SysEx frames.
 
 A transport knows nothing about the AMYboard protocol. It moves raw MIDI:
 
@@ -174,12 +174,13 @@ class AlsaTransport:
         return self
 
     def _spawn_reader(self):
-        # Persistent receive stream: line-buffered so frames arrive in real time
-        # (block buffering would sit on the board's ACKs). Coexists fine with the
-        # one-shot `amidi -S` sends on the same rawmidi device.
+        # Persistent receive stream: fully unbuffered (`stdbuf -o0`) so frames
+        # arrive in real time (buffering would sit on the board's ACKs).
+        # Coexists fine with the one-shot `amidi -S` sends on the same rawmidi
+        # device.
         self._reader = subprocess.Popen(
-            ["stdbuf", "-oL", "amidi", "-p", self.port, "-d"],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+            ["stdbuf", "-o0", "amidi", "-p", self.port, "-d"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
         threading.Thread(target=self._read_loop, daemon=True).start()
         self.ack_available = True
 
@@ -195,16 +196,29 @@ class AlsaTransport:
 
     def _read_loop(self):
         """Parse the `amidi -d` hex dump into SysEx frames and dispatch each
-        frame's payload (the bytes between F0 and F7) to on_sysex."""
+        frame's payload (the bytes between F0 and F7) to on_sysex. Parses the
+        raw byte stream two hex digits at a time — amidi separates bytes with
+        whitespace but writes a newline only BEFORE each frame, and nothing
+        after the final F7, so anything that waits for a delimiter (a line, a
+        token boundary) sees each frame one frame late and a single-reply
+        exchange like ping never completes."""
         reader = self._reader
         buf, insx = [], False
+        tok = ""
+        hexdigits = "0123456789abcdefABCDEF"
         try:
-            for line in reader.stdout:
-                for tok in line.split():
-                    try:
-                        b = int(tok, 16)
-                    except ValueError:
+            while True:
+                data = reader.stdout.read(4096)
+                if not data:
+                    break
+                for ch in data.decode("ascii", "replace"):
+                    if ch not in hexdigits:
+                        tok = ""
                         continue
+                    tok += ch
+                    if len(tok) < 2:
+                        continue
+                    b, tok = int(tok, 16), ""
                     if b == 0xF0:
                         insx, buf = True, []
                     elif b == 0xF7:
