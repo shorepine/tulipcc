@@ -1,0 +1,34 @@
+# Guard for PRs that move the amy submodule pin (bot or hand-pinned): verifies
+# the committed files derived from amy are in sync with the new pin.
+#
+# Today that is only tulip/server/refdocs/amy/ (the vendored docs snapshot the
+# Railway sketch-generator deploy reads, since it has no submodule checkout).
+# The amyboardweb static/*.generated.js files are NOT committed here — they are
+# copied from the amy submodule's committed src/ outputs at build time by
+# tulip/amyboardweb/dev.py, and amy's own CI (make check-c-api) keeps those
+# fresh, so there is nothing to drift on the tulipcc side.
+#
+# No submodule checkout needed: sync_amy_docs.py falls back to GitHub raw at
+# the pinned SHA.
+name: amy-pin-check
+
+on:
+  pull_request:
+    paths:
+      - 'amy'
+  push:
+    branches: [main]
+    paths:
+      - 'amy'
+  workflow_dispatch:
+
+jobs:
+  refdocs-fresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Check refdocs/amy matches the pinned amy SHA
+        run: python3 tulip/server/sync_amy_docs.py --check

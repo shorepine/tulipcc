@@ -79,8 +79,15 @@ the `amy` submodule is not checked out in the Railway deploy. Whenever you bump 
 pinned commit:
 
 1. `python3 tulip/server/sync_amy_docs.py` (sources from the pinned commit — the local
-   submodule if checked out, else GitHub raw at the pinned SHA).
+   submodule if checked out at the pin, else GitHub raw at the pinned SHA).
 2. Commit the updated `tulip/server/refdocs/amy/`.
+
+CI enforces this: `.github/workflows/amy-pin-check.yml` runs
+`sync_amy_docs.py --check` on any PR that moves the `amy` gitlink and fails if
+the snapshot is stale. This is the **only** committed-in-tulipcc file derived
+from amy — the amyboardweb `static/*.generated.js` files are gitignored build
+products copied from the amy submodule's committed `src/*.generated.js`
+(regenerate those in amy with `make c-api`; amy CI keeps them fresh).
 
 ## Testing `tulipcc`
 
