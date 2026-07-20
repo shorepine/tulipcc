@@ -19,8 +19,9 @@ Source priority:
   2. GitHub raw at the pinned amy SHA (read from ``git ls-tree HEAD amy``)
 
 Usage:
-    python3 tulip/server/sync_amy_docs.py            # refresh the snapshot
-    python3 tulip/server/sync_amy_docs.py --check    # exit 1 if snapshot is stale
+    python3 tulip/server/sync_amy_docs.py             # refresh the snapshot
+    python3 tulip/server/sync_amy_docs.py --check     # exit 1 if snapshot is stale
+    python3 tulip/server/sync_amy_docs.py --sha SHA   # vendor from SHA, not the gitlink
 """
 from __future__ import annotations
 
@@ -93,9 +94,13 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true",
                     help="verify refdocs/amy matches the pinned amy SHA; no writes")
+    ap.add_argument("--sha", metavar="SHA",
+                    help="vendor from this amy commit instead of the pinned gitlink "
+                         "(amy's tulipcc-pin workflow uses this to build the snapshot "
+                         "for a pin bump before the gitlink moves)")
     opts = ap.parse_args()
 
-    sha = pinned_sha()
+    sha = opts.sha or pinned_sha()
     use_local = (SUBMODULE_DOCS.is_dir() and md_names_local()
                  and submodule_head() == sha)
     source = "local submodule" if use_local else "GitHub raw @ pinned SHA"
