@@ -128,11 +128,18 @@ def full_build(skip_amy=False):
         print("[dev] Building AMY (make web) …")
         subprocess.run(["make", "web"], cwd=AMY_DIR, check=True)
 
-    # Copy generated JS files from AMY build into static/
-    for name in ("amy_api.generated.js", "patches.generated.js"):
-        src = os.path.join(AMY_BUILD, name)
-        if os.path.exists(src):
-            shutil.copy2(src, os.path.join(STATIC_DIR, name))
+    # Copy generated JS files from the amy submodule into static/. These are
+    # committed outputs in amy/src (regenerated there by `make c-api`, kept
+    # fresh by amy CI), so the copies in static/ are build products, not
+    # committed here — .gitignore'd to keep them from drifting from the pin.
+    for name in ("amy_api.generated.js", "patches.generated.js",
+                 "pcm_presets.generated.js"):
+        src = os.path.join(AMY_DIR, "src", name)
+        if not os.path.exists(src):
+            raise SystemExit(
+                f"[dev] missing {src} — the amy pin predates committed JS codegen "
+                "(needs amy with src/*.generated.js; run tulip/shared/grab_submodules.sh?)")
+        shutil.copy2(src, os.path.join(STATIC_DIR, name))
 
     # Regenerate the drum preset table (preset -> name/frames) from the AMY
     # gamma9001 sample manifest. Used by the editor's drum kit knob view.

@@ -1,4 +1,10 @@
 .vercel
 .env*.local
 stage
+# Build products copied/derived from the amy submodule by dev.py — the
+# committed sources of truth live in amy/src (kept fresh by amy CI).
+static/amy_api.generated.js
+static/patches.generated.js
+static/pcm_presets.generated.js
+static/drum_presets.generated.js
 

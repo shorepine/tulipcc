@@ -35,6 +35,11 @@ and every PR gets an `amyboard-pr-<N>.vercel.app` preview. Just open a PR.
 ## Workflow Notes
 
 - `static/` is where you and Claude edit source files.
+- `static/*.generated.js` are build products, not sources: `dev.py` copies
+  `amy_api` / `patches` / `pcm_presets` from the amy submodule's committed
+  `amy/src/*.generated.js` and derives `drum_presets` from amy's gamma9001
+  manifest. They are gitignored — to change them, change amy and run
+  `make c-api` there.
 - `stage/` is the built output — served locally and deployed to Vercel. Never edit files in `stage/` directly.
 - All marketing site images live in `assets/img/` at the repo root. `dev.py` copies them into `stage/img/`.
 - The WASM/JS timestamp is fixed for the entire dev session — WASM filenames stay stable even as you edit HTML/JS.
