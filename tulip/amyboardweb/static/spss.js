@@ -3624,7 +3624,7 @@ function reboot_to_bootloader() {
     amy_add_log_message('zBZ');
 }
 
-// Windows Chrome WebMIDI can't recover from a USB reboot within the same
+// Windows WebMIDI can't recover from a USB reboot within the same
 // document: the MIDIOutput handle stays stale, no statechange fires, and
 // sendSysex silently goes into the void. We work around this by sending
 // zB, waiting for the board to finish rebooting, then reloading the page
@@ -3632,9 +3632,14 @@ function reboot_to_bootloader() {
 // saves its post-bootloader context in sessionStorage and reloads; on the
 // new page, pageload_control_sync picks up the flag and runs the post-
 // bootloader work against the fresh handles. macOS doesn't need this.
-var _IS_WINDOWS_CHROME = typeof navigator !== 'undefined' &&
-                         /Windows/i.test(navigator.userAgent || '') &&
-                         /Chrome/i.test(navigator.userAgent || '');
+//
+// This was originally Chrome-only, but bench testing (2026-07-22, Windows
+// 11 + Firefox 153) showed Firefox has the identical failure with better
+// camouflage: its stale output keeps reporting state=connected/conn=open
+// with the pre-reboot port id while sends go nowhere, so wait_for_board_ready
+// pings a zombie until timeout. Gate on Windows for every browser.
+var _IS_WINDOWS_BROWSER = typeof navigator !== 'undefined' &&
+                          /Windows/i.test(navigator.userAgent || '');
 
 // Complete the post-bootloader portion of a sketch-upload flow. Shared
 // between the synchronous (macOS) path and the post-reload (Windows) path
@@ -3977,7 +3982,7 @@ async function wait_for_board_ready(timeout_ms) {
             // the rest of the session (prev-name matching is sticky on
             // the wrong port). Leave macOS on the connected-event path —
             // CoreMIDI does fire those reliably.
-            if (_IS_WINDOWS_CHROME && typeof _refresh_main_midi_dropdowns === 'function') {
+            if (_IS_WINDOWS_BROWSER && typeof _refresh_main_midi_dropdowns === 'function') {
                 _refresh_main_midi_dropdowns();
             }
 
@@ -5070,7 +5075,7 @@ async function _send_text_file_verified(path, text) {
         }
         if (boardCrc === null) {
             console.warn('[verify] attempt ' + attempt + ': CRC report TIMED OUT — transfer likely wedged on board');
-            if (_IS_WINDOWS_CHROME) return 'reload-needed';
+            if (_IS_WINDOWS_BROWSER) return 'reload-needed';
             if (attempt < MAX_ATTEMPTS) {
                 console.warn('[verify] rebooting board (zB) to clear wedged transfer state, then retrying…');
                 reboot_to_bootloader();
@@ -5348,7 +5353,7 @@ function show_firmware_warning(date, latest, reason, opts) {
         if (updBtn)  updBtn.onclick  = isWedged ? async function() {
             cleanup(); inst.hide();
             console.log('[fwdetect] user: reboot wedged board (zB)');
-            if (_IS_WINDOWS_CHROME) {
+            if (_IS_WINDOWS_BROWSER) {
                 // Same limitation as every zB flow: Windows Chrome WebMIDI can't
                 // survive the USB reboot in-document (see
                 // _zb_then_reload_with_upload_context). If a Write is pending,
@@ -6145,7 +6150,7 @@ async function reset_amyboard() {
         // flag and calls _reset_amyboard_send_and_cleanup() — which sends
         // zP factory_reset and resets the JS state — against a fresh
         // MIDIAccess.
-        if (_IS_WINDOWS_CHROME) {
+        if (_IS_WINDOWS_BROWSER) {
             reboot_to_bootloader();
             console.log('reset: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
             sessionStorage.setItem('amyboard_post_reset_reload', '1');
