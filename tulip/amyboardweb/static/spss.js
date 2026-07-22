@@ -3734,8 +3734,8 @@ async function _zb_then_reload_with_upload_context(opts) {
         console.warn('_zb_then_reload_with_upload_context: stash failed:', e);
     }
     reboot_to_bootloader();
-    console.log('Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
-    await sleep_ms(4000);
+    console.log('Windows — zB sent, reloading in 9s for fresh MIDIAccess (long wait: reloading while the USB re-enumeration is still settling binds a dead endpoint instance, seen on Firefox 153)');
+    await sleep_ms(9000);
     console.log('reloading now');
     window.location.reload();
     // Block the caller's await in case reload is delayed — we do NOT want
@@ -3822,6 +3822,31 @@ async function _install_raw_midi_statechange_diagnostic() {
     } catch (e) {
         console.warn('[MIDIAccess] diagnostic install failed:', e);
     }
+}
+
+// Tear the whole WebMidi session down and rebuild it from a brand-new
+// MIDIAccess. On Windows the board's MIDI endpoint keeps the SAME id across
+// a zB USB reboot, so a session opened against the pre-reboot instance looks
+// perfectly healthy (state=connected, connection=open) while every send
+// silently vanishes — verified on Firefox 153 with a wire monitor: the
+// page's zI pings never reached the board while a parallel native client
+// pinged it fine. Raw-port close()/open() cycling does NOT fix this (the
+// session still points at the dead instance); only a new MIDIAccess binds
+// the live one. Returns true if the rebind completed.
+async function _full_webmidi_rebind() {
+    if (typeof WebMidi === 'undefined' || !WebMidi || !WebMidi.supported) return false;
+    try { await WebMidi.disable(); } catch (e) { console.warn('rebind: disable failed:', e && e.message); }
+    await sleep_ms(500);
+    try {
+        await WebMidi.enable({ sysex: true });
+    } catch (e) {
+        console.warn('rebind: enable failed:', e && e.message);
+        return false;
+    }
+    console.log('rebind: WebMidi re-enabled, sysex=' + WebMidi.sysexEnabled);
+    try { if (typeof _refresh_main_midi_dropdowns === 'function') _refresh_main_midi_dropdowns(); } catch (e) {}
+    try { await setup_midi_devices(); } catch (e) { console.warn('rebind: setup_midi_devices failed:', e && e.message); }
+    return true;
 }
 
 async function wait_for_board_ready(timeout_ms) {
@@ -3926,9 +3951,23 @@ async function wait_for_board_ready(timeout_ms) {
     // on the raw MIDIPort. No-op on macOS because the happy path already
     // succeeded well before halfway.
     var did_port_cycle = false;
+    // One-shot at 1/3 of the window: full WebMidi teardown + re-enable.
+    // This is the recovery that actually works on Windows Firefox (see
+    // _full_webmidi_rebind); it runs BEFORE the raw-port cycle so the
+    // cheap-but-Firefox-ineffective cycle remains the Chrome fallback.
+    var did_full_rebind = false;
 
     try {
         while (Date.now() < deadline) {
+            if (_IS_WINDOWS_BROWSER && !did_full_rebind && (Date.now() - start_time) > timeout_ms / 3) {
+                did_full_rebind = true;
+                console.log('wait_for_board_ready: no replies at 1/3 timeout — full WebMidi rebind (new MIDIAccess)...');
+                try { await _full_webmidi_rebind(); } catch (e) { console.warn('wait_for_board_ready: rebind failed:', e); }
+                // WebMidi.disable() dropped our connected listener — re-attach.
+                _attach_connected_listener();
+                consecutive_failures = 0;
+                last_probe_time = 0;
+            }
             if (!did_port_cycle && (Date.now() - start_time) > timeout_ms / 2) {
                 did_port_cycle = true;
                 console.log('wait_for_board_ready: halfway, cycling raw ports (close → wait → open)...');
@@ -5370,8 +5409,8 @@ function show_firmware_warning(date, latest, reason, opts) {
                     });
                 } else {
                     reboot_to_bootloader();
-                    console.log('[fwdetect] Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
-                    await sleep_ms(4000);
+                    console.log('[fwdetect] Windows — zB sent, reloading in 9s for fresh MIDIAccess (long wait: reloading while the USB re-enumeration is still settling binds a dead endpoint instance, seen on Firefox 153)');
+                    await sleep_ms(9000);
                     window.location.reload();
                 }
                 resolve(false);  // unreachable in practice — the reload unloads us
@@ -6152,9 +6191,9 @@ async function reset_amyboard() {
         // MIDIAccess.
         if (_IS_WINDOWS_BROWSER) {
             reboot_to_bootloader();
-            console.log('reset: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+            console.log('reset: Windows — zB sent, reloading in 9s for fresh MIDIAccess (long wait: reloading while the USB re-enumeration is still settling binds a dead endpoint instance, seen on Firefox 153)');
             sessionStorage.setItem('amyboard_post_reset_reload', '1');
-            await sleep_ms(4000);
+            await sleep_ms(9000);
             console.log('reset: reloading now');
             window.location.reload();
             return;  // unreachable after reload
