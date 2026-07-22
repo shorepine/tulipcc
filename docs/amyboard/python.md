@@ -130,15 +130,17 @@ import amyboard
 amyboard.cv_out(5.0, channel=0)    # Output 5V on CV out 1
 volts = amyboard.cv_in(channel=0)   # Read CV in 1
 
-# Rotary encoders.  amyboard.encoder() autodetects whichever accessory is
-# connected (Adafruit single/quad or M5Stack 8Encoder) and gives one API for all.
-enc = amyboard.encoder()
-print(enc.type, enc.encoders)       # e.g. "m5stack" 8
+# Rotary encoders.  amyboard.encoder() autodetects every attached accessory
+# (Adafruit single/quad or M5Stack 8Encoder) and gives one API for all --
+# multiple boards (via their address jumpers) combine into one flat index space.
+enc = amyboard.encoder()            # pass invert=True if yours counts backwards
+print(enc.type, enc.encoders)       # e.g. "m5stack" 8; enc.devices lists (type, addr)
 print(enc.read(0))                  # position of encoder 0 (starts at 0)
 print(enc.button(0))                # True while held
 if enc.leds:
     enc.led(0, 0, 64, 0)            # light encoder 0's LED dim green
-# See accessories.md for the legacy per-device read_encoder()/read_buttons() helpers.
+# See accessories.md for multi-board details, invert, and the legacy
+# per-device read_encoder()/read_buttons() helpers.
 
 # OLED display (if connected)
 amyboard.init_display()

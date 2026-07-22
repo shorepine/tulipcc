@@ -1300,12 +1300,13 @@ THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe
 - amyboard.cv_in(channel) -> volts (-10..10). channel 0 = CV1, 1 = CV2.
 - amyboard.cv_out(volts, channel): write a CV output.
 - Rotary encoders: ALWAYS use the unified, hardware-agnostic API so the sketch works on any encoder accessory (Adafruit single/quad or M5Stack 8Encoder) and in the simulator. Do NOT call the legacy read_encoder()/read_buttons()/m5_8encoder helpers, and never hardcode an encoder count or I2C address.
-    enc = amyboard.encoder()        # autodetects whatever is connected (or the simulator's one encoder)
-    enc.encoders                    # how many encoders exist (1, 4, or 8); loop over range(enc.encoders)
+    enc = amyboard.encoder()        # autodetects EVERYTHING connected (multiple boards combine into one flat index space; or the simulator's one encoder)
+    enc.encoders                    # total encoders across all attached devices; loop over range(enc.encoders)
     enc.read(i)                     # cumulative position of encoder i (0-based), starts at 0
     enc.button(i)                   # True while encoder i's push button is held
     enc.led(i, r, g, b)            # light encoder i's LED (0..255 each); skip if i >= enc.leds
     enc.reset(i)                    # zero encoder i (omit i to zero all)
+    enc.invert(True, i)             # flip the counting direction of encoder i (omit i for all); amyboard.encoder(invert=True) also works. Use ONLY if the user says their encoder counts backwards.
   Build the encoder once at top level (enc = amyboard.encoder()) and read it inside loop(). If enc.encoders == 0 no hardware is present; guard LED writes with enc.leds. Use relative motion (track the previous enc.read(i) and act on the delta) so any number of encoders maps onto your parameters.
 - amyboard.init_display(); amyboard.display.fill(0); amyboard.display.text("hi", 0, 0, 255); amyboard.display_refresh(): optional 128x128 grayscale OLED. Color is 0-255. The ONLY drawing methods are: fill(col), fill_rect(x,y,w,h,col), rect(x,y,w,h,col), line(x1,y1,x2,y2,col), hline(x,y,w,col), vline(x,y,h,col), pixel(x,y,col), text(str,x,y,col), scroll(dx,dy). There is no circle, ellipse, hline-only-via-line, or print method -- use only the methods listed.
 - amyboard.set_display_rotation(degrees): rotate the OLED; degrees must be 0, 90, 180, or 270. Applies immediately and persists across reboots. amyboard.display_rotation() returns the current saved rotation. Call set_display_rotation once at top level (never in loop()); safe in the simulator, where it is accepted but the on-screen framebuffer does not rotate.
