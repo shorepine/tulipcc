@@ -67,15 +67,15 @@ Set up a nice drum sequence for a bit. Play with the pitch parameter and pan. No
 
 Let's make some of our own Tulip code to play along! You can make programs with our editor or just write small functions in the REPL itself. Let's start there. What we want to do is play the notes of a chord randomly, but in time with the drum machine already playing.
 
-First, let's grab the synth we'll be playing. Let's just use the default playing synth - the Juno-6 patch 0 on MIDI channel 1. If you changed it to something else, that's fine! While we're here, we'll also choose the chord we want to play. So just type
+First, let's make the synth we'll be playing. We'll boot a 4-note polyphonic Juno-6 synth playing patch 0, the same patch that boots on MIDI channel 1. While we're here, we'll also choose the chord we want to play. So just type
 
 ```python
 import music, random
 chord = music.Chord("F:min7").midinotes()
-syn = midi.config.get_synth(channel=1)
+syn = synth.PatchSynth(num_voices=4, patch=0)
 ```
 
-The first `import music, random` tells Tulip that we'll be using those libraries. Some (like `tulip, amy, midi`) are already included on bootup, but it's a good habit to get into when writing programs. 
+The first `import music, random` tells Tulip that we'll be using those libraries. Some (like `tulip, amy, midi, synth, sequencer`) are already included on bootup, but it's a good habit to get into when writing programs. 
 
 If you just type `chord` and enter, you'll see the contents - just a list of MIDI notes corresponding to F minor 7. And `syn` is an object you can send messages to do make tones. Try `syn.note_on(50, 0.5)` -- will play a MIDI note 50 at half volume. 
 
@@ -93,7 +93,7 @@ for i in range(8):
 
 To unpack this a litte, we're creating a 8 1/4 note long pattern `(8,4)` and then adding 8 random notes of the F:min7 chord we created earlier to it. The `seq.add` first takes a parameter of which element to schedule (here, just 0, 1, 2, 3.... 7) and then the function to call (`syn.note_on`), then the arguments for that function (`random.choice(chord)` chooses a random midi note, and 0.6 is the velocity.)
 
-You should now be hearing a synth pattern play every quarter note in time with the drums. It will keep going! The first parameter of `sequencer.AMYSequence` is the `divider` of the callback. This tells Tulip how often to call the callback. A `4` means `1/4`, a quarter note. If you made it `8`, it would be an eighth note. 
+You should now be hearing a synth pattern play every quarter note in time with the drums. It will keep going! The second parameter of `sequencer.AMYSequence` is the `divider`. This tells Tulip how long each step of the sequence is. A `4` means `1/4`, a quarter note. If you made it `8`, each step would be an eighth note. 
 
 ```python
 seq.clear() # the sequence should stop 
@@ -117,13 +117,13 @@ print_seq = sequencer.TulipSequence(2, p)
 
 To stop this printing every half note, type `print_seq.clear()`. Your programs should end in a `seq.clear()` so that you can clean up after yourself!
 
-While you're playing with this, go back to the `voices` app and change the patch on channel 1 to something else. You'll hear your synth change immediately. You can also do this programatically: 
+While you're playing with this, you can change the patch your synth is playing without stopping the sequence: 
 
 ```python
 syn.program_change(143) # change to patch #143 (dx-7 patch BASS 2)
 ```
 
-Juno patches use patch number 0-127, DX7 are 128-255, and the piano is at 256.
+Juno patches use patch number 0-127, DX7 are 128-255, the piano is at 256, the General MIDI drum kits are 384-390, and patches you store yourself (see below) start at 1024.
 
 You can also easily change the BPM of the sequencer -- this will impact everything using it, like the drum machine as well:
 
@@ -135,7 +135,7 @@ sequencer.tempo(120)
 
 ## Making new synths
 
-We're using `midi.config.get_synth(channel=1)` to "borrow" the synth that booted with Tulip. But if you're going to want to share your ideas with others, you should make your own `synth` that doesn't conflict with anything already running on Tulip. That's easy, you can just run:
+Each `synth.PatchSynth` you create gets its own voices, so it won't conflict with the synths Tulip boots with for MIDI (or anything else running on Tulip.) You can make as many as you like:
 
 ```python
 syn = synth.PatchSynth(num_voices=2, patch=143) # two note polyphony, patch 143 is DX7 BASS 2
@@ -204,7 +204,7 @@ to stop your REPL sequencer callback.
 Type `edit('jam.py')` (or whatever you want to call it.) You'll see a black screen open. This is the editor! You can use it like a computer's editor to save code. Just start typing, let's put our program in posterity:
 
 ```python
-import tulip, midi, music, random, sequencer
+import tulip, midi, music, random, sequencer, synth
 
 chord = music.Chord("F:min7").midinotes()
 syn = synth.PatchSynth(num_voices=1, patch=143)  # DX7 BASS 2
@@ -234,14 +234,14 @@ jam.stop() # will stop playing
 
 This will be easier for you to edit your creations and try things out. Try different chords, patches, different sequences, etc. If you stopped the drum machine, you can restart it anytime and it will stay in time with your `jam`.
 
-The drum machine itself is actually a simple Tulip program, written in Python. You can look at the code on your Tulip, or edit it and run your own version. You can go back to the REPL and run `edit('/sys/ex/my_drums.py')` -- this will open a copy of the drum machine you can edit. Try changing the color of the LED on line 12 to say, 9. Then save ('control-X'), then quit the running drum machine and open your version -- `run('my_drums')`. You should see the change! Check out the rest of the drum machine code. Most of it is UI setup, and then you can see it setting up a sequencer callback and sending off the drum messages every beat. 
+The drum machine itself is actually a simple Tulip program, written in Python. Check out [the drum machine code](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) -- most of it is UI setup, and then you can see it setting up a sequencer callback and sending off the drum messages every beat. If you want to make your own version, copy it onto your Tulip under a new name (like `my_drums.py`), edit it, and `run('my_drums')`. 
 
 ## UIScreens
 
 You may have noticed that the editor, the `voices` and `drums` app all have those buttons on the top right and their own screen, while your `jam.py` just runs in the REPL. That works for a lot of things, but maybe you want to build a UI or show status of your app on its own screen. To do that, we can easily adapt our simple program to be a Tulip `UIScreen` app like its big siblings. Let's make a `jam2.py` into a UIScreen with a slider for tempo. Open `edit('jam2.py')` (quit the editor and restart it if you're editing something else) and make it
 
 ```python
-import tulip, midi, music, random
+import tulip, midi, music, random, sequencer, synth
 
 def note(t):
     global app
@@ -306,11 +306,11 @@ s.note_on(60,1)
 s.note_off(60)
 ```
 
-Let's try it as a sampler. There are 29 samples of drum-like and instrument sounds in Tulip, and it can adjust the pitch and pan and loop of each one. You can try it out with:
+Let's try it as a sampler. Tulip bakes in the full TR-808 drum sample bank as PCM `preset`s 0-18, and 136 more drum and percussion samples (TR-909, Linn 9000, Univox MR-12, Tokyo Synthetics, 80s Power Kit and Percussion) live at presets 256-391. The sampler can adjust the pitch and pan of each one. You can try it out with:
 
 ```python
 # You can pass any AMY arguments to the setup of OscSynth
-s = synth.OscSynth(wave=amy.PCM, patch=10) # PCM wave type, patch=10 (808 Cowbell)
+s = synth.OscSynth(wave=amy.PCM, preset=8) # PCM wave type, preset=8 (808 Cowbell)
 
 s.note_on(50, 1.0)
 s.note_on(40, 1.0) # different pitch
@@ -318,30 +318,29 @@ s.note_on(40, 1.0) # different pitch
 s.update_oscs(pan=0) # different pan
 s.note_on(40, 1.0)
 
-s.update_oscs(feedback=1, patch=23) # patch 23 is Koto, feedback=1 loops the sound
+s.update_oscs(preset=18) # preset 18 is the 808 Cymbal
 s.note_on(40, 1.0)
-s.note_off(40) # looped instruments require a note_off to stop
 ```
 
-You can load your own samples into Tulip. Take any .wav file and [load it onto Tulip.](getting_started.md#transfer-files-between-tulip-and-your-computer) Now, load it in as a PCM patch:
+You can load your own samples into Tulip. Take any .wav file and [load it onto Tulip.](getting_started.md#transfer-files-between-tulip-and-your-computer) Now, load it in as a PCM preset:
 
 ```python
-amy.load_sample('sample.wav', patch=50)
-s = synth.OscSynth(wave=amy.PCM, patch=50)
+amy.load_sample('sample.wav', preset=50)
+s = synth.OscSynth(wave=amy.PCM, preset=50)
 s.note_on(60, 1.0)
 ```
 
-You can also load PCM patches with looped segments if you have their loopstart and loopend parameters (these are often stored in the WAVE metadata. If the .wav file has this metadata, we'll parse it. The example file `/sys/ex/vlng3.wav` has it. You can also provide the metadata directly.) To indicate looping, use `feedback=1`. 
+You can also load samples with looped segments if you have their loopstart and loopend parameters (these are often stored in the WAVE metadata. If the .wav file has this metadata, we'll parse it. The example file `/sys/ex/vlng3.wav` has it. You can also provide the metadata directly.) To indicate looping, use `feedback=1`. 
 
 ```python
-amy.load_sample("/sys/ex/vlng3.wav", patch=50)  # loads wave looping metadata
-s = synth.OscSynth(wave=amy.CUSTOM, patch=50, feedback=1, num_voices=1)
+amy.load_sample("/sys/ex/vlng3.wav", preset=50)  # loads wave looping metadata
+s = synth.OscSynth(wave=amy.PCM, preset=50, feedback=1, num_voices=1)
 s.note_on(60, 1.0) # loops
 s.note_on(55, 1.0) # loops
 s.note_off(55) # stops
 ```
 
-You can unload samples from RAM with `amy.unload_sample(patch_number)`. 
+You can unload samples from RAM with `amy.unload_sample(preset_number)`. 
 
 ## Modify Juno-6 patches programatically
 
@@ -368,7 +367,6 @@ amy.send(osc=30, wave=amy.SINE, freq=440, vel=1) # 440Hz sine wave
 amy.send(osc=30, vel = 0) # note off
 amy.reverb(1) # turn on global reverb
 amy.echo(level=1, delay_ms=400, feedback=0.8) # global echo
-amy.drums() # play a test pattern
 amy.reset() # reset every AMY oscillator
 ```
 
@@ -447,7 +445,7 @@ to stop it. You can also send individual voltages with
 
 ```python
 import mabeedac
-mabeedac.send(2.5, channel=0) # sends 2.5V to the first CV channel.
+mabeedac.set(2.5, channel=0) # sends 2.5V to the first CV channel.
 ```
 
 ## Custom FM tones and AMY patches (WOOD PIANO)
@@ -491,8 +489,7 @@ amy.stop_store_patch(1024)
 Now, you're free to use this patch number like all the Juno and DX7 ones. For a polyphonic wood piano, do:
 
 ```python
-s = synth.PatchSynth(5)
-s.program_change(1024)
+s = synth.PatchSynth(num_voices=5, patch=1024)
 s.note_on(50, 1)
 s.note_on(50, 1)
 s.note_on(55, 1)
