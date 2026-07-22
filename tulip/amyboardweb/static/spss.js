@@ -3647,9 +3647,25 @@ var _IS_WINDOWS_CHROME = typeof navigator !== 'undefined' &&
 async function _upload_sketch_post_bootloader(opts) {
     if (!opts || typeof opts.sketchText !== 'string') return;
     var sketchPath = opts.sketchPath || '/user/current/sketch.py';
+    var uploadOk = false;
     try {
-        await _send_text_file_to_amyboard(sketchPath, opts.sketchText);
-        console.log('post-zb upload: sketch sent to AMYboard');
+        var result = await _send_text_file_verified(sketchPath, opts.sketchText);
+        if (result === 'reload-needed') {
+            // The transfer wedged again and we're on Windows Chrome, where
+            // the zB reboot that clears it forces a page reload. Cap the
+            // reload loop at 2 so a persistently bad link can't bounce the
+            // page forever.
+            var reloads = opts.verifyReloadCount || 0;
+            if (reloads < 2) {
+                await _zb_then_reload_with_upload_context(Object.assign({}, opts, {
+                    verifyReloadCount: reloads + 1
+                }));
+                return;  // unreachable — the reload unloads us
+            }
+            console.warn('post-zb upload: verify still failing after ' + reloads + ' reloads — giving up');
+        }
+        uploadOk = (result === 'verified');
+        if (uploadOk) console.log('post-zb upload: sketch sent to AMYboard (verified)');
         await sleep_ms(opts.restart ? 500 : 1000);
     } catch (e) {
         console.warn('post-zb upload: sketch upload to AMYboard failed', e);
@@ -3677,10 +3693,15 @@ async function _upload_sketch_post_bootloader(opts) {
         var envNameInput = document.getElementById('editor_filename');
         if (envNameInput) envNameInput.value = opts.packageName;
     }
-    if (opts.restart) {
+    if (opts.restart && uploadOk) {
         var restartFn = (opts.restart === 'transfer_done') ? 'environment_transfer_done' : 'restart_sketch';
         amy_add_log_message('zPimport amyboard; amyboard.' + restartFn + '()Z');
         console.log('post-zb upload: sketch restarted via zP (' + restartFn + ')');
+    } else if (!uploadOk) {
+        // Don't restart into a sketch we know didn't arrive intact — surface
+        // the failure instead. (Editor + knob UI above still reflect the
+        // user's sketch; only the board write failed.)
+        show_alert(_VERIFY_FAILED_ALERT);
     }
     if (opts.refreshWorldFiles && typeof refresh_amyboard_world_files === 'function') {
         try { await refresh_amyboard_world_files(); } catch (e) {}
@@ -4911,6 +4932,103 @@ async function _send_text_file_to_amyboard(path, text) {
 }
 
 // ============================================================================
+// Verified file write: send, read back, retry
+// ----------------------------------------------------------------------------
+// The zT transfer has no integrity check: if one sysex chunk is lost in
+// transit (seen in the field on Windows Chrome), the board's byte counter
+// comes up short and the transfer never completes — worse, every later sysex
+// command (zP restart, a retried zT header, ...) is base64-decoded INTO the
+// open file as binary garbage until the counter finally crosses the expected
+// size, producing the mystery "SyntaxError at line 11" / UnicodeDecodeError
+// popups. Until the firmware protocol grows sequence numbers, we verify every
+// sketch write by reading the file straight back with zD and comparing
+// byte-for-byte, resending on mismatch. A read-back TIMEOUT is the signature
+// of the wedged-transfer state above (the zD request itself got eaten as
+// transfer data); only a reboot clears it, since the board has no transfer
+// timeout. All logging is tagged [verify] so field reports can find it.
+var _verify_read_resolve = null;
+
+// Read a file off the board via zD and resolve with its raw text (before any
+// sanitizing — this is for byte-exact comparison), or null on timeout.
+function _read_back_file_from_amyboard(path, timeout_ms) {
+    if (!timeout_ms) timeout_ms = 15000;
+    return new Promise(function(resolve) {
+        // Drop stale sysex reassembly state so a fragment from an earlier
+        // interrupted op can't prepend onto our response.
+        _sysex_reasm = null;
+        _sysex_b64_accum = '';
+        var done = false;
+        var t = setTimeout(function() {
+            if (done) return;
+            done = true;
+            _verify_read_resolve = null;
+            resolve(null);
+        }, timeout_ms);
+        _verify_read_resolve = function(payloadText) {
+            if (done) return;
+            done = true;
+            clearTimeout(t);
+            resolve(payloadText);
+        };
+        amy_add_log_message('zD' + path + 'Z');
+    });
+}
+
+// Console-only diagnostic: where does the read-back first diverge from what
+// we sent? The char index maps to a sketch line, which is exactly the line
+// number users report from the on-board SyntaxError popup.
+function _log_first_difference(sent, got) {
+    var n = Math.min(sent.length, got.length);
+    var i = 0;
+    while (i < n && sent[i] === got[i]) i++;
+    var line = sent.slice(0, i).split('\n').length;
+    console.warn('[verify] first difference at char ' + i + ' (sketch line ' + line + '): sent '
+        + JSON.stringify(sent.slice(i, i + 40)) + ' got ' + JSON.stringify(got.slice(i, i + 40)));
+}
+
+// Send a text file with verify-and-retry. Returns:
+//   'verified'      — the board's file matches `text` byte-for-byte.
+//   'reload-needed' — Windows Chrome only: the transfer wedged and clearing
+//                     it needs a zB reboot, which stale WebMIDI can't survive
+//                     in-document; the caller must stash context and reload.
+//   'failed'        — attempts exhausted without a verified write.
+async function _send_text_file_verified(path, text) {
+    var MAX_ATTEMPTS = 3;
+    // Scale the read-back timeout with size: big sketches (embedded MIDI
+    // files) take a while to stream back over sysex.
+    var readback_timeout_ms = 15000 + Math.floor(text.length / 10);
+    for (var attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        console.log('[verify] write attempt ' + attempt + '/' + MAX_ATTEMPTS + ': sending '
+            + text.length + ' chars to ' + path);
+        await _send_text_file_to_amyboard(path, text);
+        var readBack = await _read_back_file_from_amyboard(path, readback_timeout_ms);
+        if (readBack === text) {
+            console.log('[verify] attempt ' + attempt + ': read-back matches (' + text.length + ' chars)');
+            return 'verified';
+        }
+        if (readBack === null) {
+            console.warn('[verify] attempt ' + attempt + ': read-back TIMED OUT — transfer likely wedged on board');
+            if (_IS_WINDOWS_CHROME) return 'reload-needed';
+            if (attempt < MAX_ATTEMPTS) {
+                console.warn('[verify] rebooting board (zB) to clear wedged transfer state, then retrying…');
+                reboot_to_bootloader();
+                await wait_for_board_ready();
+            }
+        } else {
+            console.warn('[verify] attempt ' + attempt + ': read-back MISMATCH (sent '
+                + text.length + ' chars, got ' + readBack.length + ') — resending');
+            _log_first_difference(text, readBack);
+        }
+    }
+    console.warn('[verify] giving up after ' + MAX_ATTEMPTS + ' attempts');
+    return 'failed';
+}
+
+var _VERIFY_FAILED_ALERT =
+    'Writing to your AMYboard failed: the sketch did not arrive intact over MIDI, even after retries.\n\n'
+    + 'Unplug and replug your AMYboard, then try Write again.';
+
+// ============================================================================
 // Pre-op board check: reachability, liveness, firmware version
 // ----------------------------------------------------------------------------
 // Every Write/Read in control mode first verifies the board can actually take
@@ -5240,9 +5358,27 @@ async function write_sketch_to_amyboard() {
         try {
             // zT stops the sequencer on the board during the transfer, so the
             // running sketch's loop() can't corrupt it — no reboot required.
-            await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-            // Restart the sketch: resets AMY, replays the knob block, runs code.
-            amy_add_log_message('zPimport amyboard; amyboard.environment_transfer_done()Z');
+            // Verified write: read the file back and resend on mismatch, so a
+            // dropped sysex chunk becomes a silent retry instead of a corrupted
+            // sketch (see _send_text_file_verified).
+            var result = await _send_text_file_verified('/user/current/sketch.py', sketchText);
+            if (result === 'verified') {
+                // Restart the sketch: resets AMY, replays the knob block, runs code.
+                amy_add_log_message('zPimport amyboard; amyboard.environment_transfer_done()Z');
+            } else if (result === 'reload-needed') {
+                // Windows Chrome with a wedged transfer: clearing it needs a zB
+                // reboot, and stale WebMIDI can't survive that in-document.
+                // Stash the sketch and reload; the fresh page resumes the write
+                // in _upload_sketch_post_bootloader (which verifies again).
+                await _zb_then_reload_with_upload_context({
+                    sketchText: sketchText,
+                    restart: 'transfer_done',
+                    suppressKnobCc: true,
+                    verifyReloadCount: 1
+                });
+            } else {
+                show_alert(_VERIFY_FAILED_ALERT);
+            }
         } catch (e) {
             console.warn('write_sketch_to_amyboard: control failed', e);
         } finally {
@@ -6136,6 +6272,15 @@ function _sanitize_sketch_text(text) {
 }
 
 function _handle_sync_sysex_payload(payload) {
+    // Verify read-back in progress (_send_text_file_verified): hand the RAW
+    // payload to the verifier before any sanitizing or self-healing — the
+    // whole point is a byte-exact comparison with what was just sent.
+    if (_verify_read_resolve) {
+        var vr = _verify_read_resolve;
+        _verify_read_resolve = null;
+        vr(payload);
+        return;
+    }
     // payload is the sketch.py text, base64-decoded.
     payload = _sanitize_sketch_text(payload);
     // Reject empty/garbage payloads — a stale sysex fragment shouldn't
