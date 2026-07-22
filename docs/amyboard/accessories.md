@@ -76,10 +76,12 @@ the connected device and gives you one consistent interface:
 ```python
 import amyboard
 
-enc = amyboard.encoder()   # autodetect whatever is connected
-print(enc.type)            # "adafruit_single", "adafruit_quad", "m5stack", "web", or None
-print(enc.encoders)        # how many encoders this device has (1, 4, or 8)
-print(enc.leds)            # how many addressable LEDs it has
+enc = amyboard.encoder()   # autodetect everything that's connected
+print(enc.type)            # "adafruit_single", "adafruit_quad", "m5stack", "web",
+                           # "multi" (mixed device types), or None
+print(enc.devices)         # each attached device as (type, i2c_address)
+print(enc.encoders)        # total number of encoders across all attached devices
+print(enc.leds)            # total number of addressable LEDs
 
 for i in range(enc.encoders):
     pos = enc.read(i)          # cumulative position, starts at 0
@@ -89,6 +91,30 @@ for i in range(enc.encoders):
 
 enc.reset()                # zero every encoder back to 0 (or enc.reset(i) for just one)
 enc.switch()               # M5Stack toggle-switch state (False on other devices)
+```
+
+**Multiple encoder boards on one bus.** Both Adafruit breakouts have address
+jumpers (single: up to 8 boards at 0x36–0x3D, quad: up to 8 at 0x49–0x50), and
+`amyboard.encoder()` finds *every* attached device and presents them as one
+`Encoder` with a flat index space. Indices run across devices in a fixed order —
+M5Stack first, then quads, then singles, each by ascending I2C address — so two
+single encoders at 0x36 and 0x37 give `enc.encoders == 2`, with the 0x36 board as
+encoder 0. To bind exactly one specific board instead, pass its address (and
+optionally the type):
+
+```python
+enc_a = amyboard.encoder(addr=0x36)   # just the board at 0x36
+enc_b = amyboard.encoder(addr=0x37)   # just the board at 0x37
+```
+
+**Inverted encoders.** Some encoder hardware revisions count the "wrong" way
+(clockwise decrements). Pass `invert=True` to flip the direction every `read()`
+reports, or set it per encoder:
+
+```python
+enc = amyboard.encoder(invert=True)   # flip every encoder
+enc.invert(True, 2)                   # ...or flip just encoder 2
+enc.invert(False)                     # back to the hardware's native direction
 ```
 
 If no encoder is attached `enc.encoders` is 0 and every method returns a safe default,

@@ -154,21 +154,32 @@ Yes -- as of the 2026-06-30 firmware, `amyboard.encoder()` autodetects whichever
 
 ```python
 enc = amyboard.encoder()   # autodetects via I2C scan (or the web simulator)
-enc.type          # "adafruit_single" | "adafruit_quad" | "m5stack" | "web" | None
-enc.encoders      # 1, 4, or 8
+enc.type          # "adafruit_single" | "adafruit_quad" | "m5stack" | "web" | "multi" | None
+enc.devices       # each attached device as (type, i2c_address)
+enc.encoders      # total encoders across ALL attached devices
 enc.read(i)       # cumulative position, starts at 0
 enc.button(i)     # True while held (normalized across devices)
 enc.led(i, r,g,b) # set encoder i's LED, 0..255 each
 enc.reset(i)      # zero one encoder (or all if i omitted)
+enc.invert(True, i) # flip encoder i's direction (omit i for all)
 enc.switch()      # M5Stack toggle (False on other devices)
 ```
 
 The sketch generator on AMYboard World uses this API too, so generated sketches no longer assume a specific encoder. Note that many older World sketches were written for a *specific* encoder -- if a sketch "runs but nothing happens," check whether it expects a single encoder for preset selection while you only have the 8-pack (or vice versa).
 
-Two power-user notes:
+### Can I connect more than one encoder board at once?
 
-- If you have **more than one encoder accessory connected** (say, the Adafruit single *and* the M5Stack 8-pack), autodetect picks one -- force the one you want with `amyboard.Encoder(type="adafruit_single")`.
-- The API supports up to **8** encoders. You *can* run two 8-packs (16 knobs) if you reprogram the second unit's I2C address, but you'll need to address the second one with your own code.
+Yes -- `amyboard.encoder()` finds **every** attached encoder accessory and presents them as one object with a flat index space. The Adafruit boards have address jumpers (single: up to 8 boards at 0x36--0x3D, quad: up to 8 at 0x49--0x50), so e.g. two single encoders at 0x36 and 0x37 give `enc.encoders == 2`. Indices run M5Stack first, then quads, then singles, each by ascending I2C address. To bind exactly one specific board instead, pass its address: `amyboard.encoder(addr=0x37)` (and/or force a type with `type="adafruit_single"`).
+
+### My encoder counts backwards (counterclockwise increments) -- how do I fix it?
+
+Some encoder hardware revisions ship with the detent phase reversed, so a clockwise turn *decrements* the count. Pass `invert=True` to flip every encoder's direction, or flip just one:
+
+```python
+enc = amyboard.encoder(invert=True)  # flip all encoders
+enc.invert(True, 2)                  # ...or just encoder 2
+enc.invert(False)                    # back to the hardware's native direction
+```
 
 ### How do I read the M5Stack 8-Angle (8 pots) or 8-Encoder?
 
