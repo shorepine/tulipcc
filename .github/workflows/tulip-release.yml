@@ -30,6 +30,7 @@ on:
       - 'tulip/esp32s3/**'
       - 'tulip/shared/**'
       - 'tulip/fs/tulip/**'
+      - 'tulip/fs_create.py'
       - 'tulip/macos/**'
       - 'tulip/windows/**'
       - '.github/workflows/tulip-release.yml'

@@ -26,6 +26,15 @@ if [ -z "${SKIP_AMY_WEB:-}" ]; then
   #make docs/amy-audioin.js
   cd ../tulip/web
 fi
+
+# Ship editable copies of the built-in apps as /sys/ex/my_*.py (baked into
+# micropython.data via the Makefile's --preload-file of ../fs/tulip). The
+# frozen originals are read-only; the docs point users at these copies.
+# Gitignored (tulip/fs/tulip/ex/my_*); fs_create.py does the same for ESP images.
+for app in drums juno6 voices worldui; do
+  cp ../shared/py/$app.py ../fs/tulip/ex/my_$app.py
+done
+
 make
 
 # Now modify the static html and copy everything to a stage area 

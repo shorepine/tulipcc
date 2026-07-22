@@ -8,6 +8,15 @@ if(len(sys.argv)<2):
     print("Usage: python fs_create.py (amyboard,tulip) [flash]")
 
 distro = sys.argv[1]
+
+# Ship editable copies of the built-in apps as /sys/ex/my_*.py -- the frozen
+# originals are read-only, and the docs point users at these copies to edit.
+# They are gitignored (tulip/fs/tulip/ex/my_*), so regenerate them per build.
+if(distro=='tulip'):
+    import shutil
+    for app in ('drums', 'juno6', 'voices', 'worldui'):
+        shutil.copyfile('shared/py/%s.py' % (app), 'fs/tulip/ex/my_%s.py' % (app))
+
 if(distro=='tulip'):
     os.chdir('esp32s3')
 else:
