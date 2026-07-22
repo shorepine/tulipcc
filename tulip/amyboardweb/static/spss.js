@@ -2037,6 +2037,16 @@ function _process_complete_sysex(d) {
         if (_fw_version_resolve) { var vr = _fw_version_resolve; _fw_version_resolve = null; vr(verStr); }
         return;
     }
+    // File-CRC report: F0 00 03 45 'H' <ascii "C<crc32 hex>,L<len>"> F7,
+    // produced by the zP snippet _request_board_file_crc sends (write-verify).
+    // Like 'V', intercept before the chunk-marker logic.
+    if (d[4] === 0x48 /* 'H' */) {
+        var crcStr = '';
+        for (var ci = 5; ci < d.length - 1; ci++) crcStr += String.fromCharCode(d[ci]);
+        console.log('[verify] <- H reply: ' + JSON.stringify(crcStr));
+        if (_verify_crc_resolve) { var cr = _verify_crc_resolve; _verify_crc_resolve = null; cr(crcStr); }
+        return;
+    }
     // AMY CPU overload report: F0 00 03 45 'L' <base64 load percent> F7.
     // Sent by amyboard._on_amy_overload() after AMY's failsafe reset the synth
     // and the sketch loop was stopped. Like 'V', intercept before the
@@ -4932,21 +4942,74 @@ async function _send_text_file_to_amyboard(path, text) {
 }
 
 // ============================================================================
-// Verified file write: send, read back, retry
+// Verified file write: send, verify board-side CRC, retry
 // ----------------------------------------------------------------------------
 // The zT transfer has no integrity check: if one sysex chunk is lost in
-// transit (seen in the field on Windows Chrome), the board's byte counter
+// transit (seen in the field on Windows), the board's byte counter
 // comes up short and the transfer never completes — worse, every later sysex
 // command (zP restart, a retried zT header, ...) is base64-decoded INTO the
 // open file as binary garbage until the counter finally crosses the expected
 // size, producing the mystery "SyntaxError at line 11" / UnicodeDecodeError
 // popups. Until the firmware protocol grows sequence numbers, we verify every
-// sketch write by reading the file straight back with zD and comparing
-// byte-for-byte, resending on mismatch. A read-back TIMEOUT is the signature
-// of the wedged-transfer state above (the zD request itself got eaten as
+// sketch write and resend on mismatch. A verify TIMEOUT is the signature
+// of the wedged-transfer state above (the verify request itself got eaten as
 // transfer data); only a reboot clears it, since the board has no transfer
 // timeout. All logging is tagged [verify] so field reports can find it.
+//
+// The verify primitive is a CRC32 computed ON THE BOARD (zP exec) and
+// reported in a ~20-byte 'H' sysex frame — NOT a zD read-back of the file.
+// Read-back depends on the browser/OS delivering the board's ~1KB zD dump
+// frames intact, and bench testing (2026-07, Windows 11 + AMYboard) showed
+// Windows MIDI stacks dropping inbound sysex above ~1KB (fixed-size sysex
+// input buffers) while small frames always arrive. The zD read-back is kept
+// only as a best-effort diagnostic to locate the first corrupted byte after
+// a CRC mismatch.
 var _verify_read_resolve = null;
+var _verify_crc_resolve = null;
+
+// CRC32 (IEEE — same polynomial and convention as MicroPython's
+// binascii.crc32, so the JS and board values are directly comparable).
+var _CRC32_TABLE = null;
+function _crc32_bytes(bytes) {
+    if (!_CRC32_TABLE) {
+        _CRC32_TABLE = new Uint32Array(256);
+        for (var n = 0; n < 256; n++) {
+            var c = n;
+            for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+            _CRC32_TABLE[n] = c >>> 0;
+        }
+    }
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) crc = _CRC32_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+// Ask the board (via zP exec) to report "C<crc32 hex>,L<len>" of a file in a
+// small 'H' sysex frame. Resolves with that string, or null on timeout (the
+// wedged-transfer signature). binascii and tulip.midi_out exist on all
+// AMYboard firmware, so this works without a firmware update.
+function _request_board_file_crc(path, timeout_ms) {
+    if (!timeout_ms) timeout_ms = 8000;
+    return new Promise(function(resolve) {
+        var done = false;
+        var t = setTimeout(function() {
+            if (done) return;
+            done = true;
+            _verify_crc_resolve = null;
+            resolve(null);
+        }, timeout_ms);
+        _verify_crc_resolve = function(reply) {
+            if (done) return;
+            done = true;
+            clearTimeout(t);
+            resolve(reply);
+        };
+        var code = "import binascii,tulip\n"
+            + "d=open('" + path + "','rb').read()\n"
+            + "tulip.midi_out(bytes([0xF0,0,3,0x45,0x48])+('C%08x,L%d'%(binascii.crc32(d)&0xffffffff,len(d))).encode()+bytes([0xF7]))";
+        amy_add_log_message('zP' + code + 'Z');
+    });
+}
 
 // Read a file off the board via zD and resolve with its raw text (before any
 // sanitizing — this is for byte-exact comparison), or null on timeout.
@@ -4987,27 +5050,26 @@ function _log_first_difference(sent, got) {
 }
 
 // Send a text file with verify-and-retry. Returns:
-//   'verified'      — the board's file matches `text` byte-for-byte.
+//   'verified'      — the board's file matches `text` (CRC32 + length).
 //   'reload-needed' — Windows Chrome only: the transfer wedged and clearing
 //                     it needs a zB reboot, which stale WebMIDI can't survive
 //                     in-document; the caller must stash context and reload.
 //   'failed'        — attempts exhausted without a verified write.
 async function _send_text_file_verified(path, text) {
     var MAX_ATTEMPTS = 3;
-    // Scale the read-back timeout with size: big sketches (embedded MIDI
-    // files) take a while to stream back over sysex.
-    var readback_timeout_ms = 15000 + Math.floor(text.length / 10);
+    var textBytes = new TextEncoder().encode(text);
+    var expected = 'C' + _crc32_bytes(textBytes).toString(16).padStart(8, '0') + ',L' + textBytes.length;
     for (var attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         console.log('[verify] write attempt ' + attempt + '/' + MAX_ATTEMPTS + ': sending '
-            + text.length + ' chars to ' + path);
+            + textBytes.length + ' bytes to ' + path);
         await _send_text_file_to_amyboard(path, text);
-        var readBack = await _read_back_file_from_amyboard(path, readback_timeout_ms);
-        if (readBack === text) {
-            console.log('[verify] attempt ' + attempt + ': read-back matches (' + text.length + ' chars)');
+        var boardCrc = await _request_board_file_crc(path);
+        if (boardCrc === expected) {
+            console.log('[verify] attempt ' + attempt + ': board CRC matches (' + expected + ')');
             return 'verified';
         }
-        if (readBack === null) {
-            console.warn('[verify] attempt ' + attempt + ': read-back TIMED OUT — transfer likely wedged on board');
+        if (boardCrc === null) {
+            console.warn('[verify] attempt ' + attempt + ': CRC report TIMED OUT — transfer likely wedged on board');
             if (_IS_WINDOWS_CHROME) return 'reload-needed';
             if (attempt < MAX_ATTEMPTS) {
                 console.warn('[verify] rebooting board (zB) to clear wedged transfer state, then retrying…');
@@ -5015,9 +5077,16 @@ async function _send_text_file_verified(path, text) {
                 await wait_for_board_ready();
             }
         } else {
-            console.warn('[verify] attempt ' + attempt + ': read-back MISMATCH (sent '
-                + text.length + ' chars, got ' + readBack.length + ') — resending');
-            _log_first_difference(text, readBack);
+            console.warn('[verify] attempt ' + attempt + ': board CRC MISMATCH (want '
+                + expected + ', got ' + boardCrc + ') — resending');
+            // Best-effort diagnostic: pull the file back with zD to locate the
+            // first corrupted byte. On hosts that drop the ~1KB zD frames this
+            // just times out quietly — the CRC verdict above stands regardless.
+            try {
+                var readBack = await _read_back_file_from_amyboard(path, 15000 + Math.floor(text.length / 10));
+                if (readBack !== null && readBack !== text) _log_first_difference(text, readBack);
+                else if (readBack === null) console.warn('[verify] (diagnostic zD read-back timed out — inbound large-sysex limit?)');
+            } catch (e) {}
         }
     }
     console.warn('[verify] giving up after ' + MAX_ATTEMPTS + ' attempts');
