@@ -18,11 +18,8 @@ die() { echo "$*" 1>&2 ; exit 1; }
 RELEASE=$1
 TYPE=$2
 
-# Copy over some known examples to tulip's /sys/ex before creating image
-cp shared/py/drums.py fs/tulip/ex/my_drums.py
-cp shared/py/juno6.py fs/tulip/ex/my_juno6.py
-cp shared/py/worldui.py fs/tulip/ex/my_worldui.py
-cp shared/py/voices.py fs/tulip/ex/my_voices.py
+# The editable /sys/ex/my_*.py copies of the built-in apps are created by
+# fs_create.py (run below), so every image build gets them -- no copy needed here.
 
 # Make sure the submodules are fresh
 rm ../.submodules_ok
