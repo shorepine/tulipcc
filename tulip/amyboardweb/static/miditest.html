@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>AMYboard WebMIDI transfer test</title>
+<style>
+body { font-family: monospace; margin: 2em; background: #111; color: #ddd; }
+#verdict { font-size: 2em; margin: 0.5em 0; }
+.pass { color: #4c4; } .fail { color: #e55; } .warn { color: #fa3; }
+#log { white-space: pre-wrap; font-size: 0.9em; }
+button { font-size: 1.2em; padding: 0.5em 1em; }
+</style></head>
+<body>
+<h2>AMYboard WebMIDI transfer test</h2>
+<p>Diagnoses MIDI file-transfer reliability between this browser and a
+USB-connected AMYboard. Writes a small test file (your sketch is not touched),
+verifies it with a checksum computed on the board, then reads it back to
+measure large-sysex handling. Click Run, allow the MIDI permission prompt,
+then copy the results box to whoever asked you to run this.</p>
+<button id="go" onclick="run()">Run test (allow MIDI when prompted)</button>
+<div id="verdict"></div>
+<textarea id="results" rows="8" style="width:100%; background:#222; color:#ddd;"
+  placeholder="results JSON appears here after the test"></textarea>
+<div id="log"></div>
+<script>
+'use strict';
+const MFR = [0x00, 0x03, 0x45];
+const CHUNK = 188;
+const PATH = '/user/verifytest.txt';
+const logEl = document.getElementById('log');
+const verdictEl = document.getElementById('verdict');
+const lines = [];
+function log(s) { lines.push(s); logEl.textContent = lines.join('\n'); console.log(s); }
+
+// CRC32 (same poly as binascii.crc32)
+const CRC_T = (() => { const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0; } return t; })();
+function crc32(bytes) { let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_T[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0; }
+
+let inPort = null, outPort = null;
+const rxFrames = [];          // reassembled complete sysex frames (Uint8Array)
+const rxEventSizes = [];      // raw midimessage event sizes (fragmentation info)
+let reasm = null;
+
+function onMidi(ev) {
+  const d = ev.data;
+  rxEventSizes.push(d.length);
+  for (let i = 0; i < d.length; i++) {
+    const b = d[i];
+    if (b === 0xF0) reasm = [0xF0];
+    else if (reasm !== null) {
+      reasm.push(b);
+      if (b === 0xF7) { rxFrames.push(new Uint8Array(reasm)); reasm = null; }
+    }
+  }
+}
+
+function sendStr(s) {
+  const bytes = [0xF0].concat(MFR);
+  for (const ch of s) bytes.push(ch.charCodeAt(0));
+  bytes.push(0xF7);
+  outPort.send(bytes);
+}
+
+function waitFrame(markers, timeoutMs) {
+  // Resolve with the next reassembled AMY frame whose marker is in `markers`.
+  const t0 = Date.now();
+  return new Promise((resolve) => {
+    (function poll() {
+      while (rxFrames.length) {
+        const f = rxFrames.shift();
+        if (f.length >= 5 && f[1] === 0 && f[2] === 3 && f[3] === 0x45) {
+          const m = String.fromCharCode(f[4]);
+          if (markers.includes(m)) return resolve({ m, payload: f.slice(5, f.length - 1) });
+        }
+      }
+      if (Date.now() - t0 > timeoutMs) return resolve(null);
+      setTimeout(poll, 5);
+    })();
+  });
+}
+
+function b64(bytes) { let s = ''; bytes.forEach(x => s += String.fromCharCode(x)); return btoa(s); }
+
+function makePayload(tag, n) {
+  let s = '# ' + tag + ' browser test payload\n';
+  for (let i = 0; s.length < n; i++) s += tag + '-' + String(i).padStart(5, '0') + '-abcdefghijklmnopqrstuvwxyz\n';
+  return new TextEncoder().encode(s.slice(0, n));
+}
+
+async function run() {
+  document.getElementById('go').disabled = true;
+  const report = { ua: navigator.userAgent, steps: {}, akTimeouts: 0 };
+  try {
+    log('requesting MIDI access (sysex)...');
+    const access = await navigator.requestMIDIAccess({ sysex: true });
+    // Enumeration can lag behind the permission grant (WinRT backend) —
+    // retry the scan for up to 6s and always record what we saw.
+    for (let tries = 0; tries < 12 && (!inPort || !outPort); tries++) {
+      const ins = [], outs = [];
+      access.inputs.forEach(p => { ins.push(p.name); if (/amyboard/i.test(p.name)) inPort = p; });
+      access.outputs.forEach(p => { outs.push(p.name); if (/amyboard/i.test(p.name)) outPort = p; });
+      report.ports = { inputs: ins, outputs: outs };
+      if (!inPort || !outPort) await new Promise(r => setTimeout(r, 500));
+    }
+    log('port list: ' + JSON.stringify(report.ports));
+    if (!inPort || !outPort) throw new Error('AMYboard MIDI ports not found');
+    log('ports: in=' + inPort.name + ' out=' + outPort.name);
+    inPort.onmidimessage = onMidi;
+    await new Promise(r => setTimeout(r, 300));
+
+    // 1. ping
+    sendStr('zIZ');
+    const ok = await waitFrame('O', 3000);
+    report.steps.ping = !!ok;
+    log('zI ping: ' + (ok ? 'OK' : 'NO REPLY'));
+    if (!ok) throw new Error('board did not answer ping');
+
+    // 2. paced write, 12 chunks
+    const data = makePayload('BR', 2256);
+    sendStr('zT' + PATH + ',' + data.length + 'Z');
+    if (!(await waitFrame('A', 5000))) { report.akTimeouts++; log('WARN: no AK for header'); }
+    for (let off = 0; off < data.length; off += CHUNK) {
+      sendStr(b64(data.slice(off, off + CHUNK)));
+      if (!(await waitFrame('A', 5000))) { report.akTimeouts++; log('WARN: AK timeout at offset ' + off); }
+    }
+    log('sent ' + Math.ceil(data.length / CHUNK) + ' chunks, AK timeouts: ' + report.akTimeouts);
+
+    // 3. board-side CRC verify (small inbound frame — immune to input limits)
+    const code = "import binascii,tulip\nd=open('" + PATH + "','rb').read()\n" +
+      "tulip.midi_out(bytes([0xF0,0,3,0x45,86])+('C%08x,L%d'%(binascii.crc32(d)&0xffffffff,len(d))).encode()+bytes([0xF7]))";
+    sendStr('zP' + code + 'Z');
+    const crcReply = await waitFrame('V', 8000);
+    await waitFrame('A', 2000);
+    const want = 'C' + crc32(data).toString(16).padStart(8, '0') + ',L' + data.length;
+    const got = crcReply ? new TextDecoder().decode(crcReply.payload) : null;
+    report.steps.writeCrc = { want, got, ok: got === want };
+    log('WRITE verify (board CRC): want=' + want + ' got=' + got + ' -> ' + (got === want ? 'PASS' : 'FAIL'));
+
+    // 4. zD read-back — measures whether ~1KB inbound frames survive this browser
+    rxEventSizes.length = 0;
+    sendStr('zD' + PATH + 'Z');
+    let b64acc = '', readOk = false, frameSizes = [];
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline) {
+      const f = await waitFrame('CE0', deadline - Date.now());
+      if (!f) break;
+      frameSizes.push(f.payload.length + 6);
+      let s = ''; f.payload.forEach(x => s += String.fromCharCode(x));
+      b64acc += s;
+      if (f.m === 'E' || f.m === '0') { readOk = true; break; }
+    }
+    await waitFrame('A', 2000);
+    let readMatch = false, readLen = 0, firstDiff = -1;
+    if (readOk && b64acc) {
+      const bin = atob(b64acc);
+      readLen = bin.length;
+      readMatch = (bin.length === data.length);
+      if (readMatch) for (let i = 0; i < bin.length; i++)
+        if (bin.charCodeAt(i) !== data[i]) { readMatch = false; firstDiff = i; break; }
+    }
+    report.steps.readBack = { completed: readOk, len: readLen, expected: data.length,
+      match: readMatch, firstDiff, frameSizes, eventSizes: rxEventSizes.slice(0, 40) };
+    log('READ-BACK: completed=' + readOk + ' len=' + readLen + '/' + data.length +
+        ' match=' + readMatch + ' inbound frame sizes=' + JSON.stringify(frameSizes));
+    log('raw midimessage event sizes: ' + JSON.stringify(rxEventSizes.slice(0, 40)));
+
+    const wOK = report.steps.writeCrc.ok, rOK = readMatch;
+    verdictEl.textContent = 'WRITE: ' + (wOK ? 'PASS' : 'FAIL') + '   READ-BACK: ' + (rOK ? 'PASS' : 'FAIL');
+    verdictEl.className = (wOK && rOK) ? 'pass' : (wOK ? 'warn' : 'fail');
+  } catch (e) {
+    log('ERROR: ' + e.message);
+    report.error = e.message;
+    verdictEl.textContent = 'ERROR: ' + e.message;
+    verdictEl.className = 'fail';
+  }
+  report.log = lines.slice();
+  document.getElementById('results').value = JSON.stringify(report);
+  // Local test-collector convenience (127.0.0.1:8123 rig); 404s silently on
+  // the deployed site.
+  try { await fetch('/report', { method: 'POST', body: JSON.stringify(report) }); } catch (e) {}
+  document.getElementById('go').disabled = false;
+}
+</script>
+</body></html>

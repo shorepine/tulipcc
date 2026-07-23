@@ -2037,6 +2037,16 @@ function _process_complete_sysex(d) {
         if (_fw_version_resolve) { var vr = _fw_version_resolve; _fw_version_resolve = null; vr(verStr); }
         return;
     }
+    // File-CRC report: F0 00 03 45 'H' <ascii "C<crc32 hex>,L<len>"> F7,
+    // produced by the zP snippet _request_board_file_crc sends (write-verify).
+    // Like 'V', intercept before the chunk-marker logic.
+    if (d[4] === 0x48 /* 'H' */) {
+        var crcStr = '';
+        for (var ci = 5; ci < d.length - 1; ci++) crcStr += String.fromCharCode(d[ci]);
+        console.log('[verify] <- H reply: ' + JSON.stringify(crcStr));
+        if (_verify_crc_resolve) { var cr = _verify_crc_resolve; _verify_crc_resolve = null; cr(crcStr); }
+        return;
+    }
     // AMY CPU overload report: F0 00 03 45 'L' <base64 load percent> F7.
     // Sent by amyboard._on_amy_overload() after AMY's failsafe reset the synth
     // and the sketch loop was stopped. Like 'V', intercept before the
@@ -3614,7 +3624,29 @@ function reboot_to_bootloader() {
     amy_add_log_message('zBZ');
 }
 
-// Windows Chrome WebMIDI can't recover from a USB reboot within the same
+// Send zB, then release every WebMidi port BEFORE the board's USB device
+// disappears. Firefox holds MIDI sessions in process-wide state keyed by the
+// port's id — and the id is STABLE across the zB USB reboot. A session left
+// open when the device drops becomes a zombie that blocks every later
+// document in that tab from opening the re-enumerated port: open() fails
+// with "operation is not supported by the underlying object" and sends
+// silently vanish, surviving page reloads and even a fresh MIDIAccess
+// (verified on Firefox 153 + Windows 11 with a parallel native wire
+// monitor). Releasing the ports while the device is still alive means no
+// zombie is recorded and the post-reload document binds cleanly. Chrome
+// doesn't need this but isn't harmed — the reload rebuilds MIDI regardless.
+async function _zb_and_release_midi() {
+    reboot_to_bootloader();
+    await sleep_ms(500);   // let the zB sysex actually leave first
+    try {
+        await WebMidi.disable();
+        console.log('zB: WebMidi released before USB re-enumeration');
+    } catch (e) {
+        console.warn('zB: WebMidi release failed:', e && e.message);
+    }
+}
+
+// Windows WebMIDI can't recover from a USB reboot within the same
 // document: the MIDIOutput handle stays stale, no statechange fires, and
 // sendSysex silently goes into the void. We work around this by sending
 // zB, waiting for the board to finish rebooting, then reloading the page
@@ -3622,9 +3654,14 @@ function reboot_to_bootloader() {
 // saves its post-bootloader context in sessionStorage and reloads; on the
 // new page, pageload_control_sync picks up the flag and runs the post-
 // bootloader work against the fresh handles. macOS doesn't need this.
-var _IS_WINDOWS_CHROME = typeof navigator !== 'undefined' &&
-                         /Windows/i.test(navigator.userAgent || '') &&
-                         /Chrome/i.test(navigator.userAgent || '');
+//
+// This was originally Chrome-only, but bench testing (2026-07-22, Windows
+// 11 + Firefox 153) showed Firefox has the identical failure with better
+// camouflage: its stale output keeps reporting state=connected/conn=open
+// with the pre-reboot port id while sends go nowhere, so wait_for_board_ready
+// pings a zombie until timeout. Gate on Windows for every browser.
+var _IS_WINDOWS_BROWSER = typeof navigator !== 'undefined' &&
+                          /Windows/i.test(navigator.userAgent || '');
 
 // Complete the post-bootloader portion of a sketch-upload flow. Shared
 // between the synchronous (macOS) path and the post-reload (Windows) path
@@ -3647,9 +3684,25 @@ var _IS_WINDOWS_CHROME = typeof navigator !== 'undefined' &&
 async function _upload_sketch_post_bootloader(opts) {
     if (!opts || typeof opts.sketchText !== 'string') return;
     var sketchPath = opts.sketchPath || '/user/current/sketch.py';
+    var uploadOk = false;
     try {
-        await _send_text_file_to_amyboard(sketchPath, opts.sketchText);
-        console.log('post-zb upload: sketch sent to AMYboard');
+        var result = await _send_text_file_verified(sketchPath, opts.sketchText);
+        if (result === 'reload-needed') {
+            // The transfer wedged again and we're on Windows Chrome, where
+            // the zB reboot that clears it forces a page reload. Cap the
+            // reload loop at 2 so a persistently bad link can't bounce the
+            // page forever.
+            var reloads = opts.verifyReloadCount || 0;
+            if (reloads < 2) {
+                await _zb_then_reload_with_upload_context(Object.assign({}, opts, {
+                    verifyReloadCount: reloads + 1
+                }));
+                return;  // unreachable — the reload unloads us
+            }
+            console.warn('post-zb upload: verify still failing after ' + reloads + ' reloads — giving up');
+        }
+        uploadOk = (result === 'verified');
+        if (uploadOk) console.log('post-zb upload: sketch sent to AMYboard (verified)');
         await sleep_ms(opts.restart ? 500 : 1000);
     } catch (e) {
         console.warn('post-zb upload: sketch upload to AMYboard failed', e);
@@ -3677,10 +3730,15 @@ async function _upload_sketch_post_bootloader(opts) {
         var envNameInput = document.getElementById('editor_filename');
         if (envNameInput) envNameInput.value = opts.packageName;
     }
-    if (opts.restart) {
+    if (opts.restart && uploadOk) {
         var restartFn = (opts.restart === 'transfer_done') ? 'environment_transfer_done' : 'restart_sketch';
         amy_add_log_message('zPimport amyboard; amyboard.' + restartFn + '()Z');
         console.log('post-zb upload: sketch restarted via zP (' + restartFn + ')');
+    } else if (!uploadOk) {
+        // Don't restart into a sketch we know didn't arrive intact — surface
+        // the failure instead. (Editor + knob UI above still reflect the
+        // user's sketch; only the board write failed.)
+        show_alert(_VERIFY_FAILED_ALERT);
     }
     if (opts.refreshWorldFiles && typeof refresh_amyboard_world_files === 'function') {
         try { await refresh_amyboard_world_files(); } catch (e) {}
@@ -3697,9 +3755,9 @@ async function _zb_then_reload_with_upload_context(opts) {
     } catch (e) {
         console.warn('_zb_then_reload_with_upload_context: stash failed:', e);
     }
-    reboot_to_bootloader();
-    console.log('Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
-    await sleep_ms(4000);
+    await _zb_and_release_midi();
+    console.log('Windows — zB sent + MIDI released, reloading in 9s for a clean rebind');
+    await sleep_ms(8500);
     console.log('reloading now');
     window.location.reload();
     // Block the caller's await in case reload is delayed — we do NOT want
@@ -3786,6 +3844,31 @@ async function _install_raw_midi_statechange_diagnostic() {
     } catch (e) {
         console.warn('[MIDIAccess] diagnostic install failed:', e);
     }
+}
+
+// Tear the whole WebMidi session down and rebuild it from a brand-new
+// MIDIAccess. On Windows the board's MIDI endpoint keeps the SAME id across
+// a zB USB reboot, so a session opened against the pre-reboot instance looks
+// perfectly healthy (state=connected, connection=open) while every send
+// silently vanishes — verified on Firefox 153 with a wire monitor: the
+// page's zI pings never reached the board while a parallel native client
+// pinged it fine. Raw-port close()/open() cycling does NOT fix this (the
+// session still points at the dead instance); only a new MIDIAccess binds
+// the live one. Returns true if the rebind completed.
+async function _full_webmidi_rebind() {
+    if (typeof WebMidi === 'undefined' || !WebMidi || !WebMidi.supported) return false;
+    try { await WebMidi.disable(); } catch (e) { console.warn('rebind: disable failed:', e && e.message); }
+    await sleep_ms(500);
+    try {
+        await WebMidi.enable({ sysex: true });
+    } catch (e) {
+        console.warn('rebind: enable failed:', e && e.message);
+        return false;
+    }
+    console.log('rebind: WebMidi re-enabled, sysex=' + WebMidi.sysexEnabled);
+    try { if (typeof _refresh_main_midi_dropdowns === 'function') _refresh_main_midi_dropdowns(); } catch (e) {}
+    try { await setup_midi_devices(); } catch (e) { console.warn('rebind: setup_midi_devices failed:', e && e.message); }
+    return true;
 }
 
 async function wait_for_board_ready(timeout_ms) {
@@ -3890,9 +3973,23 @@ async function wait_for_board_ready(timeout_ms) {
     // on the raw MIDIPort. No-op on macOS because the happy path already
     // succeeded well before halfway.
     var did_port_cycle = false;
+    // One-shot at 1/3 of the window: full WebMidi teardown + re-enable.
+    // This is the recovery that actually works on Windows Firefox (see
+    // _full_webmidi_rebind); it runs BEFORE the raw-port cycle so the
+    // cheap-but-Firefox-ineffective cycle remains the Chrome fallback.
+    var did_full_rebind = false;
 
     try {
         while (Date.now() < deadline) {
+            if (_IS_WINDOWS_BROWSER && !did_full_rebind && (Date.now() - start_time) > timeout_ms / 3) {
+                did_full_rebind = true;
+                console.log('wait_for_board_ready: no replies at 1/3 timeout — full WebMidi rebind (new MIDIAccess)...');
+                try { await _full_webmidi_rebind(); } catch (e) { console.warn('wait_for_board_ready: rebind failed:', e); }
+                // WebMidi.disable() dropped our connected listener — re-attach.
+                _attach_connected_listener();
+                consecutive_failures = 0;
+                last_probe_time = 0;
+            }
             if (!did_port_cycle && (Date.now() - start_time) > timeout_ms / 2) {
                 did_port_cycle = true;
                 console.log('wait_for_board_ready: halfway, cycling raw ports (close → wait → open)...');
@@ -3946,7 +4043,7 @@ async function wait_for_board_ready(timeout_ms) {
             // the rest of the session (prev-name matching is sticky on
             // the wrong port). Leave macOS on the connected-event path —
             // CoreMIDI does fire those reliably.
-            if (_IS_WINDOWS_CHROME && typeof _refresh_main_midi_dropdowns === 'function') {
+            if (_IS_WINDOWS_BROWSER && typeof _refresh_main_midi_dropdowns === 'function') {
                 _refresh_main_midi_dropdowns();
             }
 
@@ -4911,6 +5008,162 @@ async function _send_text_file_to_amyboard(path, text) {
 }
 
 // ============================================================================
+// Verified file write: send, verify board-side CRC, retry
+// ----------------------------------------------------------------------------
+// The zT transfer has no integrity check: if one sysex chunk is lost in
+// transit (seen in the field on Windows), the board's byte counter
+// comes up short and the transfer never completes — worse, every later sysex
+// command (zP restart, a retried zT header, ...) is base64-decoded INTO the
+// open file as binary garbage until the counter finally crosses the expected
+// size, producing the mystery "SyntaxError at line 11" / UnicodeDecodeError
+// popups. Until the firmware protocol grows sequence numbers, we verify every
+// sketch write and resend on mismatch. A verify TIMEOUT is the signature
+// of the wedged-transfer state above (the verify request itself got eaten as
+// transfer data); only a reboot clears it, since the board has no transfer
+// timeout. All logging is tagged [verify] so field reports can find it.
+//
+// The verify primitive is a CRC32 computed ON THE BOARD (zP exec) and
+// reported in a ~20-byte 'H' sysex frame — NOT a zD read-back of the file.
+// Read-back depends on the browser/OS delivering the board's ~1KB zD dump
+// frames intact, and bench testing (2026-07, Windows 11 + AMYboard) showed
+// Windows MIDI stacks dropping inbound sysex above ~1KB (fixed-size sysex
+// input buffers) while small frames always arrive. The zD read-back is kept
+// only as a best-effort diagnostic to locate the first corrupted byte after
+// a CRC mismatch.
+var _verify_read_resolve = null;
+var _verify_crc_resolve = null;
+
+// CRC32 (IEEE — same polynomial and convention as MicroPython's
+// binascii.crc32, so the JS and board values are directly comparable).
+var _CRC32_TABLE = null;
+function _crc32_bytes(bytes) {
+    if (!_CRC32_TABLE) {
+        _CRC32_TABLE = new Uint32Array(256);
+        for (var n = 0; n < 256; n++) {
+            var c = n;
+            for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+            _CRC32_TABLE[n] = c >>> 0;
+        }
+    }
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) crc = _CRC32_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+// Ask the board (via zP exec) to report "C<crc32 hex>,L<len>" of a file in a
+// small 'H' sysex frame. Resolves with that string, or null on timeout (the
+// wedged-transfer signature). binascii and tulip.midi_out exist on all
+// AMYboard firmware, so this works without a firmware update.
+function _request_board_file_crc(path, timeout_ms) {
+    if (!timeout_ms) timeout_ms = 8000;
+    return new Promise(function(resolve) {
+        var done = false;
+        var t = setTimeout(function() {
+            if (done) return;
+            done = true;
+            _verify_crc_resolve = null;
+            resolve(null);
+        }, timeout_ms);
+        _verify_crc_resolve = function(reply) {
+            if (done) return;
+            done = true;
+            clearTimeout(t);
+            resolve(reply);
+        };
+        var code = "import binascii,tulip\n"
+            + "d=open('" + path + "','rb').read()\n"
+            + "tulip.midi_out(bytes([0xF0,0,3,0x45,0x48])+('C%08x,L%d'%(binascii.crc32(d)&0xffffffff,len(d))).encode()+bytes([0xF7]))";
+        amy_add_log_message('zP' + code + 'Z');
+    });
+}
+
+// Read a file off the board via zD and resolve with its raw text (before any
+// sanitizing — this is for byte-exact comparison), or null on timeout.
+function _read_back_file_from_amyboard(path, timeout_ms) {
+    if (!timeout_ms) timeout_ms = 15000;
+    return new Promise(function(resolve) {
+        // Drop stale sysex reassembly state so a fragment from an earlier
+        // interrupted op can't prepend onto our response.
+        _sysex_reasm = null;
+        _sysex_b64_accum = '';
+        var done = false;
+        var t = setTimeout(function() {
+            if (done) return;
+            done = true;
+            _verify_read_resolve = null;
+            resolve(null);
+        }, timeout_ms);
+        _verify_read_resolve = function(payloadText) {
+            if (done) return;
+            done = true;
+            clearTimeout(t);
+            resolve(payloadText);
+        };
+        amy_add_log_message('zD' + path + 'Z');
+    });
+}
+
+// Console-only diagnostic: where does the read-back first diverge from what
+// we sent? The char index maps to a sketch line, which is exactly the line
+// number users report from the on-board SyntaxError popup.
+function _log_first_difference(sent, got) {
+    var n = Math.min(sent.length, got.length);
+    var i = 0;
+    while (i < n && sent[i] === got[i]) i++;
+    var line = sent.slice(0, i).split('\n').length;
+    console.warn('[verify] first difference at char ' + i + ' (sketch line ' + line + '): sent '
+        + JSON.stringify(sent.slice(i, i + 40)) + ' got ' + JSON.stringify(got.slice(i, i + 40)));
+}
+
+// Send a text file with verify-and-retry. Returns:
+//   'verified'      — the board's file matches `text` (CRC32 + length).
+//   'reload-needed' — Windows Chrome only: the transfer wedged and clearing
+//                     it needs a zB reboot, which stale WebMIDI can't survive
+//                     in-document; the caller must stash context and reload.
+//   'failed'        — attempts exhausted without a verified write.
+async function _send_text_file_verified(path, text) {
+    var MAX_ATTEMPTS = 3;
+    var textBytes = new TextEncoder().encode(text);
+    var expected = 'C' + _crc32_bytes(textBytes).toString(16).padStart(8, '0') + ',L' + textBytes.length;
+    for (var attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        console.log('[verify] write attempt ' + attempt + '/' + MAX_ATTEMPTS + ': sending '
+            + textBytes.length + ' bytes to ' + path);
+        await _send_text_file_to_amyboard(path, text);
+        var boardCrc = await _request_board_file_crc(path);
+        if (boardCrc === expected) {
+            console.log('[verify] attempt ' + attempt + ': board CRC matches (' + expected + ')');
+            return 'verified';
+        }
+        if (boardCrc === null) {
+            console.warn('[verify] attempt ' + attempt + ': CRC report TIMED OUT — transfer likely wedged on board');
+            if (_IS_WINDOWS_BROWSER) return 'reload-needed';
+            if (attempt < MAX_ATTEMPTS) {
+                console.warn('[verify] rebooting board (zB) to clear wedged transfer state, then retrying…');
+                reboot_to_bootloader();
+                await wait_for_board_ready();
+            }
+        } else {
+            console.warn('[verify] attempt ' + attempt + ': board CRC MISMATCH (want '
+                + expected + ', got ' + boardCrc + ') — resending');
+            // Best-effort diagnostic: pull the file back with zD to locate the
+            // first corrupted byte. On hosts that drop the ~1KB zD frames this
+            // just times out quietly — the CRC verdict above stands regardless.
+            try {
+                var readBack = await _read_back_file_from_amyboard(path, 15000 + Math.floor(text.length / 10));
+                if (readBack !== null && readBack !== text) _log_first_difference(text, readBack);
+                else if (readBack === null) console.warn('[verify] (diagnostic zD read-back timed out — inbound large-sysex limit?)');
+            } catch (e) {}
+        }
+    }
+    console.warn('[verify] giving up after ' + MAX_ATTEMPTS + ' attempts');
+    return 'failed';
+}
+
+var _VERIFY_FAILED_ALERT =
+    'Writing to your AMYboard failed: the sketch did not arrive intact over MIDI, even after retries.\n\n'
+    + 'Unplug and replug your AMYboard, then try Write again.';
+
+// ============================================================================
 // Pre-op board check: reachability, liveness, firmware version
 // ----------------------------------------------------------------------------
 // Every Write/Read in control mode first verifies the board can actually take
@@ -5161,7 +5414,7 @@ function show_firmware_warning(date, latest, reason, opts) {
         if (updBtn)  updBtn.onclick  = isWedged ? async function() {
             cleanup(); inst.hide();
             console.log('[fwdetect] user: reboot wedged board (zB)');
-            if (_IS_WINDOWS_CHROME) {
+            if (_IS_WINDOWS_BROWSER) {
                 // Same limitation as every zB flow: Windows Chrome WebMIDI can't
                 // survive the USB reboot in-document (see
                 // _zb_then_reload_with_upload_context). If a Write is pending,
@@ -5177,9 +5430,9 @@ function show_firmware_warning(date, latest, reason, opts) {
                         suppressKnobCc: true
                     });
                 } else {
-                    reboot_to_bootloader();
-                    console.log('[fwdetect] Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
-                    await sleep_ms(4000);
+                    await _zb_and_release_midi();
+                    console.log('[fwdetect] Windows — zB sent + MIDI released, reloading in 9s for a clean rebind');
+                    await sleep_ms(8500);
                     window.location.reload();
                 }
                 resolve(false);  // unreachable in practice — the reload unloads us
@@ -5240,9 +5493,27 @@ async function write_sketch_to_amyboard() {
         try {
             // zT stops the sequencer on the board during the transfer, so the
             // running sketch's loop() can't corrupt it — no reboot required.
-            await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-            // Restart the sketch: resets AMY, replays the knob block, runs code.
-            amy_add_log_message('zPimport amyboard; amyboard.environment_transfer_done()Z');
+            // Verified write: read the file back and resend on mismatch, so a
+            // dropped sysex chunk becomes a silent retry instead of a corrupted
+            // sketch (see _send_text_file_verified).
+            var result = await _send_text_file_verified('/user/current/sketch.py', sketchText);
+            if (result === 'verified') {
+                // Restart the sketch: resets AMY, replays the knob block, runs code.
+                amy_add_log_message('zPimport amyboard; amyboard.environment_transfer_done()Z');
+            } else if (result === 'reload-needed') {
+                // Windows Chrome with a wedged transfer: clearing it needs a zB
+                // reboot, and stale WebMIDI can't survive that in-document.
+                // Stash the sketch and reload; the fresh page resumes the write
+                // in _upload_sketch_post_bootloader (which verifies again).
+                await _zb_then_reload_with_upload_context({
+                    sketchText: sketchText,
+                    restart: 'transfer_done',
+                    suppressKnobCc: true,
+                    verifyReloadCount: 1
+                });
+            } else {
+                show_alert(_VERIFY_FAILED_ALERT);
+            }
         } catch (e) {
             console.warn('write_sketch_to_amyboard: control failed', e);
         } finally {
@@ -5940,11 +6211,11 @@ async function reset_amyboard() {
         // flag and calls _reset_amyboard_send_and_cleanup() — which sends
         // zP factory_reset and resets the JS state — against a fresh
         // MIDIAccess.
-        if (_IS_WINDOWS_CHROME) {
-            reboot_to_bootloader();
-            console.log('reset: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+        if (_IS_WINDOWS_BROWSER) {
             sessionStorage.setItem('amyboard_post_reset_reload', '1');
-            await sleep_ms(4000);
+            await _zb_and_release_midi();
+            console.log('reset: Windows — zB sent + MIDI released, reloading in 9s for a clean rebind');
+            await sleep_ms(8500);
             console.log('reset: reloading now');
             window.location.reload();
             return;  // unreachable after reload
@@ -6136,6 +6407,15 @@ function _sanitize_sketch_text(text) {
 }
 
 function _handle_sync_sysex_payload(payload) {
+    // Verify read-back in progress (_send_text_file_verified): hand the RAW
+    // payload to the verifier before any sanitizing or self-healing — the
+    // whole point is a byte-exact comparison with what was just sent.
+    if (_verify_read_resolve) {
+        var vr = _verify_read_resolve;
+        _verify_read_resolve = null;
+        vr(payload);
+        return;
+    }
     // payload is the sketch.py text, base64-decoded.
     payload = _sanitize_sketch_text(payload);
     // Reject empty/garbage payloads — a stale sysex fragment shouldn't

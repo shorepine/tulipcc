@@ -68,7 +68,12 @@ A working board enumerates as a USB MIDI device (VID `0xCAF0`, PID `0x4009`) plu
 
 ### The online editor / "Control" can't find my AMYboard
 
-The editor talks to the board over **WebSerial/WebMIDI**, which only work in **Chrome or Edge** (desktop). Safari and Firefox don't support them, so the board won't show up at all. Also plug the board in and finish any DFU/BOOT step **before** clicking Connect/Control, and pick the right port when the browser prompts.
+The editor talks to the board over two browser APIs, with different support:
+
+- **Web MIDI** (Control mode -- knobs, writing sketches): works in **Chrome, Edge, and Firefox** (desktop). Firefox will ask to install a small site-permission add-on the first time -- allow it (see the Firefox question below). Safari doesn't support Web MIDI at all.
+- **WebSerial** (the **firmware flasher** only): **Chrome or Edge only** -- Firefox and Safari can't flash firmware.
+
+Also plug the board in and finish any DFU/BOOT step **before** clicking Connect/Control, and pick the right port when the browser prompts.
 
 If the **Update firmware** button shows something like "amyboard.com refused to connect," clear your browser cache and reload the page -- a stale cached page has caused exactly this.
 
@@ -83,6 +88,28 @@ Most setups work across macOS, Linux, and Windows, especially after a firmware u
 - On **Linux**, add your user to the `dialout` group, then e.g. `screen /dev/ttyACM0 115200`.
 
 Still stuck on a particular machine? **Ask on the [Discord](https://discord.gg/TzBFkUb8pG) `#amyboard` channel** -- it's the fastest way to get help, and your report helps us catch any remaining edge cases.
+
+### Windows: my DAW sees the AMYboard, but no browser does
+
+If the AMYboard shows up fine in Device Manager and in DAWs/MIDI apps, but **every browser** (Chrome, Edge, Firefox) says no MIDI devices exist, you've likely hit a **Windows MIDI Services migration problem**. Microsoft is rolling out a new MIDI stack to Windows 11 in 2026, and on some machines -- especially **refurbs, or PCs restored from an older image, that then pull months of Windows updates at once** -- old per-device MIDI registrations in the registry block the handoff that browsers depend on. Desktop apps keep working through the legacy path, so everything *looks* healthy except browsers.
+
+To confirm and fix:
+
+1. Make sure Windows is fully updated and the **"Windows MIDI Service"** (`midisrv`) is running in `services.msc` (set it to Automatic).
+2. Install Microsoft's tools: `winget install Microsoft.MIDI.SDK`, then run **`mididiag`** -- if it prints an error about `wdmaud2.drv` missing from `Drivers32`, that's this problem.
+3. Run **`midifixreg`** (from the same tools) in an **Administrator** terminal and reboot.
+4. If it *still* reverts after a reboot, old audio devices each carry a leftover `Drivers\midi` registration that recreates the bad entries every boot -- ask on [Discord](https://discord.gg/TzBFkUb8pG) `#amyboard` and we'll walk you through removing them (it's a small registry cleanup we've verified end-to-end).
+
+You can verify the fix (or capture a report to share) with the one-click test at [amyboard.com/miditest.html](https://amyboard.com/miditest.html).
+
+### Firefox: "site permission add-on" prompts, or MIDI silently refused
+
+Firefox supports Web MIDI, but gates it behind a **site-permission add-on**: the first time a site asks for MIDI, a small icon appears near the address bar asking to install a Firefox-generated add-on for that site -- click **Allow/Add** and you're set. Things to know:
+
+- The prompt only appears on **real https sites** like amyboard.com -- Firefox never grants MIDI to local/`localhost` pages.
+- If Firefox sees **no MIDI devices at all**, it silently auto-denies without ever showing the prompt (the devtools console says "no devices were detected"). Fix device visibility first -- on Windows, see the question above.
+- If you dismissed the prompt once, Firefox auto-rejects afterward -- click the small permissions icon in the address bar to bring it back.
+- The **firmware flasher** still needs Chrome or Edge (WebSerial); only the editor's Control mode works in Firefox.
 
 ### Can I plug a USB-MIDI keyboard straight into the AMYboard? (USB host)
 
