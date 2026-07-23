@@ -1171,6 +1171,12 @@ _ENCODER_PROFILES = {
 # jumper range, and an ADS1115 can sit inside the quad range.
 _SEESAW_HW_IDS = (0x55, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89)
 
+# How many callbacks a button should be held for before Encoder.button_event returns HELD
+_BUTTON_HOLD_STEPS = 6
+
+# Return codes from Encoder.button_event
+PRESS = 1
+HELD = 2
 
 def _seesaw_present(addr, delay=0.008):
     """True if a device at addr answers the seesaw hardware-ID register."""
@@ -1263,6 +1269,8 @@ class Encoder:
             self.devices.append((t, a))
 
         self.encoders = sum(d["n"] for d in self._devs)
+        self.button_held_steps = [0] * self.encoders
+        self.button_events_queue = []
         self.leds = sum(d["leds"] for d in self._devs)
         types = set(t for t, _ in self.devices)
         # type stays a plain string for single-type setups; "multi" when mixed.
@@ -1279,11 +1287,12 @@ class Encoder:
             self._invert = [bool(invert)] * self.encoders
 
         # Snapshot each encoder's raw counter so read() starts at 0.
-        self._offset = [self._raw_read(d, j) for d, j in self._map]
+        self._offset = [self._raw_read(i) for i in range(self.encoders)]
 
     # -- raw, offset-free per-device reads --
 
-    def _raw_read(self, d, j):
+    def _raw_read(self, i):
+        d, j = self._map[i]
         t = d["type"]
         if t == "web":
             return _web_encoder_pos
@@ -1306,8 +1315,7 @@ class Encoder:
         """Cumulative position of encoder i (0-based), starting at 0."""
         if not (0 <= i < self.encoders):
             return 0
-        d, j = self._map[i]
-        pos = self._raw_read(d, j) - self._offset[i]
+        pos = self._raw_read(i) - self._offset[i]
         return -pos if self._invert[i] else pos
 
     def invert(self, invert=True, i=None):
@@ -1341,6 +1349,33 @@ class Encoder:
                 return False
         return False
 
+    def poll_button_events(self):
+        """Stateful layer that returns a list of button events (button, PRESS/HOLD)."""
+        for i in range(self.encoders):
+            button_down = self.button(i)
+            if button_down:
+                if self.button_held_steps[i] < _BUTTON_HOLD_STEPS:
+                    self.button_held_steps[i] += 1
+                    if self.button_held_steps[i] == _BUTTON_HOLD_STEPS:
+                        self.button_events_queue.append((i, HELD))
+            else:
+                # Button is up
+                if self.button_held_steps[i] > 0:
+                    # Button was down
+                    if self.button_held_steps[i] < _BUTTON_HOLD_STEPS:
+                        self.button_events_queue.append((i, PRESS))
+                    self.button_held_steps[i] = 0
+
+    def button_event(self, encoder=None):
+        """Pull one event from button event stack, either for encoder, or for all."""
+        result = None
+        for i, event in enumerate(self.button_events_queue):
+            if encoder is None or event[0] == encoder:
+                result = event
+                del self.button_events_queue[i]
+                break
+        return result
+
     def led(self, i, r, g, b):
         """Set LED i to (r, g, b), each 0..255. Applied immediately."""
         if not (0 <= i < self.leds):
@@ -1356,13 +1391,12 @@ class Encoder:
             except OSError:
                 pass
 
-    def reset(self, i=None):
-        """Zero encoder i back to 0 (omit i to zero every encoder)."""
+    def reset(self, i=None, value=0):
+        """Zero encoder i back to value (or 0) (omit i to zero every encoder)."""
         if i is None:
-            self._offset = [self._raw_read(d, j) for d, j in self._map]
+            self._offset = [self._raw_read(i) - value for i in range(self.encoders)]
         elif 0 <= i < self.encoders:
-            d, j = self._map[i]
-            self._offset[i] = self._raw_read(d, j)
+            self._offset[i] = self._raw_read(i) - value
 
     def switch(self):
         """M5Stack 8Encoder toggle-switch state (always False on other devices)."""
