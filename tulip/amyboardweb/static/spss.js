@@ -3624,6 +3624,28 @@ function reboot_to_bootloader() {
     amy_add_log_message('zBZ');
 }
 
+// Send zB, then release every WebMidi port BEFORE the board's USB device
+// disappears. Firefox holds MIDI sessions in process-wide state keyed by the
+// port's id — and the id is STABLE across the zB USB reboot. A session left
+// open when the device drops becomes a zombie that blocks every later
+// document in that tab from opening the re-enumerated port: open() fails
+// with "operation is not supported by the underlying object" and sends
+// silently vanish, surviving page reloads and even a fresh MIDIAccess
+// (verified on Firefox 153 + Windows 11 with a parallel native wire
+// monitor). Releasing the ports while the device is still alive means no
+// zombie is recorded and the post-reload document binds cleanly. Chrome
+// doesn't need this but isn't harmed — the reload rebuilds MIDI regardless.
+async function _zb_and_release_midi() {
+    reboot_to_bootloader();
+    await sleep_ms(500);   // let the zB sysex actually leave first
+    try {
+        await WebMidi.disable();
+        console.log('zB: WebMidi released before USB re-enumeration');
+    } catch (e) {
+        console.warn('zB: WebMidi release failed:', e && e.message);
+    }
+}
+
 // Windows WebMIDI can't recover from a USB reboot within the same
 // document: the MIDIOutput handle stays stale, no statechange fires, and
 // sendSysex silently goes into the void. We work around this by sending
@@ -3733,9 +3755,9 @@ async function _zb_then_reload_with_upload_context(opts) {
     } catch (e) {
         console.warn('_zb_then_reload_with_upload_context: stash failed:', e);
     }
-    reboot_to_bootloader();
-    console.log('Windows — zB sent, reloading in 9s for fresh MIDIAccess (long wait: reloading while the USB re-enumeration is still settling binds a dead endpoint instance, seen on Firefox 153)');
-    await sleep_ms(9000);
+    await _zb_and_release_midi();
+    console.log('Windows — zB sent + MIDI released, reloading in 9s for a clean rebind');
+    await sleep_ms(8500);
     console.log('reloading now');
     window.location.reload();
     // Block the caller's await in case reload is delayed — we do NOT want
@@ -5408,9 +5430,9 @@ function show_firmware_warning(date, latest, reason, opts) {
                         suppressKnobCc: true
                     });
                 } else {
-                    reboot_to_bootloader();
-                    console.log('[fwdetect] Windows — zB sent, reloading in 9s for fresh MIDIAccess (long wait: reloading while the USB re-enumeration is still settling binds a dead endpoint instance, seen on Firefox 153)');
-                    await sleep_ms(9000);
+                    await _zb_and_release_midi();
+                    console.log('[fwdetect] Windows — zB sent + MIDI released, reloading in 9s for a clean rebind');
+                    await sleep_ms(8500);
                     window.location.reload();
                 }
                 resolve(false);  // unreachable in practice — the reload unloads us
@@ -6190,10 +6212,10 @@ async function reset_amyboard() {
         // zP factory_reset and resets the JS state — against a fresh
         // MIDIAccess.
         if (_IS_WINDOWS_BROWSER) {
-            reboot_to_bootloader();
-            console.log('reset: Windows — zB sent, reloading in 9s for fresh MIDIAccess (long wait: reloading while the USB re-enumeration is still settling binds a dead endpoint instance, seen on Firefox 153)');
             sessionStorage.setItem('amyboard_post_reset_reload', '1');
-            await sleep_ms(9000);
+            await _zb_and_release_midi();
+            console.log('reset: Windows — zB sent + MIDI released, reloading in 9s for a clean rebind');
+            await sleep_ms(8500);
             console.log('reset: reloading now');
             window.location.reload();
             return;  // unreachable after reload
