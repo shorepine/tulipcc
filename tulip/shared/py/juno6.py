@@ -605,8 +605,8 @@ def control_change(control, value):
 
 
 def midi_event_cb(m):
-    #print('midi_cb:', [int(b) for b in m])
-    if m[0] == 0xb0:    # Other control slider.
+    global midi_channel
+    if m[0] == (0xb0 + midi_channel - 1):    # Other control slider.
         control_change(m[1], m[2])
     elif m[0] == 0xbf:
         # Special case for Oxygen49 transport buttons which send val 0x00 on release.
