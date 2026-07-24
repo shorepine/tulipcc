@@ -14,6 +14,7 @@ import ast
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import shutil
@@ -275,6 +276,22 @@ def _ensure_schema() -> None:
         except sqlite3.OperationalError:
             pass  # column already exists
 
+        # Log of file downloads across both scopes (for usage stats/graphs).
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS downloads (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              created_at_ms INTEGER NOT NULL,
+              client_ip TEXT NOT NULL DEFAULT '',
+              scope TEXT NOT NULL,
+              item_id INTEGER NOT NULL,
+              filename TEXT NOT NULL DEFAULT ''
+            );
+            CREATE INDEX IF NOT EXISTS idx_downloads_created ON downloads(created_at_ms DESC);
+            CREATE INDEX IF NOT EXISTS idx_downloads_scope ON downloads(scope, created_at_ms DESC);
+            """
+        )
+
         # Embedding vectors for World sketches, keyed by environments.id.
         # text_hash covers (embedding model, embedded text) so rows re-embed
         # automatically when a description/tags change or the model is swapped.
@@ -313,6 +330,19 @@ def _client_ip(request: Request) -> str:
     if request.client:
         return request.client.host
     return ""
+
+
+def _log_download(scope: str, item_id: int, filename: str, request: Request) -> None:
+    """Best-effort download log — never fail the download over it."""
+    try:
+        with _open_db() as conn:
+            conn.execute(
+                "INSERT INTO downloads(created_at_ms, client_ip, scope, item_id, filename) VALUES (?, ?, ?, ?, ?)",
+                (_now_ms(), _client_ip(request), scope, item_id, filename),
+            )
+            conn.commit()
+    except Exception:
+        logging.exception("download log insert failed (%s/%s)", scope, item_id)
 
 
 def _normalize_username(raw: str) -> str:
@@ -747,7 +777,7 @@ def get_amyboard_file(item_id: int) -> dict[str, Any]:
 
 
 @app.get("/api/amyboardworld/files/{item_id}/download")
-def download_amyboard_file(item_id: int) -> FileResponse:
+def download_amyboard_file(item_id: int, request: Request) -> FileResponse:
     with _open_db() as conn:
         row = conn.execute(
             "SELECT filename, blob_path FROM environments WHERE id = ? AND deleted_at_ms IS NULL",
@@ -759,6 +789,7 @@ def download_amyboard_file(item_id: int) -> FileResponse:
     if not blob_path.exists():
         raise HTTPException(status_code=404, detail="File missing")
     fname = str(row["filename"])
+    _log_download("amyboardworld", item_id, fname, request)
     lower = fname.lower()
     if lower.endswith(".py"):
         mime = "text/x-python"
@@ -888,7 +919,7 @@ def get_latest_tulip_file(
 
 
 @app.get("/api/tulipworld/files/{item_id}/download")
-def download_tulip_file(item_id: int) -> FileResponse:
+def download_tulip_file(item_id: int, request: Request) -> FileResponse:
     with _open_db() as conn:
         row = conn.execute(
             "SELECT filename, blob_path FROM tulip_files WHERE id = ? AND deleted_at_ms IS NULL",
@@ -899,7 +930,9 @@ def download_tulip_file(item_id: int) -> FileResponse:
     blob_path = Path(str(row["blob_path"]))
     if not blob_path.exists():
         raise HTTPException(status_code=404, detail="File missing")
-    return FileResponse(str(blob_path), media_type="application/x-tar", filename=str(row["filename"]))
+    fname = str(row["filename"])
+    _log_download("tulipworld", item_id, fname, request)
+    return FileResponse(str(blob_path), media_type="application/x-tar", filename=fname)
 
 
 @app.patch("/api/tulipworld/files/{item_id}/tags", dependencies=[Depends(_require_admin)])
@@ -1144,6 +1177,63 @@ def list_admin_generations(
             }
             for r in rows
         ]
+    }
+
+
+@app.get("/api/admin/downloads", dependencies=[Depends(_require_admin)])
+def list_admin_downloads(
+    limit: int = Query(default=200, ge=1, le=2000),
+    scope: str = Query(default=""),
+    ip: str = Query(default=""),
+    since_ms: int = Query(default=0, ge=0),
+) -> dict[str, Any]:
+    """Download log (IP, filename, time, scope) plus per-day counts for graphing."""
+    clauses: list[str] = []
+    args: list[Any] = []
+    scope_s = scope.strip()
+    if scope_s:
+        clauses.append("scope = ?")
+        args.append(scope_s)
+    ip_s = ip.strip()
+    if ip_s:
+        clauses.append("client_ip = ?")
+        args.append(ip_s)
+    if since_ms:
+        clauses.append("created_at_ms >= ?")
+        args.append(since_ms)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    with _open_db() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT id, created_at_ms, client_ip, scope, item_id, filename
+            FROM downloads{where}
+            ORDER BY created_at_ms DESC
+            LIMIT ?
+            """,
+            tuple(args + [limit]),
+        ).fetchall()
+        day_rows = conn.execute(
+            f"""
+            SELECT scope, date(created_at_ms / 1000, 'unixepoch') AS day, COUNT(*) AS n
+            FROM downloads{where}
+            GROUP BY scope, day
+            ORDER BY day
+            """,
+            tuple(args),
+        ).fetchall()
+    return {
+        "downloads": [
+            {
+                "id": r["id"],
+                "time": r["created_at_ms"],
+                "client_ip": r["client_ip"],
+                "scope": r["scope"],
+                "item_id": r["item_id"],
+                "filename": r["filename"],
+            }
+            for r in rows
+        ],
+        "by_day": [{"scope": r["scope"], "day": r["day"], "count": r["n"]} for r in day_rows],
     }
 
 
