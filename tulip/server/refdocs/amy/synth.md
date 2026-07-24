@@ -94,7 +94,8 @@ Note 2: note-on events to synths (or their component voices) have a specific beh
 ```
 amy.reset()
 amy.send(synth=1, num_voices=2, oscs_per_voice=2)
-amy.send(synth=1, osc=1, freq=660)
+amy.send(synth=1, osc=0, wave=amy.SINE, freq=440)  # These are all defaults, so this line is not needed.
+amy.send(synth=1, osc=1, wave=amy.SINE, freq=660)  # Non-default freq
 amy.send(synth=1, note=60, vel=1)
 ```
 .. will sound two sine tones a fifth apart, even though the two oscs are not chained and we only issued a single note-one.
@@ -171,7 +172,7 @@ You see we first set up the modulation oscillator (a sine wave at 0.5Hz, with am
 
 ```python
 amy.send(osc=1, wave=amy.TRIANGLE, freq=5, amp=1)
-amy.send(osc=0, wave=amy.PULSE, duty={'const': 0.5, 'mod': 0.25}, freq={'mod': 0.5}, mod_source=1)
+amy.send(osc=0, wave=amy.PULSE, duty={'const': 0.5, 'mod': 0.25}, freq={'mod': 0.5}, mod_source=1)m
 amy.send(osc=0, note=60, vel=0.5)
 ```
 
@@ -221,7 +222,7 @@ Oscillators will not become audible until a `velocity` over 0 is set for the osc
 
  - Pick the table with `preset`: `pcm_wavetable_base` to `pcm_wavetable_base + pcm_wavetable_samples - 1`
  - `duty` controls interpolation position across the 64 waveform cycles within one wavetable preset.
- - Internally each cycle is 256 samples; full table length is typically 16384 samples.
+ - Internally each cycle is 256 samples; full table length is typically 16384 samples (64 complete cycles).
  - You can load new wavetables using `load_sample` and use your new preset number. Ensure they are 16,384 samples long. Find more on [waveeditonline.com](http://waveeditonline.com).
 
 
@@ -340,7 +341,7 @@ On Gamma9001 devices, patches 384-390 are ready-made General MIDI drum kits: loa
 | 389 | 5 | 80s Power Kit (gated reverb) |
 | 390 | 6 | Percussion (hand drums / latin) |
 
-Switch kits from code with `amy.send(synth=10, patch=38x)`, or over MIDI with a bank select MSB of 3 (CC0=3) followed by a program change 0-6 on the drum channel. A synth already sitting on a kit patch stays in the kit bank, so a bare program change also switches kits. Channel 10 boots as the TR-808 kit when default synths are on; you can run a second kit polytimbrally on another channel, e.g. `amy.send(synth=11, num_voices=4, patch=390, synth_flags=3)`. Set a kit channel's overall level with a constant amp on the synth, e.g. `amy.send(synth=10, amp=0.5)` — the kits keep their per-drum gains in each note mapping's velocity scale, so the level persists across hits, just like on the melodic patches.
+Switch kits from code with `amy.send(synth=10, patch=38x)`, or over MIDI with a bank select MSB of 3 (CC0=3) followed by a program change 0-6 on the drum channel. A synth already sitting on a kit patch stays in the kit bank, so a bare program change also switches kits. Channel 10 boots as the TR-808 kit when default synths are on; you can run a second kit polytimbrally on another channel, e.g. `amy.send(synth=11, num_voices=1, patch=390, synth_flags=3)`. Set a kit channel's overall level with a constant amp on the synth, e.g. `amy.send(synth=10, amp=0.5)` — the kits keep their per-drum gains in each note mapping's velocity scale, so the level persists across hits, just like on the melodic patches.
 
 
 ```python
