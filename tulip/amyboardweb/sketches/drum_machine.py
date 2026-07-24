@@ -8,8 +8,7 @@ sequencer.tempo(118)
 
 # --- Drum synths: one channel per kit ---
 # Gamma9001 GM drum kits: 384 TR-808, 385 TR-909, 386 Linn 9000, 387 MR-12,
-# 388 Tokyo Synthetics, 389 80s Power Kit, 390 Percussion. synth_flags=3
-# routes notes through the kit's GM note map and ignores note offs.
+# 388 Tokyo Synthetics, 389 80s Power Kit, 390 Percussion. 
 # Kits 385-390 stream from the drums flash partition, so hardware needs the
 # full-image flash (kit 384 alone works on firmware-only upgrades).
 KITS = [(384, "TR-808"), (385, "TR-909"), (386, "Linn 9000"),
@@ -18,9 +17,9 @@ kit_idx = 0
 
 # Drum kits are single-voice (amy#913): the voice is a container with one
 # dedicated osc per drum sound, so num_voices must be 1 per kit synth.
-amy.send(synth=10, patch=KITS[kit_idx][0], num_voices=1, synth_flags=3)  # main kit (rotates)
-amy.send(synth=11, patch=385, num_voices=1, synth_flags=3)               # TR-909: hats + clap
-amy.send(synth=12, patch=390, num_voices=1, synth_flags=3)               # Percussion: tabla/shaker
+amy.send(synth=10, patch=KITS[kit_idx][0])  # main kit (rotates)
+amy.send(synth=11, patch=385)               # TR-909: hats + clap
+amy.send(synth=12, patch=390)               # Percussion: tabla/shaker
 
 amy.send(reverb="0.2,0.5,0.1")
 
@@ -68,7 +67,7 @@ def loop():
     # --- Section change: rotate the main kit every 8 bars ---
     if step > 0 and bar_step == 0 and bar == 0:
         kit_idx = (kit_idx + 1) % len(KITS)
-        amy.send(synth=10, patch=KITS[kit_idx][0], num_voices=1, synth_flags=3)
+        amy.send(synth=10, patch=KITS[kit_idx][0])
         amy.send(synth=10, note=CRASH, vel=0.7)  # announce the new kit
         draw_kit()
 
