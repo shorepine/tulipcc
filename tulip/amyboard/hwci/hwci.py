@@ -709,6 +709,7 @@ def analyze_transients(x, sr, t0=0.0, t1=None, hop_ms=1.0, win_ms=4.0,
     return {
         "window": (round(t0, 3), round((b / sr), 3)),
         "n_clicks": len(peaks),
+        "fold": fold_period(peaks),
         "click_times": [round(t, 3) for t in peaks[:40]],
         "iois_ms": iois[:40],
         "median_ioi_ms": (round(float(np.median(iois)), 1) if iois else None),
@@ -717,6 +718,46 @@ def analyze_transients(x, sr, t0=0.0, t1=None, hop_ms=1.0, win_ms=4.0,
         "rms_db": round(20 * np.log10(float(np.sqrt(np.mean(seg ** 2))) + 1e-12), 1),
         "crest_db": round(20 * np.log10((float(np.max(np.abs(seg))) + 1e-12) /
                                         (float(np.sqrt(np.mean(seg ** 2))) + 1e-12)), 1),
+    }
+
+
+def fold_period(click_times, gap_ms=60.0, lo_ms=60.0, hi_ms=400.0):
+    """Group clicks into bursts, then fit ONE period to the burst onsets.
+
+    Bench data showed the raw median inter-click interval understates the true
+    recurrence: each event is a burst of 1-2 clicks a few tens of ms apart, so
+    the median mixes within-burst and between-burst gaps (131ms median for a
+    167ms recurrence). Clustering first, then fitting a single period by
+    maximizing phase coherence, recovers it — and tolerates dropped bursts,
+    since a missed one just leaves a 2x gap. Returns None if too few bursts."""
+    import numpy as np
+    if len(click_times) < 4:
+        return None
+    ct = np.asarray(sorted(click_times), dtype=float)
+    bursts = [[ct[0]]]
+    for t in ct[1:]:
+        if t - bursts[-1][-1] <= gap_ms / 1000.0:
+            bursts[-1].append(t)
+        else:
+            bursts.append([t])
+    onsets = np.array([b[0] for b in bursts])
+    if len(onsets) < 4:
+        return None
+    best_p, best_r = None, -1.0
+    for p in np.arange(lo_ms / 1000.0, hi_ms / 1000.0, 0.0005):
+        ph = 2 * np.pi * (((onsets - onsets[0]) / p) % 1.0)
+        r = float(np.abs(np.mean(np.exp(1j * ph))))
+        if r > best_r:
+            best_p, best_r = p, r
+    gaps = np.diff(onsets) * 1000.0
+    return {
+        "n_bursts": len(bursts),
+        "burst_sizes": sorted(set(len(b) for b in bursts)),
+        "gaps_ms": np.round(gaps, 0).astype(int).tolist()[:40],
+        "median_gap_ms": round(float(np.median(gaps)), 1),
+        "period_ms": round(best_p * 1000.0, 1),
+        "coherence": round(best_r, 3),
+        "gap_multiples": np.round(gaps / (best_p * 1000.0)).astype(int).tolist()[:40],
     }
 
 
@@ -739,6 +780,13 @@ def report_transients(label, r):
         print(f"[piano8] {label}: inter-click intervals (ms) = {r['iois_ms']}")
     if r["click_times"]:
         print(f"[piano8] {label}: click times (s) = {r['click_times']}")
+    f = r.get("fold")
+    if f:
+        print(f"[piano8] {label}: FOLDED -> {f['n_bursts']} bursts "
+              f"(sizes {f['burst_sizes']})  period={f['period_ms']}ms "
+              f"(phase coherence {f['coherence']})  median_gap={f['median_gap_ms']}ms")
+        print(f"[piano8] {label}: burst gaps (ms) = {f['gaps_ms']}")
+        print(f"[piano8] {label}: gaps as multiples of period = {f['gap_multiples']}")
 
 
 # ── AMYboard World sketch suite ──────────────────────────────────────────────
@@ -835,7 +883,11 @@ def main():
     ap.add_argument("--piano-voices", type=int, default=8,
                     help="num_voices for the polyphony probe")
     ap.add_argument("--piano-notes", default="48,52,55,60,64,67,72,76",
-                    help="comma-separated MIDI notes to stack, one at a time")
+                    help="comma-separated MIDI notes to stack, one at a time "
+                         "(low/mid: ~40 partials each, overruns max_oscs=250)")
+    ap.add_argument("--piano-notes-hi", default="84,88,90,92,96,98,100,104",
+                    help="control set at the same polyphony but few partials per "
+                         "note (~4-13 each), so the osc pool is not exhausted")
     ap.add_argument("--piano-step", type=float, default=0.5,
                     help="seconds between successive note_ons in the ramp")
     ap.add_argument("--piano-hold", type=float, default=6.0,
@@ -930,31 +982,41 @@ def main():
             # before the World suite so the board is still in its clean default
             # state — no pushed sketch loop() answering our notes.
             if args.piano_poly:
-                try:
-                    notes = [int(n) for n in args.piano_notes.split(",") if n.strip()]
-                    print(f"\n[piano8] === piano polyphony probe: patch "
-                          f"{args.piano_patch}, num_voices={args.piano_voices}, "
-                          f"notes={notes} ===")
-                    m.silence()
-                    time.sleep(0.3)
-                    setup_piano_poly(m, args.piano_patch, args.piano_voices)
-                    # No zP traffic during the recording: a load poll mid-hold
-                    # would inject its own transients into exactly what we're
-                    # measuring. Load is read once after, still holding.
-                    if getattr(m, "_poll_pause", None):
-                        m._poll_pause.set()
-                    marks = []
+                # Two note sets, SAME num_voices. The piano's partial count falls
+                # steeply with pitch (piano_num_harmonics: 40 at the bottom, ~4 at
+                # the top), and each partial costs an osc out of the max_oscs=250
+                # pool. So the low set needs ~295 oscs and overruns the pool while
+                # the high set needs ~73 and fits — at identical polyphony. If the
+                # artifact appears only in the low set, it's osc-pool exhaustion,
+                # not voice count or CPU.
+                sets = [("piano_poly8", args.piano_notes, "low/mid ~295 oscs, pool=250 EXCEEDED"),
+                        ("piano_poly8_hi", args.piano_notes_hi, "high ~73 oscs, fits pool")]
+                for tag, spec, why in sets:
                     try:
-                        piano_rec = record_and_drive(
-                            args, args.piano_duration,
-                            lambda: run_piano_poly_sequence(
-                                m, marks, notes, args.piano_step, args.piano_hold))
-                    finally:
+                        notes = [int(n) for n in spec.split(",") if n.strip()]
+                        print(f"\n[piano8] === {tag}: patch {args.piano_patch}, "
+                              f"num_voices={args.piano_voices}, notes={notes} "
+                              f"({why}) ===")
+                        m.silence()
+                        time.sleep(0.3)
+                        setup_piano_poly(m, args.piano_patch, args.piano_voices)
+                        # No zP traffic during the recording: a load poll mid-hold
+                        # would inject its own transients into exactly what we're
+                        # measuring. Load is read once after, still holding.
                         if getattr(m, "_poll_pause", None):
-                            m._poll_pause.clear()
-                    diagnostics.append(("piano_poly8", piano_rec, marks))
-                except Exception as e:
-                    print(f"[piano8] probe failed: {e}")
+                            m._poll_pause.set()
+                        marks = []
+                        try:
+                            piano_rec = record_and_drive(
+                                args, args.piano_duration,
+                                lambda: run_piano_poly_sequence(
+                                    m, marks, notes, args.piano_step, args.piano_hold))
+                        finally:
+                            if getattr(m, "_poll_pause", None):
+                                m._poll_pause.clear()
+                        diagnostics.append((tag, piano_rec, marks))
+                    except Exception as e:
+                        print(f"[piano8] {tag} failed: {e}")
             if args.world:
                 results += run_world_suite(args, m)
                 m.silence()   # leave the board quiet for the Tulip test that follows
