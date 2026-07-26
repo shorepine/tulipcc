@@ -883,11 +883,14 @@ def main():
     ap.add_argument("--piano-voices", type=int, default=8,
                     help="num_voices for the polyphony probe")
     ap.add_argument("--piano-notes", default="48,52,55,60,64,67,72,76",
-                    help="comma-separated MIDI notes to stack, one at a time "
-                         "(low/mid: ~40 partials each, overruns max_oscs=250)")
+                    help="the repro: 8 low/mid notes stacked one at a time")
+    ap.add_argument("--piano-notes-6", default="48,52,55,60,64,67",
+                    help="clean control: the first 6 of the same low notes, at the "
+                         "same num_voices — isolates active voice count with no "
+                         "change in register, loudness, decay or osc layout")
     ap.add_argument("--piano-notes-hi", default="84,88,90,92,96,98,100,104",
-                    help="control set at the same polyphony but few partials per "
-                         "note (~4-13 each), so the osc pool is not exhausted")
+                    help="high-register set; CONFOUNDED (these decay to near "
+                         "silence), kept only for continuity")
     ap.add_argument("--piano-step", type=float, default=0.5,
                     help="seconds between successive note_ons in the ramp")
     ap.add_argument("--piano-hold", type=float, default=6.0,
@@ -982,15 +985,29 @@ def main():
             # before the World suite so the board is still in its clean default
             # state — no pushed sketch loop() answering our notes.
             if args.piano_poly:
-                # Two note sets, SAME num_voices. The piano's partial count falls
-                # steeply with pitch (piano_num_harmonics: 40 at the bottom, ~4 at
-                # the top), and each partial costs an osc out of the max_oscs=250
-                # pool. So the low set needs ~295 oscs and overruns the pool while
-                # the high set needs ~73 and fits — at identical polyphony. If the
-                # artifact appears only in the low set, it's osc-pool exhaustion,
-                # not voice count or CPU.
-                sets = [("piano_poly8", args.piano_notes, "low/mid ~295 oscs, pool=250 EXCEEDED"),
-                        ("piano_poly8_hi", args.piano_notes_hi, "high ~73 oscs, fits pool")]
+                # Three note sets, ALL at the same num_voices, so the synth config
+                # and osc layout are byte-identical across them and only what's
+                # actually sounding differs.
+                #
+                #  * 8 low  — the repro.
+                #  * 6 low  — THE clean control: same register, same loudness, same
+                #    decay, same allocation (num_voices is unchanged, so voices are
+                #    still spaced patch_oscs[256]=25 apart); only the count of
+                #    active voices drops. If the artifact needs 7-8 voices this
+                #    isolates it with no confound.
+                #  * 8 high — kept for continuity, but CONFOUNDED: high piano notes
+                #    both use fewer partials AND decay to near-silence (-51.9dB in
+                #    the 2026-07-26 run), so "no clicks" there may just mean
+                #    "nothing was sounding". Don't draw conclusions from it alone.
+                #
+                # Note the earlier osc-pool theory was WRONG: max partials is a
+                # per-PRESET constant (24, from use_this_partial_map over
+                # num_harmonics[0]), not per-note, and patch_oscs[256]=25, so 8
+                # voices reserve 200 oscs against a default max_oscs of 250 — it
+                # fits, and the OOM path never triggers here.
+                sets = [("piano_poly8", args.piano_notes, "8 low notes, the repro"),
+                        ("piano_poly6", args.piano_notes_6, "6 low notes, clean control"),
+                        ("piano_poly8_hi", args.piano_notes_hi, "8 high notes, CONFOUNDED (quiet)")]
                 for tag, spec, why in sets:
                     try:
                         notes = [int(n) for n in spec.split(",") if n.strip()]
