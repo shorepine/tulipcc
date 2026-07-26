@@ -872,6 +872,73 @@ def fold_period(click_times, gap_ms=60.0, lo_ms=60.0, hi_ms=400.0):
     }
 
 
+def classify_clicks(x, sr, click_times, n=6, pre_ms=12.0, post_ms=12.0):
+    """Characterise the glitch WAVEFORM, which discriminates mechanisms that
+    timing alone cannot:
+
+      * a run of near-zero samples  -> the DAC/I2S was starved (underrun fed
+        silence); length tells you how many blocks were missed
+      * a repeated chunk            -> the I2S driver replayed the last DMA
+        buffer, the classic underrun-with-repeat
+      * a bare step discontinuity   -> a sample was dropped or state was reset
+        mid-waveform, no starvation
+
+    Reported per click: the largest single-sample jump vs the local typical
+    jump, the longest near-silent run, and the best correlation between the
+    post-click window and the block-sized chunk before it (a repeat scores
+    near 1.0 at a lag of one AMY block)."""
+    import numpy as np
+    out = []
+    blk = int(round(256 * sr / 44100.0))   # one AMY block at 256/44100, in capture samples
+    for t in click_times[:n]:
+        c = int(t * sr)
+        a, b = max(0, c - int(pre_ms * sr / 1000)), min(len(x), c + int(post_ms * sr / 1000))
+        if b - a < 32:
+            continue
+        seg = np.asarray(x[a:b], dtype=np.float64)
+        d = np.abs(np.diff(seg))
+        step_ratio = float(np.max(d)) / (float(np.median(d)) + 1e-12)
+        # longest run of samples below 2% of the segment's own RMS
+        rms = float(np.sqrt(np.mean(seg ** 2))) + 1e-12
+        quiet = np.abs(seg) < 0.02 * rms
+        best = cur = 0
+        for q in quiet:
+            cur = cur + 1 if q else 0
+            best = max(best, cur)
+        # does the material just after the click repeat the block before it?
+        rep = None
+        if c - blk - a >= 0 and b - c >= blk:
+            prev = np.asarray(x[c - blk:c], dtype=np.float64)
+            post = np.asarray(x[c:c + blk], dtype=np.float64)
+            if np.std(prev) > 1e-9 and np.std(post) > 1e-9:
+                rep = float(np.corrcoef(prev, post)[0, 1])
+        out.append({"t": round(t, 3), "step_ratio": round(step_ratio, 1),
+                    "zero_run_ms": round(1000.0 * best / sr, 2),
+                    "repeat_corr": (round(rep, 3) if rep is not None else None)})
+    return out
+
+
+def report_click_shapes(label, shapes, sr):
+    if not shapes:
+        return
+    import numpy as np
+    zr = [s["zero_run_ms"] for s in shapes]
+    rc = [s["repeat_corr"] for s in shapes if s["repeat_corr"] is not None]
+    sr_ratio = [s["step_ratio"] for s in shapes]
+    verdict = "step discontinuity (no starvation)"
+    if max(zr) > 1.0:
+        verdict = f"SILENCE GAP up to {max(zr):.2f}ms (~{max(zr) / 5.805:.1f} AMY blocks)"
+    elif rc and max(rc) > 0.9:
+        verdict = f"REPEATED BLOCK (corr {max(rc):.3f}) -- I2S replayed a DMA buffer"
+    print(f"[piano8] {label}: click shapes -> {verdict}")
+    print(f"[piano8] {label}:   median step_ratio={np.median(sr_ratio):.1f}x  "
+          f"max zero_run={max(zr):.2f}ms  "
+          f"max repeat_corr={max(rc) if rc else 'n/a'}")
+    for s in shapes:
+        print(f"[piano8]     t={s['t']}s step={s['step_ratio']}x "
+              f"zero_run={s['zero_run_ms']}ms repeat_corr={s['repeat_corr']}")
+
+
 def report_transients(label, r):
     """`clicks` + `median_IOI` are the evidence. autocorr_period is only
     meaningful alongside a nonzero click count — a clean tonal chord still
@@ -1135,9 +1202,6 @@ def main():
                 sets = [
                     dict(tag="piano_poly8", patch=256, voices=8, notes=args.piano_notes,
                          why="8 low notes, the repro, 200 oscs, CV reads ACTIVE"),
-                    dict(tag="piano_poly8_nocv", patch=256, voices=8, notes=args.piano_notes,
-                         no_cv=True,
-                         why="IDENTICAL to piano_poly8 but cv_read_task does no I2C"),
                     dict(tag="piano_poly6", patch=256, voices=8, notes=args.piano_notes_6,
                          why="6 low notes, known-clean anchor, 150 oscs"),
                 ]
@@ -1245,7 +1309,14 @@ def main():
         if not spans:
             spans["whole recording"] = (0.0, len(rec) / args.samplerate)
         for label, (a, b) in spans.items():
-            report_transients(label, analyze_transients(rec, args.samplerate, a, b))
+            tr = analyze_transients(rec, args.samplerate, a, b)
+            report_transients(label, tr)
+            # What does the glitch actually look like? Silence gap vs repeated
+            # block vs bare step points at different mechanisms.
+            if tr and tr["click_times"]:
+                report_click_shapes(label, classify_clicks(rec, args.samplerate,
+                                                           tr["click_times"]),
+                                    args.samplerate)
             # Is AMY's CPU-overload bleep in here? 440/880Hz only -- 523/659 are
             # in the C-E-G probe chord and would prove nothing.
             for f0 in (440.0, 880.0):
