@@ -285,7 +285,7 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 | `i`    | `synth` | `synth`  | 0-31  | Define a set of voices for voice management. |
 | `ic`   | **TODO** | `midi_cc`  | C,L,N,X,O,CMD | MIDI Control Code command for this synth (1-16).  `C`=MIDI CC (0-127), `L`=log mapping (0/1), `N`=min val, `X`=max val, `O`=offset, `CMD`=wire command to execute, where `%i` is replaced by the channel number and `%v` is replaced by the value after min/max/offset/log mapping.  Providing `C` with no further args deletes that CC.  `C=255` deletes all CC mappings for the specified synth. See [#524](https://github.com/shorepine/amy/issues/524) |
 | `id`   | `synth_delay_ms` | `synth_delay` | uint | Delay (in ms) applied to synth note-ons.  Gives time for decay of 'stolen' notes. |
-| `if`   | `synth_flags` | `synth_flags` | uint | Flags for synth creation: 1 = Use MIDI drum note->preset translation; 2 = Drop note-off events. |
+| `if`   | `synth_flags` | `synth_flags` | uint | Flags for synth creation: 1 = Use MIDI drum note->preset translation; 2 = Drop note-off events; 4 = Invert MIDI pedal sense. |
 | `ig`   | `cv_trigger` | `cv_trigger` | uint,uint | Configure external CV event triggering: Gate CV, trigger threshold, reset threshold, pitch CV, pitch scale, pitch offset, wire command template, %v gets pitch value. |
 | `im`   | `grab_midi_notes` | `grab_midi_notes` | 0/1 | Use `amy.send(synth=CHANNEL, grab_midi_notes=0)` to prevent the default direct forwarding of MIDI note-on/offs to synth CHANNEL. |
 | `iM`   | `note_source_channel` | `note_source_channel` | 1-16 | Used internally to mark events that result from MIDI inputs, meaning they won't get forwarded to MIDI out. |
@@ -364,7 +364,7 @@ These per-oscillator parameters use [CtrlCoefs](synth.md) notation
 
 Devices built with `-DGAMMA9001` (Tulip, AMYboard, AMY on the web, the CPython `amy` module) carry the Gamma9001 drum sample banks: the full TR-808 bank is baked in as PCM presets 0-18, and 136 more samples (TR-909, Linn 9000, Univox MR-12, Tokyo Synthetics, 80s Power Kit, Percussion) live at presets 256-391, served from a platform-provided blob (linked into the binary on web and CPython; an mmapped `drums` flash partition on ESP32-S3). All of them play directly with `wave=PCM, preset=P`.
 
-Patches **384-390** are ready-made General MIDI drum kits over these banks -- load one on a synth with `synth_flags=3` and GM note numbers trigger the mapped samples:
+Patches **384-390** are ready-made General MIDI drum kits over these banks -- load one on a synth to make GM note numbers trigger the mapped samples:
 
 | patch | MIDI PC (bank MSB 3) | kit |
 |-------|----------------------|-----|
