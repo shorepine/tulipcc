@@ -596,6 +596,385 @@ def compare(rec, ref):
     return sim, level_db
 
 
+# ── piano polyphony probe (diagnostic, not pass/fail) ───────────────────────
+# Chases a reported artifact: with patch 256 (piano) at num_voices=8, a periodic
+# crackle appears once the 8th note is held. This records the note-by-note ramp
+# to 8 held voices and then measures the recording for periodic broadband
+# transients, so the *period* is a number in the CI log rather than an ear
+# judgement. Diagnostic only — it has no committed reference and never gates the
+# run's pass/fail.
+def setup_piano_poly(m, patch=256, voices=8, no_cv=False, amp=None):
+    """Put the board in the reported state: bare piano synth, N voices.
+
+    Also arms AMY's CPU-overload callback. That failsafe is the prime suspect:
+    it resets all notes/oscs and plays a 4-note descending bleep spaced
+    i*160ms (amy api.c amy_overload_failsafe), which would read as periodic
+    transients ~160ms apart. Its fprintf goes to the ESP-IDF console on the
+    debug UART, which we deliberately don't hold open mid-run (the dongle's
+    DTR/RTS would reset the board), so route it to MicroPython stdout instead
+    -- that lands in the CDC log we do capture. It also zeroes render_us on the
+    way out, which is why 1Hz load polling reads low."""
+    m.sysex("zPimport amy; amy.reset()Z")
+    time.sleep(0.5)
+    try:
+        m.send_python("import tulip; tulip.amy_overload_callback("
+                      "lambda l: print('hwci_overload %d' % l))")
+    except Exception as e:
+        print(f"[piano8] could not arm overload callback: {e}")
+    time.sleep(0.2)
+    if no_cv:
+        # cv_read_task (amyboard_support.c) does TWO blocking ADS1015 I2C reads
+        # every 6 RTOS ticks -- 6.000ms against a 5.805ms audio block, two
+        # near-equal periods that beat slowly. tulip.cv_local(ch, v) sets
+        # cv_local_override[ch], which makes the task skip read_ads1015_raw()
+        # entirely while still running and delaying. So this removes ~344 I2C
+        # transactions/sec and changes nothing else -- a clean A/B for "is a
+        # periodic task stealing time from the render task?".
+        try:
+            m.send_python("import tulip; tulip.cv_local(0, 0.0); tulip.cv_local(1, 0.0)")
+            print("[piano8] CV local override ON: cv_read_task now does NO I2C")
+        except Exception as e:
+            print(f"[piano8] could not set cv_local override: {e}")
+        time.sleep(0.2)
+    m.sysex(f"zPimport amy; amy.send(synth=1, patch={patch}, num_voices={voices})Z")
+    time.sleep(1.5)   # patch 256 pulls its PCM from flash
+    if amp is not None:
+        # Pure gain change on the whole synth (no osc = all oscs). Unlike
+        # velocity this does NOT touch the piano's harmonic table row, so the
+        # partial count and every other variable stay identical -- amplitude is
+        # the only thing that moves.
+        m.sysex(f"zPimport amy; amy.send(synth=1, amp={amp})Z")
+        time.sleep(0.3)
+        print(f"[piano8] synth amp set to {amp} (pure gain, harmonics unchanged)")
+
+
+def run_piano_poly_sequence(m, marks, notes, step_s, hold_s, vel=100):
+    """Add `notes` one at a time (never releasing), hold them all, then a
+    simultaneous re-strike of the same chord, then release.
+
+    The ramp is the reported repro. The re-strike is the useful control: on the
+    ramp the earliest notes have been decaying for seconds, so "8 held" may not
+    mean 8 *loud* voices — striking all 8 at once guarantees it does. If the
+    artifact tracks the re-strike too, it follows active voice count rather than
+    time-since-note-on.
+
+    `marks` collects (seconds-from-drive-start, label) so the analysis can window
+    on "all 8 held" instead of guessing. Drive starts ~0.3s into the recording
+    (record_and_drive's lead-in), which is added back by the caller."""
+    t0 = time.time()
+
+    def mark(label):
+        t = time.time() - t0
+        marks.append((t, label))
+        print(f"[piano8] t={t:6.3f}s  {label}")
+
+    mark("drive start (silence baseline)")
+    time.sleep(0.5)
+    for i, n in enumerate(notes, 1):
+        m.note_on(n, vel)
+        mark(f"note_on {n} vel={vel} -> {i} held")
+        time.sleep(step_s)
+    mark(f"ALL {len(notes)} HELD - hold {hold_s}s")
+    time.sleep(hold_s)
+    mark("release all")
+    for n in notes:
+        m.note_off(n)
+    time.sleep(0.4)
+    # Control: all 8 struck together, so every voice is at full amplitude.
+    mark(f"re-strike all {len(notes)} together")
+    for n in notes:
+        m.note_on(n, vel)
+    time.sleep(hold_s)
+    mark("release all (re-strike)")
+    for n in notes:
+        m.note_off(n)
+    m.all_notes_off(0)
+    time.sleep(0.3)
+
+
+def analyze_transients(x, sr, t0=0.0, t1=None, hop_ms=1.0, win_ms=4.0,
+                       sigma=6.0, refractory_ms=25.0,
+                       period_lo_ms=20.0, period_hi_ms=1000.0):
+    """Find broadband transients in x[t0:t1] and estimate their period.
+
+    A crackle is an impulse: broadband and phase-discontinuous, unlike the tonal
+    piano behind it. Taking the 2nd difference suppresses the low-frequency tone
+    and leaves the impulses, then a short-frame RMS envelope of that makes them
+    peaks. The threshold is median + sigma*MAD (robust — a few big clicks don't
+    inflate their own floor). Period comes from the envelope's autocorrelation,
+    which finds a regular spacing even when individual peaks fall under the
+    threshold. Returns None if the window is too short to judge."""
+    import numpy as np
+    a = int(max(0, t0) * sr)
+    b = int(t1 * sr) if t1 is not None else len(x)
+    seg = np.asarray(x[a:min(b, len(x))], dtype=np.float64)
+    if len(seg) < int(0.10 * sr):
+        return None
+    d = np.diff(seg, n=2)                      # kill the tone, keep the clicks
+    hop = max(1, int(sr * hop_ms / 1000.0))
+    win = max(hop, int(sr * win_ms / 1000.0))
+    nfr = 1 + (len(d) - win) // hop
+    if nfr < 16:
+        return None
+    # Framed RMS via cumulative sums — O(n) instead of a Python loop per frame.
+    p = np.concatenate(([0.0], np.cumsum(d * d)))
+    idx = np.arange(nfr) * hop
+    env = np.sqrt(np.maximum(p[idx + win] - p[idx], 0.0) / win)
+    med = float(np.median(env))
+    mad = float(np.median(np.abs(env - med)))
+    thr = med + sigma * 1.4826 * mad + 1e-12
+    # Peak-pick with a refractory window so one click isn't counted many times.
+    refr = max(1, int(refractory_ms / hop_ms))
+    peaks, i = [], 0
+    while i < nfr:
+        if env[i] > thr:
+            j = min(nfr, i + refr)
+            k = i + int(np.argmax(env[i:j]))
+            peaks.append(t0 + k * hop_ms / 1000.0)
+            i = k + refr
+        else:
+            i += 1
+    iois = [round((b_ - a_) * 1000.0, 1) for a_, b_ in zip(peaks, peaks[1:])]
+    e = env - env.mean()
+    ac = np.correlate(e, e, mode="full")[len(e) - 1:]
+    ac = ac / (ac[0] + 1e-20)
+    lo, hi = int(period_lo_ms / hop_ms), min(len(ac) - 1, int(period_hi_ms / hop_ms))
+    period_ms = ac_peak = None
+    if hi > lo + 1:
+        lag = lo + int(np.argmax(ac[lo:hi]))
+        period_ms, ac_peak = lag * hop_ms, float(ac[lag])
+    return {
+        "window": (round(t0, 3), round((b / sr), 3)),
+        "n_clicks": len(peaks),
+        "fold": fold_period(peaks),
+        "click_times": [round(t, 3) for t in peaks[:40]],
+        "iois_ms": iois[:40],
+        "median_ioi_ms": (round(float(np.median(iois)), 1) if iois else None),
+        "ac_period_ms": period_ms,
+        "ac_strength": (round(ac_peak, 3) if ac_peak is not None else None),
+        "rms_db": round(20 * np.log10(float(np.sqrt(np.mean(seg ** 2))) + 1e-12), 1),
+        "crest_db": round(20 * np.log10((float(np.max(np.abs(seg))) + 1e-12) /
+                                        (float(np.sqrt(np.mean(seg ** 2))) + 1e-12)), 1),
+    }
+
+
+def narrowband_report(x, sr, f0, t0=0.0, t1=None, hop_ms=4.0, win_ms=64.0):
+    """Track energy at exactly f0 Hz over time, and fold any bursts.
+
+    Used to test for AMY's CPU-overload bleep, whose four sines are A5 880,
+    E5 659.26, C5 523.25 and A4 440 Hz spaced 160ms apart. The probe chord is
+    C-E-G, so 440 and 880 appear in neither the notes nor their harmonics
+    (C3 130.8 -> 261.6/392.4/523.2, E3 164.8 -> 329.6/494.4/659.2,
+    G3 196 -> 392/588/784) -- narrowband energy there is therefore evidence of
+    the bleep rather than of the piano. 523.25/659.26 ARE in the chord and
+    prove nothing, so don't test those.
+
+    Returns dB of the f0 bin above the median of its neighbourhood, plus a fold
+    of the f0 envelope's peaks."""
+    import numpy as np
+    a = int(max(0, t0) * sr)
+    b = int(t1 * sr) if t1 is not None else len(x)
+    seg = np.asarray(x[a:min(b, len(x))], dtype=np.float64)
+    win = int(sr * win_ms / 1000.0)
+    hop = max(1, int(sr * hop_ms / 1000.0))
+    if len(seg) < win * 2:
+        return None
+    w = np.hanning(win)
+    k = 2 * np.pi * f0 / sr
+    ref = np.exp(-1j * k * np.arange(win)) * w      # single-bin DFT (Goertzel-ish)
+    nfr = 1 + (len(seg) - win) // hop
+    env = np.array([np.abs(np.dot(seg[i * hop:i * hop + win], ref)) for i in range(nfr)])
+    env = env / (win / 2.0)
+    # Neighbourhood: same measurement a few semitones away, avoiding f0's own
+    # partials, as the "is this a real peak" baseline.
+    # Neighbourhood envelopes, measured the same way. Compare peak-to-PEAK and
+    # median-to-median: an earlier version compared max-at-f0 against
+    # median-at-neighbour, which any broadband transient inflates (a click has
+    # energy at every frequency, so it raises f0's max while the neighbours'
+    # median stays low). That produced false "bleep present" readings on
+    # recordings that were simply full of clicks. Same-statistic comparison
+    # makes broadband energy cancel, so a positive peak ratio means genuinely
+    # TONAL energy at f0.
+    nb_env = []
+    for fo in (f0 * 0.87, f0 * 0.93, f0 * 1.07, f0 * 1.14):
+        r = np.exp(-1j * 2 * np.pi * fo / sr * np.arange(win)) * w
+        nb_env.append(np.array([np.abs(np.dot(seg[i * hop:i * hop + win], r))
+                                for i in range(nfr)]) / (win / 2.0))
+    nb_peak = float(np.median([float(np.max(e)) for e in nb_env])) + 1e-12
+    nb_med = float(np.median([float(np.median(e)) for e in nb_env])) + 1e-12
+    peak_db = 20 * np.log10((float(np.max(env)) + 1e-12) / nb_peak)
+    med_db = 20 * np.log10((float(np.median(env)) + 1e-12) / nb_med)
+    # Peaks in the f0 envelope, then fold them for a period.
+    med, mad = float(np.median(env)), float(np.median(np.abs(env - np.median(env))))
+    thr = med + 6.0 * 1.4826 * mad + 1e-12
+    refr = max(1, int(60.0 / hop_ms))
+    pk, i = [], 0
+    while i < nfr:
+        if env[i] > thr:
+            j = min(nfr, i + refr)
+            c = i + int(np.argmax(env[i:j]))
+            pk.append(t0 + c * hop_ms / 1000.0)
+            i = c + refr
+        else:
+            i += 1
+    return {"f0": f0, "peak_db_over_neighbourhood": round(peak_db, 1),
+            "median_db_over_neighbourhood": round(med_db, 1),
+            "n_bursts": len(pk), "burst_times": [round(t, 3) for t in pk[:20]],
+            "fold": fold_period(pk)}
+
+
+def report_narrowband(label, r):
+    if r is None:
+        print(f"[piano8] {label}: window too short for narrowband test")
+        return
+    verdict = ("PRESENT" if r["peak_db_over_neighbourhood"] > 12.0 and r["n_bursts"] >= 3
+               else "not present")
+    print(f"[piano8] {label}: {r['f0']:.0f}Hz peak={r['peak_db_over_neighbourhood']}dB "
+          f"median={r['median_db_over_neighbourhood']}dB over neighbourhood, "
+          f"bursts={r['n_bursts']}  ->  {verdict}")
+    if r["fold"]:
+        print(f"[piano8] {label}: {r['f0']:.0f}Hz fold period="
+              f"{r['fold']['period_ms']}ms (coherence {r['fold']['coherence']}) "
+              f"gaps={r['fold']['gaps_ms'][:12]}")
+    if r["burst_times"]:
+        print(f"[piano8] {label}: {r['f0']:.0f}Hz burst times = {r['burst_times']}")
+
+
+def fold_period(click_times, gap_ms=60.0, lo_ms=60.0, hi_ms=400.0):
+    """Group clicks into bursts, then fit ONE period to the burst onsets.
+
+    Bench data showed the raw median inter-click interval understates the true
+    recurrence: each event is a burst of 1-2 clicks a few tens of ms apart, so
+    the median mixes within-burst and between-burst gaps (131ms median for a
+    167ms recurrence). Clustering first, then fitting a single period by
+    maximizing phase coherence, recovers it — and tolerates dropped bursts,
+    since a missed one just leaves a 2x gap. Returns None if too few bursts."""
+    import numpy as np
+    if len(click_times) < 4:
+        return None
+    ct = np.asarray(sorted(click_times), dtype=float)
+    bursts = [[ct[0]]]
+    for t in ct[1:]:
+        if t - bursts[-1][-1] <= gap_ms / 1000.0:
+            bursts[-1].append(t)
+        else:
+            bursts.append([t])
+    onsets = np.array([b[0] for b in bursts])
+    if len(onsets) < 4:
+        return None
+    best_p, best_r = None, -1.0
+    for p in np.arange(lo_ms / 1000.0, hi_ms / 1000.0, 0.0005):
+        ph = 2 * np.pi * (((onsets - onsets[0]) / p) % 1.0)
+        r = float(np.abs(np.mean(np.exp(1j * ph))))
+        if r > best_r:
+            best_p, best_r = p, r
+    gaps = np.diff(onsets) * 1000.0
+    return {
+        "n_bursts": len(bursts),
+        "burst_sizes": sorted(set(len(b) for b in bursts)),
+        "gaps_ms": np.round(gaps, 0).astype(int).tolist()[:40],
+        "median_gap_ms": round(float(np.median(gaps)), 1),
+        "period_ms": round(best_p * 1000.0, 1),
+        "coherence": round(best_r, 3),
+        "gap_multiples": np.round(gaps / (best_p * 1000.0)).astype(int).tolist()[:40],
+    }
+
+
+def classify_clicks(x, sr, click_times, n=6, pre_ms=12.0, post_ms=12.0):
+    """Characterise the glitch WAVEFORM, which discriminates mechanisms that
+    timing alone cannot:
+
+      * a run of near-zero samples  -> the DAC/I2S was starved (underrun fed
+        silence); length tells you how many blocks were missed
+      * a repeated chunk            -> the I2S driver replayed the last DMA
+        buffer, the classic underrun-with-repeat
+      * a bare step discontinuity   -> a sample was dropped or state was reset
+        mid-waveform, no starvation
+
+    Reported per click: the largest single-sample jump vs the local typical
+    jump, the longest near-silent run, and the best correlation between the
+    post-click window and the block-sized chunk before it (a repeat scores
+    near 1.0 at a lag of one AMY block)."""
+    import numpy as np
+    out = []
+    blk = int(round(256 * sr / 44100.0))   # one AMY block at 256/44100, in capture samples
+    for t in click_times[:n]:
+        c = int(t * sr)
+        a, b = max(0, c - int(pre_ms * sr / 1000)), min(len(x), c + int(post_ms * sr / 1000))
+        if b - a < 32:
+            continue
+        seg = np.asarray(x[a:b], dtype=np.float64)
+        d = np.abs(np.diff(seg))
+        step_ratio = float(np.max(d)) / (float(np.median(d)) + 1e-12)
+        # longest run of samples below 2% of the segment's own RMS
+        rms = float(np.sqrt(np.mean(seg ** 2))) + 1e-12
+        quiet = np.abs(seg) < 0.02 * rms
+        best = cur = 0
+        for q in quiet:
+            cur = cur + 1 if q else 0
+            best = max(best, cur)
+        # does the material just after the click repeat the block before it?
+        rep = None
+        if c - blk - a >= 0 and b - c >= blk:
+            prev = np.asarray(x[c - blk:c], dtype=np.float64)
+            post = np.asarray(x[c:c + blk], dtype=np.float64)
+            if np.std(prev) > 1e-9 and np.std(post) > 1e-9:
+                rep = float(np.corrcoef(prev, post)[0, 1])
+        out.append({"t": round(t, 3), "step_ratio": round(step_ratio, 1),
+                    "zero_run_ms": round(1000.0 * best / sr, 2),
+                    "repeat_corr": (round(rep, 3) if rep is not None else None)})
+    return out
+
+
+def report_click_shapes(label, shapes, sr):
+    if not shapes:
+        return
+    import numpy as np
+    zr = [s["zero_run_ms"] for s in shapes]
+    rc = [s["repeat_corr"] for s in shapes if s["repeat_corr"] is not None]
+    sr_ratio = [s["step_ratio"] for s in shapes]
+    verdict = "step discontinuity (no starvation)"
+    if max(zr) > 1.0:
+        verdict = f"SILENCE GAP up to {max(zr):.2f}ms (~{max(zr) / 5.805:.1f} AMY blocks)"
+    elif rc and max(rc) > 0.9:
+        verdict = f"REPEATED BLOCK (corr {max(rc):.3f}) -- I2S replayed a DMA buffer"
+    print(f"[piano8] {label}: click shapes -> {verdict}")
+    print(f"[piano8] {label}:   median step_ratio={np.median(sr_ratio):.1f}x  "
+          f"max zero_run={max(zr):.2f}ms  "
+          f"max repeat_corr={max(rc) if rc else 'n/a'}")
+    for s in shapes:
+        print(f"[piano8]     t={s['t']}s step={s['step_ratio']}x "
+              f"zero_run={s['zero_run_ms']}ms repeat_corr={s['repeat_corr']}")
+
+
+def report_transients(label, r):
+    """`clicks` + `median_IOI` are the evidence. autocorr_period is only
+    meaningful alongside a nonzero click count — a clean tonal chord still
+    autocorrelates strongly at its own beat period (~26ms in bench tests), so
+    that number on its own is not a crackle."""
+    if r is None:
+        print(f"[piano8] {label}: window too short to analyze")
+        return
+    verdict = ("no periodic transients" if r["n_clicks"] < 3 else
+               f"PERIODIC TRANSIENTS ~{r['median_ioi_ms']}ms apart")
+    print(f"[piano8] {label}: window={r['window'][0]}..{r['window'][1]}s  "
+          f"clicks={r['n_clicks']}  median_IOI={r['median_ioi_ms']}ms  "
+          f"autocorr_period={r['ac_period_ms']}ms (strength {r['ac_strength']}; "
+          f"only meaningful if clicks>0)  "
+          f"rms={r['rms_db']}dB crest={r['crest_db']}dB  ->  {verdict}")
+    if r["iois_ms"]:
+        print(f"[piano8] {label}: inter-click intervals (ms) = {r['iois_ms']}")
+    if r["click_times"]:
+        print(f"[piano8] {label}: click times (s) = {r['click_times']}")
+    f = r.get("fold")
+    if f:
+        print(f"[piano8] {label}: FOLDED -> {f['n_bursts']} bursts "
+              f"(sizes {f['burst_sizes']})  period={f['period_ms']}ms "
+              f"(phase coherence {f['coherence']})  median_gap={f['median_gap_ms']}ms")
+        print(f"[piano8] {label}: burst gaps (ms) = {f['gaps_ms']}")
+        print(f"[piano8] {label}: gaps as multiples of period = {f['gap_multiples']}")
+
+
 # ── AMYboard World sketch suite ──────────────────────────────────────────────
 def run_world_suite(args, m):
     """Download each WORLD_SUITE sketch, push it onto the board, and record it.
@@ -681,6 +1060,40 @@ def main():
                          "whole World suite (default: each sketch's own threshold)")
     ap.add_argument("--world-base", default=WORLD_BASE,
                     help="AMYboard World API base URL")
+    # Piano polyphony probe (diagnostic only — no reference, never gates pass/fail).
+    # Default OFF: the investigation it was written for is finished (the
+    # artifact is amplitude-gated output clipping, not a code regression), and
+    # three recorded sets add ~70s of bench time to every AMYboard PR. Enable
+    # with --piano-poly to re-run the probe.
+    ap.add_argument("--piano-poly", dest="piano_poly", action="store_true",
+                    help="run the patch-256 piano polyphony probe (diagnostic; "
+                         "records + measures periodic transients, never gates)")
+    ap.set_defaults(piano_poly=False)
+    ap.add_argument("--piano-patch", type=int, default=256,
+                    help="patch for the polyphony probe (default 256 = piano)")
+    ap.add_argument("--piano-voices", type=int, default=8,
+                    help="num_voices for the polyphony probe")
+    ap.add_argument("--piano-notes", default="48,52,55,60,64,67,72,76",
+                    help="the repro: 8 low/mid notes stacked one at a time")
+    ap.add_argument("--piano-notes-7", default="48,52,55,60,64,67,72",
+                    help="bisect set: 7 of the same low notes")
+    ap.add_argument("--dx7-notes",
+                    default="36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84",
+                    help="25 notes for the osc-count-matched DX7 control (patch 253, "
+                         "8 oscs/voice x 25 voices = 200 oscs, no partials)")
+    ap.add_argument("--piano-notes-6", default="48,52,55,60,64,67",
+                    help="clean control: the first 6 of the same low notes, at the "
+                         "same num_voices — isolates active voice count with no "
+                         "change in register, loudness, decay or osc layout")
+    ap.add_argument("--piano-notes-hi", default="84,88,90,92,96,98,100,104",
+                    help="high-register set; CONFOUNDED (these decay to near "
+                         "silence), kept only for continuity")
+    ap.add_argument("--piano-step", type=float, default=0.5,
+                    help="seconds between successive note_ons in the ramp")
+    ap.add_argument("--piano-hold", type=float, default=6.0,
+                    help="seconds to hold all notes (ramp and re-strike each)")
+    ap.add_argument("--piano-duration", type=float, default=22.0,
+                    help="seconds to record the polyphony probe")
     ap.add_argument("--no-bench-lock", action="store_true",
                     help="skip the /tmp/amyboard-bench.lock flock (local bring-up "
                          "on a bench nothing else shares)")
@@ -753,6 +1166,7 @@ def main():
         # AMYboard World sketch. results = [(name, recording|None, min_sim)].
         m = Midi(args.midi_port)
         results = []
+        diagnostics = []   # (name, recording, marks) — recorded + analyzed, never gating
         try:
             # The board boots into its SAVED sketch (e.g. woodpiano left over from
             # a previous run's transfer), which also answers our MIDI notes and
@@ -764,6 +1178,82 @@ def main():
                 m.poll_load_start()
             rec = record_and_drive(args, args.duration, lambda: run_test_sequence(m))
             results.append((args.name, rec, args.min_similarity))
+            # Piano polyphony probe (diagnostic; never gates pass/fail). Runs
+            # before the World suite so the board is still in its clean default
+            # state — no pushed sketch loop() answering our notes.
+            if args.piano_poly:
+                # Three note sets, ALL at the same num_voices, so the synth config
+                # and osc layout are byte-identical across them and only what's
+                # actually sounding differs.
+                #
+                #  * 8 low  — the repro.
+                #  * 6 low  — THE clean control: same register, same loudness, same
+                #    decay, same allocation (num_voices is unchanged, so voices are
+                #    still spaced patch_oscs[256]=25 apart); only the count of
+                #    active voices drops. If the artifact needs 7-8 voices this
+                #    isolates it with no confound.
+                #  * 8 high — kept for continuity, but CONFOUNDED: high piano notes
+                #    both use fewer partials AND decay to near-silence (-51.9dB in
+                #    the 2026-07-26 run), so "no clicks" there may just mean
+                #    "nothing was sounding". Don't draw conclusions from it alone.
+                #
+                # Note the earlier osc-pool theory was WRONG: max partials is a
+                # per-PRESET constant (24, from use_this_partial_map over
+                # num_harmonics[0]), not per-note, and patch_oscs[256]=25, so 8
+                # voices reserve 200 oscs against a default max_oscs of 250 — it
+                # fits, and the OOM path never triggers here.
+                # patch_oscs[256]=25, so piano voices cost 25 oscs each. The DX7
+                # set is osc-count-matched to piano@8 (25 voices x 8 oscs = 200)
+                # but uses FM, no partials at all -- so it separates "200 oscs of
+                # render work" from "the INTERP_PARTIALS path".
+                # Focused on ONE question this round: is a periodic background
+                # task stealing time from the render task? piano_poly8 vs
+                # piano_poly8_nocv is that A/B and nothing else differs.
+                # Dropped from the previous round: dx7_osc_matched and
+                # piano_poly8_hi both recorded at about -53dB (effectively
+                # silent), so their "0 clicks" measured nothing.
+                sets = [
+                    dict(tag="piano_poly8", patch=256, voices=8, notes=args.piano_notes,
+                         why="8 low notes, the repro, 200 oscs, CV reads ACTIVE"),
+                    dict(tag="piano_poly8_amp025", patch=256, voices=8,
+                         notes=args.piano_notes, amp=0.25,
+                         why="same notes/vel/oscs, synth amp=0.25 (PURE gain cut, "
+                             "harmonic table untouched) -- expect CLEAN if amplitude"),
+                    dict(tag="piano_poly8_amp2", patch=256, voices=8,
+                         notes=args.piano_notes, amp=2.0,
+                         why="positive control: amp=2.0, expect MORE clicks if amplitude"),
+                ]
+                for s in sets:
+                    tag, why = s["tag"], s["why"]
+                    try:
+                        notes = [int(n) for n in s["notes"].split(",") if n.strip()]
+                        step = s.get("step", args.piano_step)
+                        print(f"\n[piano8] === {tag}: patch {s['patch']}, "
+                              f"num_voices={s['voices']}, {len(notes)} notes={notes} "
+                              f"({why}) ===")
+                        m.silence()
+                        time.sleep(0.3)
+                        setup_piano_poly(m, s["patch"], s["voices"],
+                                         no_cv=s.get("no_cv", False),
+                                         amp=s.get("amp"))
+                        # No zP traffic during the recording: a load poll mid-hold
+                        # would inject its own transients into exactly what we're
+                        # measuring. Load is read once after, still holding.
+                        if getattr(m, "_poll_pause", None):
+                            m._poll_pause.set()
+                        marks = []
+                        try:
+                            piano_rec = record_and_drive(
+                                args, args.piano_duration,
+                                lambda: run_piano_poly_sequence(
+                                    m, marks, notes, step, args.piano_hold,
+                                    vel=s.get("vel", 100)))
+                        finally:
+                            if getattr(m, "_poll_pause", None):
+                                m._poll_pause.clear()
+                        diagnostics.append((tag, piano_rec, marks))
+                    except Exception as e:
+                        print(f"[piano8] {tag} failed: {e}")
             if args.world:
                 results += run_world_suite(args, m)
                 m.silence()   # leave the board quiet for the Tulip test that follows
@@ -807,10 +1297,69 @@ def main():
               f"level={level_db:.1f}dB (min {args.min_level_db})  ->  {'PASS' if ok else 'FAIL'}")
         overall_ok = overall_ok and ok
 
+    # Diagnostics: save the recording and measure it for periodic transients.
+    # Never affects overall_ok — these have no reference and exist to put numbers
+    # in the log for whoever's chasing the artifact.
+    LEAD_IN = 0.3   # record_and_drive starts arecord this long before drive_fn
+    for name, rec, marks in diagnostics:
+        if rec is None:
+            print(f"\n[piano8] {name}: no recording")
+            continue
+        out_wav = f"{name}-recording.wav"
+        write_wav_mono(out_wav, rec, args.samplerate)
+        print(f"\n[audio] saved {out_wav}")
+        if marks:
+            print("[piano8] timeline (seconds into the wav):")
+            for t, label in marks:
+                print(f"[piano8]   {t + LEAD_IN:6.3f}s  {label}")
+        # Compare like-for-like: the fully-held windows against the ramp that
+        # led into them. If a period shows up only once all 8 are held, that's
+        # the reported artifact and its spacing is printed here.
+        spans = {}
+        held = [t + LEAD_IN for t, l in marks if l.startswith("ALL ")]
+        rel = [t + LEAD_IN for t, l in marks if l.startswith("release all")]
+        strike = [t + LEAD_IN for t, l in marks if l.startswith("re-strike")]
+        first_on = [t + LEAD_IN for t, l in marks if l.startswith("note_on")]
+        if first_on and held:
+            spans["ramp 1->8 notes"] = (first_on[0], held[0])
+        if held and rel:
+            spans["ALL 8 HELD (ramp)"] = (held[0] + 0.15, rel[0])
+        if strike and len(rel) > 1:
+            spans["ALL 8 HELD (re-strike)"] = (strike[0] + 0.15, rel[1])
+        if not spans:
+            spans["whole recording"] = (0.0, len(rec) / args.samplerate)
+        for label, (a, b) in spans.items():
+            tr = analyze_transients(rec, args.samplerate, a, b)
+            report_transients(label, tr)
+            # What does the glitch actually look like? Silence gap vs repeated
+            # block vs bare step points at different mechanisms.
+            if tr and tr["click_times"]:
+                report_click_shapes(label, classify_clicks(rec, args.samplerate,
+                                                           tr["click_times"]),
+                                    args.samplerate)
+            # Is AMY's CPU-overload bleep in here? 440/880Hz only -- 523/659 are
+            # in the C-E-G probe chord and would prove nothing.
+            for f0 in (440.0, 880.0):
+                report_narrowband(label, narrowband_report(rec, args.samplerate,
+                                                           f0, a, b))
+
     # AMY render load polled during the run (informational, doesn't gate
     # pass/fail): mean/max of the hwci_load samples on the CDC log. -1 samples
     # mean the firmware predates tulip.amy_render_load() (amy#826 / PR #1105).
     if cdc is not None:
+        # AMY's CPU-overload failsafe, routed to stdout by setup_piano_poly's
+        # callback. Each trip resets all notes/oscs and plays a 4-note bleep at
+        # i*160ms spacing, so a nonzero count here is the direct explanation for
+        # periodic ~160ms transients -- and it zeroes render_us, which is why the
+        # 1Hz load samples read low.
+        ovl = re.findall(r"hwci_overload (-?\d+)", cdc.text())
+        if ovl:
+            print(f"\n*** AMY CPU OVERLOAD FAILSAFE TRIPPED {len(ovl)} time(s) "
+                  f"during this run (load% at trip: {ovl[:20]}) ***")
+            print("    Each trip resets all notes/oscs and plays a descending "
+                  "bleep spaced 160ms (amy api.c amy_overload_failsafe).")
+        else:
+            print("\namy CPU overload failsafe: never tripped (callback armed)")
         vals = [float(x) for x in re.findall(r"hwci_load (-?[\d.]+)", cdc.text())]
         good = [v for v in vals if v >= 0]
         if good:

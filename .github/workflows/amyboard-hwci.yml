@@ -207,6 +207,12 @@ jobs:
           if-no-files-found: warn
           path: |
             hwci/hwci_basic-recording.wav
+            hwci/piano_poly8-recording.wav
+            hwci/piano_poly6-recording.wav
+            hwci/piano_poly8_quiet-recording.wav
+            hwci/piano_poly8_nocv-recording.wav
+            hwci/dx7_osc_matched-recording.wav
+            hwci/piano_poly8_hi-recording.wav
             hwci/acid_generator-recording.wav
             hwci/house_generator-recording.wav
             hwci/woodpiano-recording.wav

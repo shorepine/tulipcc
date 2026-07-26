@@ -107,6 +107,56 @@ python3 hwci.py --pr 993 --port /dev/ttyACM1
   reports `not supported by this firmware`. Polling pauses during sketch
   transfers and needs the CDC log (off under `--no-serial-log`).
 
+## Piano polyphony probe: `piano_poly8-recording.wav`
+A **diagnostic** (no reference, never gates pass/fail) chasing a reported artifact:
+with `amy.send(synth=1, patch=256, num_voices=8)`, a periodic crackle appears once
+the 8th note is held. It resets AMY, loads the bare piano synth, then adds notes
+**one at a time without releasing** up to 8 held, holds, and finally **re-strikes
+all 8 together** — the ramp is the repro, the re-strike is the control that
+distinguishes "8 voices allocated" from "8 voices at full amplitude".
+
+Load polling is paused for the whole recording, so no `zP` frame can inject a
+transient into what's being measured; the load is read once afterwards instead.
+
+It runs **two note sets at the same `num_voices`**, which is the actual
+discriminator. The piano's partial count falls steeply with pitch
+(`piano_num_harmonics`: 40 at the bottom, ~4 at the top) and every partial costs
+an osc from the `max_oscs=250` pool, so:
+
+| set | notes | approx oscs | vs. pool |
+|---|---|---|---|
+| `piano_poly8` | 48–76 | ~295 | **exceeded** |
+| `piano_poly8_hi` | 84–104 | ~73 | fits |
+
+Same polyphony, ~4x difference in osc demand. An artifact in the low set only
+points at osc-pool exhaustion rather than voice count or CPU load.
+
+The recording is measured rather than left to the ear: a 2nd-difference envelope
+suppresses the tonal chord and leaves broadband impulses, peaks are picked
+against a median+MAD threshold, and the result is **folded** — clicks are
+clustered into bursts and one period is fitted to the burst onsets by maximizing
+phase coherence:
+
+```
+[piano8] ALL 8 HELD (ramp): clicks=43 median_IOI=131.0ms ... -> PERIODIC TRANSIENTS
+[piano8] ALL 8 HELD (ramp): FOLDED -> 27 bursts (sizes [1, 2]) period=167.5ms
+         (phase coherence 0.924) median_gap=167.0ms
+[piano8] ALL 8 HELD (ramp): gaps as multiples of period = [1, 1, 1, 1, 2, 1, ...]
+```
+
+**Read `FOLDED period` + `coherence`, not `median_IOI`.** Each event is a burst of
+1–2 clicks tens of ms apart, so the raw median mixes within-burst with
+between-burst gaps and understates the recurrence (131ms median for a real 167ms
+period; on synthetic bursts-of-2 it reads 32ms where the fold correctly recovers
+167ms at coherence 0.999). Integer `gaps as multiples of period` — including the
+occasional 2x or 3x from a burst that fell under threshold — is what confirms a
+single clock rather than coincidence. `autocorr_period` is a weaker cross-check
+and is meaningless at zero clicks (a clean tonal chord still autocorrelates
+strongly at its own beat period).
+
+Tunable: `--piano-patch/-voices/-notes/-notes-hi/-step/-hold/-duration`, or
+`--no-piano-poly` to skip it.
+
 ## Serial logs: `*-serial.log`
 Two consoles are tailed for the whole run and written to one combined text file:
 - **Debug UART** — the dongle on the board's debug header is a stable hardware
