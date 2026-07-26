@@ -604,9 +604,24 @@ def compare(rec, ref):
 # judgement. Diagnostic only — it has no committed reference and never gates the
 # run's pass/fail.
 def setup_piano_poly(m, patch=256, voices=8):
-    """Put the board in the reported state: bare piano synth, N voices."""
+    """Put the board in the reported state: bare piano synth, N voices.
+
+    Also arms AMY's CPU-overload callback. That failsafe is the prime suspect:
+    it resets all notes/oscs and plays a 4-note descending bleep spaced
+    i*160ms (amy api.c amy_overload_failsafe), which would read as periodic
+    transients ~160ms apart. Its fprintf goes to the ESP-IDF console on the
+    debug UART, which we deliberately don't hold open mid-run (the dongle's
+    DTR/RTS would reset the board), so route it to MicroPython stdout instead
+    -- that lands in the CDC log we do capture. It also zeroes render_us on the
+    way out, which is why 1Hz load polling reads low."""
     m.sysex("zPimport amy; amy.reset()Z")
     time.sleep(0.5)
+    try:
+        m.send_python("import tulip; tulip.amy_overload_callback("
+                      "lambda l: print('hwci_overload %d' % l))")
+    except Exception as e:
+        print(f"[piano8] could not arm overload callback: {e}")
+    time.sleep(0.2)
     m.sysex(f"zPimport amy; amy.send(synth=1, patch={patch}, num_voices={voices})Z")
     time.sleep(1.5)   # patch 256 pulls its PCM from flash
 
@@ -719,6 +734,79 @@ def analyze_transients(x, sr, t0=0.0, t1=None, hop_ms=1.0, win_ms=4.0,
         "crest_db": round(20 * np.log10((float(np.max(np.abs(seg))) + 1e-12) /
                                         (float(np.sqrt(np.mean(seg ** 2))) + 1e-12)), 1),
     }
+
+
+def narrowband_report(x, sr, f0, t0=0.0, t1=None, hop_ms=4.0, win_ms=64.0):
+    """Track energy at exactly f0 Hz over time, and fold any bursts.
+
+    Used to test for AMY's CPU-overload bleep, whose four sines are A5 880,
+    E5 659.26, C5 523.25 and A4 440 Hz spaced 160ms apart. The probe chord is
+    C-E-G, so 440 and 880 appear in neither the notes nor their harmonics
+    (C3 130.8 -> 261.6/392.4/523.2, E3 164.8 -> 329.6/494.4/659.2,
+    G3 196 -> 392/588/784) -- narrowband energy there is therefore evidence of
+    the bleep rather than of the piano. 523.25/659.26 ARE in the chord and
+    prove nothing, so don't test those.
+
+    Returns dB of the f0 bin above the median of its neighbourhood, plus a fold
+    of the f0 envelope's peaks."""
+    import numpy as np
+    a = int(max(0, t0) * sr)
+    b = int(t1 * sr) if t1 is not None else len(x)
+    seg = np.asarray(x[a:min(b, len(x))], dtype=np.float64)
+    win = int(sr * win_ms / 1000.0)
+    hop = max(1, int(sr * hop_ms / 1000.0))
+    if len(seg) < win * 2:
+        return None
+    w = np.hanning(win)
+    k = 2 * np.pi * f0 / sr
+    ref = np.exp(-1j * k * np.arange(win)) * w      # single-bin DFT (Goertzel-ish)
+    nfr = 1 + (len(seg) - win) // hop
+    env = np.array([np.abs(np.dot(seg[i * hop:i * hop + win], ref)) for i in range(nfr)])
+    env = env / (win / 2.0)
+    # Neighbourhood: same measurement a few semitones away, avoiding f0's own
+    # partials, as the "is this a real peak" baseline.
+    nb = []
+    for fo in (f0 * 0.87, f0 * 0.93, f0 * 1.07, f0 * 1.14):
+        r = np.exp(-1j * 2 * np.pi * fo / sr * np.arange(win)) * w
+        nb.append(np.median([np.abs(np.dot(seg[i * hop:i * hop + win], r))
+                             for i in range(nfr)]) / (win / 2.0))
+    base = float(np.median(nb)) + 1e-12
+    peak_db = 20 * np.log10((float(np.max(env)) + 1e-12) / base)
+    med_db = 20 * np.log10((float(np.median(env)) + 1e-12) / base)
+    # Peaks in the f0 envelope, then fold them for a period.
+    med, mad = float(np.median(env)), float(np.median(np.abs(env - np.median(env))))
+    thr = med + 6.0 * 1.4826 * mad + 1e-12
+    refr = max(1, int(60.0 / hop_ms))
+    pk, i = [], 0
+    while i < nfr:
+        if env[i] > thr:
+            j = min(nfr, i + refr)
+            c = i + int(np.argmax(env[i:j]))
+            pk.append(t0 + c * hop_ms / 1000.0)
+            i = c + refr
+        else:
+            i += 1
+    return {"f0": f0, "peak_db_over_neighbourhood": round(peak_db, 1),
+            "median_db_over_neighbourhood": round(med_db, 1),
+            "n_bursts": len(pk), "burst_times": [round(t, 3) for t in pk[:20]],
+            "fold": fold_period(pk)}
+
+
+def report_narrowband(label, r):
+    if r is None:
+        print(f"[piano8] {label}: window too short for narrowband test")
+        return
+    verdict = ("PRESENT" if r["peak_db_over_neighbourhood"] > 12.0 and r["n_bursts"] >= 3
+               else "not present")
+    print(f"[piano8] {label}: {r['f0']:.0f}Hz peak={r['peak_db_over_neighbourhood']}dB "
+          f"median={r['median_db_over_neighbourhood']}dB over neighbourhood, "
+          f"bursts={r['n_bursts']}  ->  {verdict}")
+    if r["fold"]:
+        print(f"[piano8] {label}: {r['f0']:.0f}Hz fold period="
+              f"{r['fold']['period_ms']}ms (coherence {r['fold']['coherence']}) "
+              f"gaps={r['fold']['gaps_ms'][:12]}")
+    if r["burst_times"]:
+        print(f"[piano8] {label}: {r['f0']:.0f}Hz burst times = {r['burst_times']}")
 
 
 def fold_period(click_times, gap_ms=60.0, lo_ms=60.0, hi_ms=400.0):
@@ -884,6 +972,12 @@ def main():
                     help="num_voices for the polyphony probe")
     ap.add_argument("--piano-notes", default="48,52,55,60,64,67,72,76",
                     help="the repro: 8 low/mid notes stacked one at a time")
+    ap.add_argument("--piano-notes-7", default="48,52,55,60,64,67,72",
+                    help="bisect set: 7 of the same low notes")
+    ap.add_argument("--dx7-notes",
+                    default="36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84",
+                    help="25 notes for the osc-count-matched DX7 control (patch 253, "
+                         "8 oscs/voice x 25 voices = 200 oscs, no partials)")
     ap.add_argument("--piano-notes-6", default="48,52,55,60,64,67",
                     help="clean control: the first 6 of the same low notes, at the "
                          "same num_voices — isolates active voice count with no "
@@ -1005,18 +1099,31 @@ def main():
                 # num_harmonics[0]), not per-note, and patch_oscs[256]=25, so 8
                 # voices reserve 200 oscs against a default max_oscs of 250 — it
                 # fits, and the OOM path never triggers here.
-                sets = [("piano_poly8", args.piano_notes, "8 low notes, the repro"),
-                        ("piano_poly6", args.piano_notes_6, "6 low notes, clean control"),
-                        ("piano_poly8_hi", args.piano_notes_hi, "8 high notes, CONFOUNDED (quiet)")]
-                for tag, spec, why in sets:
+                # patch_oscs[256]=25, so piano voices cost 25 oscs each. The DX7
+                # set is osc-count-matched to piano@8 (25 voices x 8 oscs = 200)
+                # but uses FM, no partials at all -- so it separates "200 oscs of
+                # render work" from "the INTERP_PARTIALS path".
+                sets = [
+                    dict(tag="piano_poly8", patch=256, voices=8, notes=args.piano_notes,
+                         why="8 low notes, the repro, 200 oscs"),
+                    dict(tag="piano_poly7", patch=256, voices=8, notes=args.piano_notes_7,
+                         why="7 low notes, bisects 6<->8, 175 oscs"),
+                    dict(tag="piano_poly6", patch=256, voices=8, notes=args.piano_notes_6,
+                         why="6 low notes, known clean, 150 oscs"),
+                    dict(tag="dx7_osc_matched", patch=253, voices=25, notes=args.dx7_notes,
+                         step=0.2, why="25 DX7 voices x 8 oscs = 200 oscs, NO partials"),
+                ]
+                for s in sets:
+                    tag, why = s["tag"], s["why"]
                     try:
-                        notes = [int(n) for n in spec.split(",") if n.strip()]
-                        print(f"\n[piano8] === {tag}: patch {args.piano_patch}, "
-                              f"num_voices={args.piano_voices}, notes={notes} "
+                        notes = [int(n) for n in s["notes"].split(",") if n.strip()]
+                        step = s.get("step", args.piano_step)
+                        print(f"\n[piano8] === {tag}: patch {s['patch']}, "
+                              f"num_voices={s['voices']}, {len(notes)} notes={notes} "
                               f"({why}) ===")
                         m.silence()
                         time.sleep(0.3)
-                        setup_piano_poly(m, args.piano_patch, args.piano_voices)
+                        setup_piano_poly(m, s["patch"], s["voices"])
                         # No zP traffic during the recording: a load poll mid-hold
                         # would inject its own transients into exactly what we're
                         # measuring. Load is read once after, still holding.
@@ -1027,7 +1134,7 @@ def main():
                             piano_rec = record_and_drive(
                                 args, args.piano_duration,
                                 lambda: run_piano_poly_sequence(
-                                    m, marks, notes, args.piano_step, args.piano_hold))
+                                    m, marks, notes, step, args.piano_hold))
                         finally:
                             if getattr(m, "_poll_pause", None):
                                 m._poll_pause.clear()
@@ -1110,11 +1217,29 @@ def main():
             spans["whole recording"] = (0.0, len(rec) / args.samplerate)
         for label, (a, b) in spans.items():
             report_transients(label, analyze_transients(rec, args.samplerate, a, b))
+            # Is AMY's CPU-overload bleep in here? 440/880Hz only -- 523/659 are
+            # in the C-E-G probe chord and would prove nothing.
+            for f0 in (440.0, 880.0):
+                report_narrowband(label, narrowband_report(rec, args.samplerate,
+                                                           f0, a, b))
 
     # AMY render load polled during the run (informational, doesn't gate
     # pass/fail): mean/max of the hwci_load samples on the CDC log. -1 samples
     # mean the firmware predates tulip.amy_render_load() (amy#826 / PR #1105).
     if cdc is not None:
+        # AMY's CPU-overload failsafe, routed to stdout by setup_piano_poly's
+        # callback. Each trip resets all notes/oscs and plays a 4-note bleep at
+        # i*160ms spacing, so a nonzero count here is the direct explanation for
+        # periodic ~160ms transients -- and it zeroes render_us, which is why the
+        # 1Hz load samples read low.
+        ovl = re.findall(r"hwci_overload (-?\d+)", cdc.text())
+        if ovl:
+            print(f"\n*** AMY CPU OVERLOAD FAILSAFE TRIPPED {len(ovl)} time(s) "
+                  f"during this run (load% at trip: {ovl[:20]}) ***")
+            print("    Each trip resets all notes/oscs and plays a descending "
+                  "bleep spaced 160ms (amy api.c amy_overload_failsafe).")
+        else:
+            print("\namy CPU overload failsafe: never tripped (callback armed)")
         vals = [float(x) for x in re.findall(r"hwci_load (-?[\d.]+)", cdc.text())]
         good = [v for v in vals if v >= 0]
         if good:
