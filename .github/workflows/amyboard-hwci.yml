@@ -209,7 +209,7 @@ jobs:
             hwci/hwci_basic-recording.wav
             hwci/piano_poly8-recording.wav
             hwci/piano_poly6-recording.wav
-            hwci/piano_poly7-recording.wav
+            hwci/piano_poly8_nocv-recording.wav
             hwci/dx7_osc_matched-recording.wav
             hwci/piano_poly8_hi-recording.wav
             hwci/acid_generator-recording.wav

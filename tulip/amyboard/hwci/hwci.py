@@ -603,7 +603,7 @@ def compare(rec, ref):
 # transients, so the *period* is a number in the CI log rather than an ear
 # judgement. Diagnostic only — it has no committed reference and never gates the
 # run's pass/fail.
-def setup_piano_poly(m, patch=256, voices=8):
+def setup_piano_poly(m, patch=256, voices=8, no_cv=False):
     """Put the board in the reported state: bare piano synth, N voices.
 
     Also arms AMY's CPU-overload callback. That failsafe is the prime suspect:
@@ -622,6 +622,20 @@ def setup_piano_poly(m, patch=256, voices=8):
     except Exception as e:
         print(f"[piano8] could not arm overload callback: {e}")
     time.sleep(0.2)
+    if no_cv:
+        # cv_read_task (amyboard_support.c) does TWO blocking ADS1015 I2C reads
+        # every 6 RTOS ticks -- 6.000ms against a 5.805ms audio block, two
+        # near-equal periods that beat slowly. tulip.cv_local(ch, v) sets
+        # cv_local_override[ch], which makes the task skip read_ads1015_raw()
+        # entirely while still running and delaying. So this removes ~344 I2C
+        # transactions/sec and changes nothing else -- a clean A/B for "is a
+        # periodic task stealing time from the render task?".
+        try:
+            m.send_python("import tulip; tulip.cv_local(0, 0.0); tulip.cv_local(1, 0.0)")
+            print("[piano8] CV local override ON: cv_read_task now does NO I2C")
+        except Exception as e:
+            print(f"[piano8] could not set cv_local override: {e}")
+        time.sleep(0.2)
     m.sysex(f"zPimport amy; amy.send(synth=1, patch={patch}, num_voices={voices})Z")
     time.sleep(1.5)   # patch 256 pulls its PCM from flash
 
@@ -765,14 +779,23 @@ def narrowband_report(x, sr, f0, t0=0.0, t1=None, hop_ms=4.0, win_ms=64.0):
     env = env / (win / 2.0)
     # Neighbourhood: same measurement a few semitones away, avoiding f0's own
     # partials, as the "is this a real peak" baseline.
-    nb = []
+    # Neighbourhood envelopes, measured the same way. Compare peak-to-PEAK and
+    # median-to-median: an earlier version compared max-at-f0 against
+    # median-at-neighbour, which any broadband transient inflates (a click has
+    # energy at every frequency, so it raises f0's max while the neighbours'
+    # median stays low). That produced false "bleep present" readings on
+    # recordings that were simply full of clicks. Same-statistic comparison
+    # makes broadband energy cancel, so a positive peak ratio means genuinely
+    # TONAL energy at f0.
+    nb_env = []
     for fo in (f0 * 0.87, f0 * 0.93, f0 * 1.07, f0 * 1.14):
         r = np.exp(-1j * 2 * np.pi * fo / sr * np.arange(win)) * w
-        nb.append(np.median([np.abs(np.dot(seg[i * hop:i * hop + win], r))
-                             for i in range(nfr)]) / (win / 2.0))
-    base = float(np.median(nb)) + 1e-12
-    peak_db = 20 * np.log10((float(np.max(env)) + 1e-12) / base)
-    med_db = 20 * np.log10((float(np.median(env)) + 1e-12) / base)
+        nb_env.append(np.array([np.abs(np.dot(seg[i * hop:i * hop + win], r))
+                                for i in range(nfr)]) / (win / 2.0))
+    nb_peak = float(np.median([float(np.max(e)) for e in nb_env])) + 1e-12
+    nb_med = float(np.median([float(np.median(e)) for e in nb_env])) + 1e-12
+    peak_db = 20 * np.log10((float(np.max(env)) + 1e-12) / nb_peak)
+    med_db = 20 * np.log10((float(np.median(env)) + 1e-12) / nb_med)
     # Peaks in the f0 envelope, then fold them for a period.
     med, mad = float(np.median(env)), float(np.median(np.abs(env - np.median(env))))
     thr = med + 6.0 * 1.4826 * mad + 1e-12
@@ -1103,15 +1126,20 @@ def main():
                 # set is osc-count-matched to piano@8 (25 voices x 8 oscs = 200)
                 # but uses FM, no partials at all -- so it separates "200 oscs of
                 # render work" from "the INTERP_PARTIALS path".
+                # Focused on ONE question this round: is a periodic background
+                # task stealing time from the render task? piano_poly8 vs
+                # piano_poly8_nocv is that A/B and nothing else differs.
+                # Dropped from the previous round: dx7_osc_matched and
+                # piano_poly8_hi both recorded at about -53dB (effectively
+                # silent), so their "0 clicks" measured nothing.
                 sets = [
                     dict(tag="piano_poly8", patch=256, voices=8, notes=args.piano_notes,
-                         why="8 low notes, the repro, 200 oscs"),
-                    dict(tag="piano_poly7", patch=256, voices=8, notes=args.piano_notes_7,
-                         why="7 low notes, bisects 6<->8, 175 oscs"),
+                         why="8 low notes, the repro, 200 oscs, CV reads ACTIVE"),
+                    dict(tag="piano_poly8_nocv", patch=256, voices=8, notes=args.piano_notes,
+                         no_cv=True,
+                         why="IDENTICAL to piano_poly8 but cv_read_task does no I2C"),
                     dict(tag="piano_poly6", patch=256, voices=8, notes=args.piano_notes_6,
-                         why="6 low notes, known clean, 150 oscs"),
-                    dict(tag="dx7_osc_matched", patch=253, voices=25, notes=args.dx7_notes,
-                         step=0.2, why="25 DX7 voices x 8 oscs = 200 oscs, NO partials"),
+                         why="6 low notes, known-clean anchor, 150 oscs"),
                 ]
                 for s in sets:
                     tag, why = s["tag"], s["why"]
@@ -1123,7 +1151,8 @@ def main():
                               f"({why}) ===")
                         m.silence()
                         time.sleep(0.3)
-                        setup_piano_poly(m, s["patch"], s["voices"])
+                        setup_piano_poly(m, s["patch"], s["voices"],
+                                         no_cv=s.get("no_cv", False))
                         # No zP traffic during the recording: a load poll mid-hold
                         # would inject its own transients into exactly what we're
                         # measuring. Load is read once after, still holding.
