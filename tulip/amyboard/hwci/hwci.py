@@ -640,7 +640,7 @@ def setup_piano_poly(m, patch=256, voices=8, no_cv=False):
     time.sleep(1.5)   # patch 256 pulls its PCM from flash
 
 
-def run_piano_poly_sequence(m, marks, notes, step_s, hold_s):
+def run_piano_poly_sequence(m, marks, notes, step_s, hold_s, vel=100):
     """Add `notes` one at a time (never releasing), hold them all, then a
     simultaneous re-strike of the same chord, then release.
 
@@ -663,8 +663,8 @@ def run_piano_poly_sequence(m, marks, notes, step_s, hold_s):
     mark("drive start (silence baseline)")
     time.sleep(0.5)
     for i, n in enumerate(notes, 1):
-        m.note_on(n, 100)
-        mark(f"note_on {n} -> {i} held")
+        m.note_on(n, vel)
+        mark(f"note_on {n} vel={vel} -> {i} held")
         time.sleep(step_s)
     mark(f"ALL {len(notes)} HELD - hold {hold_s}s")
     time.sleep(hold_s)
@@ -675,7 +675,7 @@ def run_piano_poly_sequence(m, marks, notes, step_s, hold_s):
     # Control: all 8 struck together, so every voice is at full amplitude.
     mark(f"re-strike all {len(notes)} together")
     for n in notes:
-        m.note_on(n, 100)
+        m.note_on(n, vel)
     time.sleep(hold_s)
     mark("release all (re-strike)")
     for n in notes:
@@ -1202,6 +1202,10 @@ def main():
                 sets = [
                     dict(tag="piano_poly8", patch=256, voices=8, notes=args.piano_notes,
                          why="8 low notes, the repro, 200 oscs, CV reads ACTIVE"),
+                    dict(tag="piano_poly8_quiet", patch=256, voices=8,
+                         notes=args.piano_notes, vel=25,
+                         why="IDENTICAL to piano_poly8 but vel=25 (~12dB quieter): "
+                             "same voices/oscs/CPU, only amplitude differs"),
                     dict(tag="piano_poly6", patch=256, voices=8, notes=args.piano_notes_6,
                          why="6 low notes, known-clean anchor, 150 oscs"),
                 ]
@@ -1227,7 +1231,8 @@ def main():
                             piano_rec = record_and_drive(
                                 args, args.piano_duration,
                                 lambda: run_piano_poly_sequence(
-                                    m, marks, notes, step, args.piano_hold))
+                                    m, marks, notes, step, args.piano_hold,
+                                    vel=s.get("vel", 100)))
                         finally:
                             if getattr(m, "_poll_pause", None):
                                 m._poll_pause.clear()
