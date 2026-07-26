@@ -603,7 +603,7 @@ def compare(rec, ref):
 # transients, so the *period* is a number in the CI log rather than an ear
 # judgement. Diagnostic only — it has no committed reference and never gates the
 # run's pass/fail.
-def setup_piano_poly(m, patch=256, voices=8, no_cv=False):
+def setup_piano_poly(m, patch=256, voices=8, no_cv=False, amp=None):
     """Put the board in the reported state: bare piano synth, N voices.
 
     Also arms AMY's CPU-overload callback. That failsafe is the prime suspect:
@@ -638,6 +638,14 @@ def setup_piano_poly(m, patch=256, voices=8, no_cv=False):
         time.sleep(0.2)
     m.sysex(f"zPimport amy; amy.send(synth=1, patch={patch}, num_voices={voices})Z")
     time.sleep(1.5)   # patch 256 pulls its PCM from flash
+    if amp is not None:
+        # Pure gain change on the whole synth (no osc = all oscs). Unlike
+        # velocity this does NOT touch the piano's harmonic table row, so the
+        # partial count and every other variable stay identical -- amplitude is
+        # the only thing that moves.
+        m.sysex(f"zPimport amy; amy.send(synth=1, amp={amp})Z")
+        time.sleep(0.3)
+        print(f"[piano8] synth amp set to {amp} (pure gain, harmonics unchanged)")
 
 
 def run_piano_poly_sequence(m, marks, notes, step_s, hold_s, vel=100):
@@ -1202,12 +1210,13 @@ def main():
                 sets = [
                     dict(tag="piano_poly8", patch=256, voices=8, notes=args.piano_notes,
                          why="8 low notes, the repro, 200 oscs, CV reads ACTIVE"),
-                    dict(tag="piano_poly8_quiet", patch=256, voices=8,
-                         notes=args.piano_notes, vel=25,
-                         why="IDENTICAL to piano_poly8 but vel=25 (~12dB quieter): "
-                             "same voices/oscs/CPU, only amplitude differs"),
-                    dict(tag="piano_poly6", patch=256, voices=8, notes=args.piano_notes_6,
-                         why="6 low notes, known-clean anchor, 150 oscs"),
+                    dict(tag="piano_poly8_amp025", patch=256, voices=8,
+                         notes=args.piano_notes, amp=0.25,
+                         why="same notes/vel/oscs, synth amp=0.25 (PURE gain cut, "
+                             "harmonic table untouched) -- expect CLEAN if amplitude"),
+                    dict(tag="piano_poly8_amp2", patch=256, voices=8,
+                         notes=args.piano_notes, amp=2.0,
+                         why="positive control: amp=2.0, expect MORE clicks if amplitude"),
                 ]
                 for s in sets:
                     tag, why = s["tag"], s["why"]
@@ -1220,7 +1229,8 @@ def main():
                         m.silence()
                         time.sleep(0.3)
                         setup_piano_poly(m, s["patch"], s["voices"],
-                                         no_cv=s.get("no_cv", False))
+                                         no_cv=s.get("no_cv", False),
+                                         amp=s.get("amp"))
                         # No zP traffic during the recording: a load poll mid-hold
                         # would inject its own transients into exactly what we're
                         # measuring. Load is read once after, still holding.
