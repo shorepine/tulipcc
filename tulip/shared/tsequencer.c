@@ -8,7 +8,7 @@ uint32_t sequencer_tick[SEQUENCER_SLOTS];
 
 mp_obj_t defer_callbacks[DEFER_SLOTS];
 mp_obj_t defer_args[DEFER_SLOTS];
-uint32_t defer_sysclock[DEFER_SLOTS];
+int64_t defer_sysclock[DEFER_SLOTS];
 
 #ifdef AMY_IS_EXTERNAL
 uint32_t sequencer_tick_count = 0;
@@ -19,8 +19,8 @@ void tulip_amy_sequencer_hook(uint32_t tick_count) {
         sequencer_tick_count = tick_count;
     #endif
     for(uint8_t i=0;i<DEFER_SLOTS;i++) {
-        if(defer_callbacks[i] != NULL && get_ticks_ms() > defer_sysclock[i]) {
-            //fprintf(stderr, "calling defer with sysclock %" PRIu32 " and actual %" PRIu32"\n", defer_sysclock[i], get_ticks_ms() );
+        if(defer_callbacks[i] != NULL && get_time_ms() > defer_sysclock[i]) {
+            //fprintf(stderr, "calling defer with sysclock %" PRId64 " and actual %" PRId64"\n", defer_sysclock[i], get_time_ms() );
             mp_sched_schedule(defer_callbacks[i], defer_args[i]);
             defer_callbacks[i] = NULL; defer_sysclock[i] = 0; defer_args[i] = NULL;
         }

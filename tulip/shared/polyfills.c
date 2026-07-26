@@ -74,20 +74,40 @@ void take_semaphore() {
 }
 
 
+// Monotonic microseconds since startup, 64-bit. Not mp_hal_ticks_us(): that is
+// mp_uint_t, i.e. 32 bits here, so it wraps every ~71 minutes.
 int64_t get_time_us() {
-    return mp_hal_ticks_us();
+#ifdef ESP_PLATFORM
+    return esp_timer_get_time();  // already counts from chip boot
+#else
+    // CLOCK_MONOTONIC counts from machine boot, which can be weeks. Zero-base
+    // it on first call so desktop and device agree on "microseconds since
+    // Tulip started" and the numbers stay small.
+    static int64_t base_us = -1;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    int64_t now = (int64_t)ts.tv_sec * 1000000LL + ts.tv_nsec / 1000LL;
+    if (base_us < 0) base_us = now;
+    return now - base_us;
+#endif
 }
 
 extern int32_t get_sysclock();
+
+// Monotonic milliseconds since boot, 64-bit -- does not wrap. Anything that
+// keeps an absolute timestamp rather than a short interval must use this;
+// tulip.ticks_ms() hands it straight to Python.
 int64_t get_time_ms() {
-    return mp_hal_ticks_ms(); // a large number
+    return get_time_us() / 1000;
 }
-int32_t get_ticks_ms() {
-//#ifndef __EMSCRIPTEN__
-//    return amy_sysclock(); // based on audio driver
-//#else
-    return mp_hal_ticks_ms(); 
-//#endif
+
+// 32-bit millisecond tick. Rolls over every 2^32 ms (49.7 days) by design: its
+// only consumers are the LVGL tick shim and the desktop frame timer, which
+// subtract these values modulo 2^32 -- correct across the rollover.
+// This used to be declared int32_t, which made it go *negative* after 2^31 ms
+// (24.9 days) and fed negative numbers to Python via tulip.ticks_ms().
+uint32_t get_ticks_ms() {
+    return (uint32_t)get_time_ms();
 }
 
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags) {
