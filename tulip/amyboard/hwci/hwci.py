@@ -596,6 +596,151 @@ def compare(rec, ref):
     return sim, level_db
 
 
+# ── piano polyphony probe (diagnostic, not pass/fail) ───────────────────────
+# Chases a reported artifact: with patch 256 (piano) at num_voices=8, a periodic
+# crackle appears once the 8th note is held. This records the note-by-note ramp
+# to 8 held voices and then measures the recording for periodic broadband
+# transients, so the *period* is a number in the CI log rather than an ear
+# judgement. Diagnostic only — it has no committed reference and never gates the
+# run's pass/fail.
+def setup_piano_poly(m, patch=256, voices=8):
+    """Put the board in the reported state: bare piano synth, N voices."""
+    m.sysex("zPimport amy; amy.reset()Z")
+    time.sleep(0.5)
+    m.sysex(f"zPimport amy; amy.send(synth=1, patch={patch}, num_voices={voices})Z")
+    time.sleep(1.5)   # patch 256 pulls its PCM from flash
+
+
+def run_piano_poly_sequence(m, marks, notes, step_s, hold_s):
+    """Add `notes` one at a time (never releasing), hold them all, then a
+    simultaneous re-strike of the same chord, then release.
+
+    The ramp is the reported repro. The re-strike is the useful control: on the
+    ramp the earliest notes have been decaying for seconds, so "8 held" may not
+    mean 8 *loud* voices — striking all 8 at once guarantees it does. If the
+    artifact tracks the re-strike too, it follows active voice count rather than
+    time-since-note-on.
+
+    `marks` collects (seconds-from-drive-start, label) so the analysis can window
+    on "all 8 held" instead of guessing. Drive starts ~0.3s into the recording
+    (record_and_drive's lead-in), which is added back by the caller."""
+    t0 = time.time()
+
+    def mark(label):
+        t = time.time() - t0
+        marks.append((t, label))
+        print(f"[piano8] t={t:6.3f}s  {label}")
+
+    mark("drive start (silence baseline)")
+    time.sleep(0.5)
+    for i, n in enumerate(notes, 1):
+        m.note_on(n, 100)
+        mark(f"note_on {n} -> {i} held")
+        time.sleep(step_s)
+    mark(f"ALL {len(notes)} HELD - hold {hold_s}s")
+    time.sleep(hold_s)
+    mark("release all")
+    for n in notes:
+        m.note_off(n)
+    time.sleep(0.4)
+    # Control: all 8 struck together, so every voice is at full amplitude.
+    mark(f"re-strike all {len(notes)} together")
+    for n in notes:
+        m.note_on(n, 100)
+    time.sleep(hold_s)
+    mark("release all (re-strike)")
+    for n in notes:
+        m.note_off(n)
+    m.all_notes_off(0)
+    time.sleep(0.3)
+
+
+def analyze_transients(x, sr, t0=0.0, t1=None, hop_ms=1.0, win_ms=4.0,
+                       sigma=6.0, refractory_ms=25.0,
+                       period_lo_ms=20.0, period_hi_ms=1000.0):
+    """Find broadband transients in x[t0:t1] and estimate their period.
+
+    A crackle is an impulse: broadband and phase-discontinuous, unlike the tonal
+    piano behind it. Taking the 2nd difference suppresses the low-frequency tone
+    and leaves the impulses, then a short-frame RMS envelope of that makes them
+    peaks. The threshold is median + sigma*MAD (robust — a few big clicks don't
+    inflate their own floor). Period comes from the envelope's autocorrelation,
+    which finds a regular spacing even when individual peaks fall under the
+    threshold. Returns None if the window is too short to judge."""
+    import numpy as np
+    a = int(max(0, t0) * sr)
+    b = int(t1 * sr) if t1 is not None else len(x)
+    seg = np.asarray(x[a:min(b, len(x))], dtype=np.float64)
+    if len(seg) < int(0.10 * sr):
+        return None
+    d = np.diff(seg, n=2)                      # kill the tone, keep the clicks
+    hop = max(1, int(sr * hop_ms / 1000.0))
+    win = max(hop, int(sr * win_ms / 1000.0))
+    nfr = 1 + (len(d) - win) // hop
+    if nfr < 16:
+        return None
+    # Framed RMS via cumulative sums — O(n) instead of a Python loop per frame.
+    p = np.concatenate(([0.0], np.cumsum(d * d)))
+    idx = np.arange(nfr) * hop
+    env = np.sqrt(np.maximum(p[idx + win] - p[idx], 0.0) / win)
+    med = float(np.median(env))
+    mad = float(np.median(np.abs(env - med)))
+    thr = med + sigma * 1.4826 * mad + 1e-12
+    # Peak-pick with a refractory window so one click isn't counted many times.
+    refr = max(1, int(refractory_ms / hop_ms))
+    peaks, i = [], 0
+    while i < nfr:
+        if env[i] > thr:
+            j = min(nfr, i + refr)
+            k = i + int(np.argmax(env[i:j]))
+            peaks.append(t0 + k * hop_ms / 1000.0)
+            i = k + refr
+        else:
+            i += 1
+    iois = [round((b_ - a_) * 1000.0, 1) for a_, b_ in zip(peaks, peaks[1:])]
+    e = env - env.mean()
+    ac = np.correlate(e, e, mode="full")[len(e) - 1:]
+    ac = ac / (ac[0] + 1e-20)
+    lo, hi = int(period_lo_ms / hop_ms), min(len(ac) - 1, int(period_hi_ms / hop_ms))
+    period_ms = ac_peak = None
+    if hi > lo + 1:
+        lag = lo + int(np.argmax(ac[lo:hi]))
+        period_ms, ac_peak = lag * hop_ms, float(ac[lag])
+    return {
+        "window": (round(t0, 3), round((b / sr), 3)),
+        "n_clicks": len(peaks),
+        "click_times": [round(t, 3) for t in peaks[:40]],
+        "iois_ms": iois[:40],
+        "median_ioi_ms": (round(float(np.median(iois)), 1) if iois else None),
+        "ac_period_ms": period_ms,
+        "ac_strength": (round(ac_peak, 3) if ac_peak is not None else None),
+        "rms_db": round(20 * np.log10(float(np.sqrt(np.mean(seg ** 2))) + 1e-12), 1),
+        "crest_db": round(20 * np.log10((float(np.max(np.abs(seg))) + 1e-12) /
+                                        (float(np.sqrt(np.mean(seg ** 2))) + 1e-12)), 1),
+    }
+
+
+def report_transients(label, r):
+    """`clicks` + `median_IOI` are the evidence. autocorr_period is only
+    meaningful alongside a nonzero click count — a clean tonal chord still
+    autocorrelates strongly at its own beat period (~26ms in bench tests), so
+    that number on its own is not a crackle."""
+    if r is None:
+        print(f"[piano8] {label}: window too short to analyze")
+        return
+    verdict = ("no periodic transients" if r["n_clicks"] < 3 else
+               f"PERIODIC TRANSIENTS ~{r['median_ioi_ms']}ms apart")
+    print(f"[piano8] {label}: window={r['window'][0]}..{r['window'][1]}s  "
+          f"clicks={r['n_clicks']}  median_IOI={r['median_ioi_ms']}ms  "
+          f"autocorr_period={r['ac_period_ms']}ms (strength {r['ac_strength']}; "
+          f"only meaningful if clicks>0)  "
+          f"rms={r['rms_db']}dB crest={r['crest_db']}dB  ->  {verdict}")
+    if r["iois_ms"]:
+        print(f"[piano8] {label}: inter-click intervals (ms) = {r['iois_ms']}")
+    if r["click_times"]:
+        print(f"[piano8] {label}: click times (s) = {r['click_times']}")
+
+
 # ── AMYboard World sketch suite ──────────────────────────────────────────────
 def run_world_suite(args, m):
     """Download each WORLD_SUITE sketch, push it onto the board, and record it.
@@ -681,6 +826,22 @@ def main():
                          "whole World suite (default: each sketch's own threshold)")
     ap.add_argument("--world-base", default=WORLD_BASE,
                     help="AMYboard World API base URL")
+    # Piano polyphony probe (diagnostic only — no reference, never gates pass/fail).
+    ap.add_argument("--no-piano-poly", dest="piano_poly", action="store_false",
+                    help="skip the patch-256 8-voice piano polyphony probe")
+    ap.set_defaults(piano_poly=True)
+    ap.add_argument("--piano-patch", type=int, default=256,
+                    help="patch for the polyphony probe (default 256 = piano)")
+    ap.add_argument("--piano-voices", type=int, default=8,
+                    help="num_voices for the polyphony probe")
+    ap.add_argument("--piano-notes", default="48,52,55,60,64,67,72,76",
+                    help="comma-separated MIDI notes to stack, one at a time")
+    ap.add_argument("--piano-step", type=float, default=0.5,
+                    help="seconds between successive note_ons in the ramp")
+    ap.add_argument("--piano-hold", type=float, default=6.0,
+                    help="seconds to hold all notes (ramp and re-strike each)")
+    ap.add_argument("--piano-duration", type=float, default=22.0,
+                    help="seconds to record the polyphony probe")
     ap.add_argument("--no-bench-lock", action="store_true",
                     help="skip the /tmp/amyboard-bench.lock flock (local bring-up "
                          "on a bench nothing else shares)")
@@ -753,6 +914,7 @@ def main():
         # AMYboard World sketch. results = [(name, recording|None, min_sim)].
         m = Midi(args.midi_port)
         results = []
+        diagnostics = []   # (name, recording, marks) — recorded + analyzed, never gating
         try:
             # The board boots into its SAVED sketch (e.g. woodpiano left over from
             # a previous run's transfer), which also answers our MIDI notes and
@@ -764,6 +926,35 @@ def main():
                 m.poll_load_start()
             rec = record_and_drive(args, args.duration, lambda: run_test_sequence(m))
             results.append((args.name, rec, args.min_similarity))
+            # Piano polyphony probe (diagnostic; never gates pass/fail). Runs
+            # before the World suite so the board is still in its clean default
+            # state — no pushed sketch loop() answering our notes.
+            if args.piano_poly:
+                try:
+                    notes = [int(n) for n in args.piano_notes.split(",") if n.strip()]
+                    print(f"\n[piano8] === piano polyphony probe: patch "
+                          f"{args.piano_patch}, num_voices={args.piano_voices}, "
+                          f"notes={notes} ===")
+                    m.silence()
+                    time.sleep(0.3)
+                    setup_piano_poly(m, args.piano_patch, args.piano_voices)
+                    # No zP traffic during the recording: a load poll mid-hold
+                    # would inject its own transients into exactly what we're
+                    # measuring. Load is read once after, still holding.
+                    if getattr(m, "_poll_pause", None):
+                        m._poll_pause.set()
+                    marks = []
+                    try:
+                        piano_rec = record_and_drive(
+                            args, args.piano_duration,
+                            lambda: run_piano_poly_sequence(
+                                m, marks, notes, args.piano_step, args.piano_hold))
+                    finally:
+                        if getattr(m, "_poll_pause", None):
+                            m._poll_pause.clear()
+                    diagnostics.append(("piano_poly8", piano_rec, marks))
+                except Exception as e:
+                    print(f"[piano8] probe failed: {e}")
             if args.world:
                 results += run_world_suite(args, m)
                 m.silence()   # leave the board quiet for the Tulip test that follows
@@ -806,6 +997,40 @@ def main():
         print(f"\n{name}: spectral_similarity={sim:.4f} (min {min_sim})  "
               f"level={level_db:.1f}dB (min {args.min_level_db})  ->  {'PASS' if ok else 'FAIL'}")
         overall_ok = overall_ok and ok
+
+    # Diagnostics: save the recording and measure it for periodic transients.
+    # Never affects overall_ok — these have no reference and exist to put numbers
+    # in the log for whoever's chasing the artifact.
+    LEAD_IN = 0.3   # record_and_drive starts arecord this long before drive_fn
+    for name, rec, marks in diagnostics:
+        if rec is None:
+            print(f"\n[piano8] {name}: no recording")
+            continue
+        out_wav = f"{name}-recording.wav"
+        write_wav_mono(out_wav, rec, args.samplerate)
+        print(f"\n[audio] saved {out_wav}")
+        if marks:
+            print("[piano8] timeline (seconds into the wav):")
+            for t, label in marks:
+                print(f"[piano8]   {t + LEAD_IN:6.3f}s  {label}")
+        # Compare like-for-like: the fully-held windows against the ramp that
+        # led into them. If a period shows up only once all 8 are held, that's
+        # the reported artifact and its spacing is printed here.
+        spans = {}
+        held = [t + LEAD_IN for t, l in marks if l.startswith("ALL ")]
+        rel = [t + LEAD_IN for t, l in marks if l.startswith("release all")]
+        strike = [t + LEAD_IN for t, l in marks if l.startswith("re-strike")]
+        first_on = [t + LEAD_IN for t, l in marks if l.startswith("note_on")]
+        if first_on and held:
+            spans["ramp 1->8 notes"] = (first_on[0], held[0])
+        if held and rel:
+            spans["ALL 8 HELD (ramp)"] = (held[0] + 0.15, rel[0])
+        if strike and len(rel) > 1:
+            spans["ALL 8 HELD (re-strike)"] = (strike[0] + 0.15, rel[1])
+        if not spans:
+            spans["whole recording"] = (0.0, len(rec) / args.samplerate)
+        for label, (a, b) in spans.items():
+            report_transients(label, analyze_transients(rec, args.samplerate, a, b))
 
     # AMY render load polled during the run (informational, doesn't gate
     # pass/fail): mean/max of the hwci_load samples on the CDC log. -1 samples

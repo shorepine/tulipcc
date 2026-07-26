@@ -107,6 +107,34 @@ python3 hwci.py --pr 993 --port /dev/ttyACM1
   reports `not supported by this firmware`. Polling pauses during sketch
   transfers and needs the CDC log (off under `--no-serial-log`).
 
+## Piano polyphony probe: `piano_poly8-recording.wav`
+A **diagnostic** (no reference, never gates pass/fail) chasing a reported artifact:
+with `amy.send(synth=1, patch=256, num_voices=8)`, a periodic crackle appears once
+the 8th note is held. It resets AMY, loads the bare piano synth, then adds notes
+**one at a time without releasing** up to 8 held, holds, and finally **re-strikes
+all 8 together** — the ramp is the repro, the re-strike is the control that
+distinguishes "8 voices allocated" from "8 voices at full amplitude".
+
+Load polling is paused for the whole recording, so no `zP` frame can inject a
+transient into what's being measured; the load is read once afterwards instead.
+
+The recording is then measured rather than left to the ear: a 2nd-difference
+envelope suppresses the tonal chord and leaves broadband impulses, peaks are
+picked against a median+MAD threshold, and the spacing is reported per window
+(ramp vs. held vs. re-struck):
+
+```
+[piano8] ALL 8 HELD (ramp): window=4.9..10.9s clicks=37 median_IOI=160.0ms
+         autocorr_period=160.0ms (strength 0.897) ... -> PERIODIC TRANSIENTS ~160.0ms apart
+```
+
+**`clicks` and `median_IOI` are the evidence.** `autocorr_period` is only
+meaningful next to a nonzero click count — a clean tonal chord autocorrelates
+strongly at its own beat period, so that number alone is not a crackle.
+
+Tunable: `--piano-patch/-voices/-notes/-step/-hold/-duration`, or `--no-piano-poly`
+to skip it.
+
 ## Serial logs: `*-serial.log`
 Two consoles are tailed for the whole run and written to one combined text file:
 - **Debug UART** — the dongle on the board's debug header is a stable hardware
