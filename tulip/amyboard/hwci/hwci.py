@@ -1061,9 +1061,14 @@ def main():
     ap.add_argument("--world-base", default=WORLD_BASE,
                     help="AMYboard World API base URL")
     # Piano polyphony probe (diagnostic only — no reference, never gates pass/fail).
-    ap.add_argument("--no-piano-poly", dest="piano_poly", action="store_false",
-                    help="skip the patch-256 8-voice piano polyphony probe")
-    ap.set_defaults(piano_poly=True)
+    # Default OFF: the investigation it was written for is finished (the
+    # artifact is amplitude-gated output clipping, not a code regression), and
+    # three recorded sets add ~70s of bench time to every AMYboard PR. Enable
+    # with --piano-poly to re-run the probe.
+    ap.add_argument("--piano-poly", dest="piano_poly", action="store_true",
+                    help="run the patch-256 piano polyphony probe (diagnostic; "
+                         "records + measures periodic transients, never gates)")
+    ap.set_defaults(piano_poly=False)
     ap.add_argument("--piano-patch", type=int, default=256,
                     help="patch for the polyphony probe (default 256 = piano)")
     ap.add_argument("--piano-voices", type=int, default=8,
