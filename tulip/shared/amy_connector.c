@@ -74,10 +74,12 @@ uint8_t cv_synth_map[MAX_CV_SYNTHS];
 
 // Look up which synth owns this osc, return synth number or -1
 static int synth_for_osc(uint16_t osc) {
-    extern uint8_t *osc_to_voice;
+    // osc_to_voice is declared in amy.h (uint16_t * as of amy#977) -- don't
+    // redeclare it here, and use AMY_IS_SET so the unset sentinel follows
+    // AMY's type instead of a hardcoded 255.
     if (osc_to_voice == NULL) return -1;
-    uint8_t voice = osc_to_voice[osc];
-    if (voice == 255) return -1;  // AMY_UNSET for uint8
+    uint16_t voice = osc_to_voice[osc];
+    if (!AMY_IS_SET(voice)) return -1;
     uint16_t voices[MAX_VOICES_PER_INSTRUMENT];
     for (int s = 0; s < MAX_CV_SYNTHS; s++) {
         if (cv_synth_map[s] == 0) continue;  // skip unmapped synths
@@ -159,10 +161,12 @@ float amyboard_vcv_cv_out[2] = {0, 0};
 
 // Look up which synth owns this osc, return synth number or -1
 static int synth_for_osc(uint16_t osc) {
-    extern uint8_t *osc_to_voice;
+    // osc_to_voice is declared in amy.h (uint16_t * as of amy#977) -- don't
+    // redeclare it here, and use AMY_IS_SET so the unset sentinel follows
+    // AMY's type instead of a hardcoded 255.
     if (osc_to_voice == NULL) return -1;
-    uint8_t voice = osc_to_voice[osc];
-    if (voice == 255) return -1;  // AMY_UNSET for uint8
+    uint16_t voice = osc_to_voice[osc];
+    if (!AMY_IS_SET(voice)) return -1;
     uint16_t voices[MAX_VOICES_PER_INSTRUMENT];
     for (int s = 0; s < MAX_CV_SYNTHS; s++) {
         if (cv_synth_map[s] == 0) continue;  // skip unmapped synths
