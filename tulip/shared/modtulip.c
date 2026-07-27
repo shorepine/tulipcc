@@ -117,11 +117,16 @@ mp_obj_t amy_overload_callback = NULL;
 // the one core renders the whole osc range. Safe between blocks either way.
 // Added so HW CI can A/B single- vs dual-core rendering on ONE board in ONE run
 // instead of comparing across firmware builds. Returns the current value.
+// amy_global isn't visible in the emscripten/web build (same reason the
+// generated AMY C API entries below are #ifndef __EMSCRIPTEN__), and multicore
+// only means anything on the dual-core ESP32-S3 targets anyway.
+#ifndef __EMSCRIPTEN__
 STATIC mp_obj_t tulip_amy_multicore(size_t n_args, const mp_obj_t *args) {
     if (n_args > 0) amy_global.config.platform.multicore = mp_obj_is_true(args[0]) ? 1 : 0;
     return mp_obj_new_int(amy_global.config.platform.multicore);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_multicore_obj, 0, 1, tulip_amy_multicore);
+#endif
 
 STATIC mp_obj_t tulip_amy_overload_callback(size_t n_args, const mp_obj_t *args) {
     amy_overload_callback = (args[0] == mp_const_none) ? NULL : args[0];
@@ -1786,7 +1791,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_overload_callback), MP_ROM_PTR(&tulip_amy_overload_callback_obj) },
+#ifndef __EMSCRIPTEN__
     { MP_ROM_QSTR(MP_QSTR_amy_multicore), MP_ROM_PTR(&tulip_amy_multicore_obj) },
+#endif
 #ifndef __EMSCRIPTEN__
     // Generated table-driven AMY C API entries (amy_send, amy_ticks_ms,
     // amy_get_synth_commands, amy_dump_state, ...). Regenerate in amy/ with

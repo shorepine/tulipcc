@@ -565,21 +565,6 @@ def run_test_sequence(m):
     # 4) reset, then a sustained 3-osc chord (A4/C#5/E5) via zP
     m.sysex("zPimport amy; amy.reset()Z")
     time.sleep(0.5)
-    if multicore is not None:
-        # AMY splits the osc range across both ESP32-S3 cores
-        # (esp_render_on_cores, amy i2s.c). config.platform.multicore is read
-        # once per block, so this takes effect immediately and lets us A/B
-        # single- vs dual-core on the same board in the same run. Single-core
-        # halves the render headroom, so watch for NEW starvation-style
-        # artifacts (silence gaps) as distinct from the 167.5ms step artifact.
-        try:
-            got = m.send_python(f"import tulip; print('hwci_multicore %d' % "
-                                f"tulip.amy_multicore({1 if multicore else 0}))")
-            print(f"[piano8] multicore set to {1 if multicore else 0} "
-                  f"(board replied: {got})")
-        except Exception as e:
-            print(f"[piano8] could not set multicore: {e}")
-        time.sleep(0.3)
     m.sysex("zPimport amy; amy.send(osc=0,wave=amy.SINE,freq=440,vel=0.3); "
             "amy.send(osc=1,wave=amy.SINE,freq=554,vel=0.3); "
             "amy.send(osc=2,wave=amy.SINE,freq=659,vel=0.3)Z")
@@ -631,6 +616,21 @@ def setup_piano_poly(m, patch=256, voices=8, no_cv=False, amp=None, multicore=No
     way out, which is why 1Hz load polling reads low."""
     m.sysex("zPimport amy; amy.reset()Z")
     time.sleep(0.5)
+    if multicore is not None:
+        # AMY splits the osc range across both ESP32-S3 cores
+        # (esp_render_on_cores, amy i2s.c). config.platform.multicore is read
+        # once per block, so this takes effect immediately and lets us A/B
+        # single- vs dual-core on the same board in the same run. Single-core
+        # halves the render headroom, so watch for NEW starvation-style
+        # artifacts (silence gaps) as distinct from the 167.5ms step artifact.
+        try:
+            got = m.send_python(f"import tulip; print('hwci_multicore %d' % "
+                                f"tulip.amy_multicore({1 if multicore else 0}))")
+            print(f"[piano8] multicore set to {1 if multicore else 0} "
+                  f"(board replied: {got})")
+        except Exception as e:
+            print(f"[piano8] could not set multicore: {e}")
+        time.sleep(0.3)
     try:
         m.send_python("import tulip; tulip.amy_overload_callback("
                       "lambda l: print('hwci_overload %d' % l))")
@@ -1083,7 +1083,7 @@ def main():
     ap.add_argument("--piano-poly", dest="piano_poly", action="store_true",
                     help="run the patch-256 piano polyphony probe (diagnostic; "
                          "records + measures periodic transients, never gates)")
-    ap.set_defaults(piano_poly=True)
+    ap.set_defaults(piano_poly=False)
     ap.add_argument("--piano-patch", type=int, default=256,
                     help="patch for the polyphony probe (default 256 = piano)")
     ap.add_argument("--piano-voices", type=int, default=8,
