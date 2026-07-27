@@ -40,4 +40,12 @@ runs:
           lib/mbedtls \
           lib/micropython-lib \
           lib/tinyusb
-        echo "Initialized $(git submodule status --recursive | wc -l | tr -d ' ') submodules."
+        # `git submodule status --recursive` lists registered submodules, not
+        # cloned ones -- uninitialized entries are the lines starting with '-'.
+        # Report both numbers so the log can't be read as "we cloned all of them".
+        sm_status=$(git submodule status --recursive)
+        # `|| true` because grep -c exits 1 on a zero count, which set -e would
+        # turn into a failed build over a log line.
+        sm_init=$(grep -cv '^-' <<<"$sm_status" || true)
+        sm_total=$(wc -l <<<"$sm_status" | tr -d ' ')
+        echo "Initialized $sm_init of $sm_total registered submodules."
