@@ -565,6 +565,21 @@ def run_test_sequence(m):
     # 4) reset, then a sustained 3-osc chord (A4/C#5/E5) via zP
     m.sysex("zPimport amy; amy.reset()Z")
     time.sleep(0.5)
+    if multicore is not None:
+        # AMY splits the osc range across both ESP32-S3 cores
+        # (esp_render_on_cores, amy i2s.c). config.platform.multicore is read
+        # once per block, so this takes effect immediately and lets us A/B
+        # single- vs dual-core on the same board in the same run. Single-core
+        # halves the render headroom, so watch for NEW starvation-style
+        # artifacts (silence gaps) as distinct from the 167.5ms step artifact.
+        try:
+            got = m.send_python(f"import tulip; print('hwci_multicore %d' % "
+                                f"tulip.amy_multicore({1 if multicore else 0}))")
+            print(f"[piano8] multicore set to {1 if multicore else 0} "
+                  f"(board replied: {got})")
+        except Exception as e:
+            print(f"[piano8] could not set multicore: {e}")
+        time.sleep(0.3)
     m.sysex("zPimport amy; amy.send(osc=0,wave=amy.SINE,freq=440,vel=0.3); "
             "amy.send(osc=1,wave=amy.SINE,freq=554,vel=0.3); "
             "amy.send(osc=2,wave=amy.SINE,freq=659,vel=0.3)Z")
@@ -603,7 +618,7 @@ def compare(rec, ref):
 # transients, so the *period* is a number in the CI log rather than an ear
 # judgement. Diagnostic only — it has no committed reference and never gates the
 # run's pass/fail.
-def setup_piano_poly(m, patch=256, voices=8, no_cv=False, amp=None):
+def setup_piano_poly(m, patch=256, voices=8, no_cv=False, amp=None, multicore=None):
     """Put the board in the reported state: bare piano synth, N voices.
 
     Also arms AMY's CPU-overload callback. That failsafe is the prime suspect:
@@ -1068,7 +1083,7 @@ def main():
     ap.add_argument("--piano-poly", dest="piano_poly", action="store_true",
                     help="run the patch-256 piano polyphony probe (diagnostic; "
                          "records + measures periodic transients, never gates)")
-    ap.set_defaults(piano_poly=False)
+    ap.set_defaults(piano_poly=True)
     ap.add_argument("--piano-patch", type=int, default=256,
                     help="patch for the polyphony probe (default 256 = piano)")
     ap.add_argument("--piano-voices", type=int, default=8,
@@ -1214,14 +1229,16 @@ def main():
                 # silent), so their "0 clicks" measured nothing.
                 sets = [
                     dict(tag="piano_poly8", patch=256, voices=8, notes=args.piano_notes,
-                         why="8 low notes, the repro, 200 oscs, CV reads ACTIVE"),
-                    dict(tag="piano_poly8_amp025", patch=256, voices=8,
-                         notes=args.piano_notes, amp=0.25,
-                         why="same notes/vel/oscs, synth amp=0.25 (PURE gain cut, "
-                             "harmonic table untouched) -- expect CLEAN if amplitude"),
-                    dict(tag="piano_poly8_amp2", patch=256, voices=8,
-                         notes=args.piano_notes, amp=2.0,
-                         why="positive control: amp=2.0, expect MORE clicks if amplitude"),
+                         multicore=True,
+                         why="8 low notes, the repro, 200 oscs, dual-core (baseline)"),
+                    dict(tag="piano_poly8_1core", patch=256, voices=8,
+                         notes=args.piano_notes, multicore=False,
+                         why="IDENTICAL to piano_poly8 but AMY renders on ONE core "
+                             "-- tests the dual-core hypothesis"),
+                    dict(tag="piano_poly8_back2core", patch=256, voices=8,
+                         notes=args.piano_notes, multicore=True,
+                         why="restore dual-core: proves the toggle is what moved, "
+                             "not drift over the run"),
                 ]
                 for s in sets:
                     tag, why = s["tag"], s["why"]
@@ -1235,7 +1252,8 @@ def main():
                         time.sleep(0.3)
                         setup_piano_poly(m, s["patch"], s["voices"],
                                          no_cv=s.get("no_cv", False),
-                                         amp=s.get("amp"))
+                                         amp=s.get("amp"),
+                                         multicore=s.get("multicore"))
                         # No zP traffic during the recording: a load poll mid-hold
                         # would inject its own transients into exactly what we're
                         # measuring. Load is read once after, still holding.
