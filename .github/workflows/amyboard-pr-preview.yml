@@ -140,12 +140,26 @@ jobs:
       # scoped to that branch -- invisible to other PRs and to main -- so
       # saving here would be upload time spent for nobody. Entries come from
       # the release workflows on main, which build these same two boards.
-      - name: Restore esp-idf ccache
+      #
+      # TWO restores, one per board, because this job builds both and the two
+      # release workflows each save only their own (they fire on the same push,
+      # so a single shared key would have them collide -- see either release
+      # workflow). Extracting both into the same .ccache unions them: ccache
+      # storage is content-addressed, so the two sets of objects live in
+      # disjoint paths and neither restore clobbers the other's entries.
+      - name: Restore esp-idf ccache (AMYBOARD)
         uses: actions/cache/restore@v4
         with:
           path: .ccache
-          key: esp-idf-ccache-v5.4.1-${{ github.sha }}
-          restore-keys: esp-idf-ccache-v5.4.1-
+          key: esp-idf-ccache-v5.4.1-AMYBOARD-${{ github.sha }}
+          restore-keys: esp-idf-ccache-v5.4.1-AMYBOARD-
+
+      - name: Restore esp-idf ccache (TULIP4_R11)
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          key: esp-idf-ccache-v5.4.1-TULIP4_R11-${{ github.sha }}
+          restore-keys: esp-idf-ccache-v5.4.1-TULIP4_R11-
 
       # --- Firmware (.bin sets) ---
       # Build AMYBOARD then TULIP4_R11 in ONE esp-idf container.

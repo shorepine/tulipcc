@@ -64,12 +64,17 @@ jobs:
       - name: Prepare ccache dir
         run: mkdir -p .ccache
 
+      # Key is namespaced by BOARD. Both release workflows fire on the same push,
+      # so a key of just <prefix>-${{ github.sha }} is identical in both jobs:
+      # whichever finishes first saves, the other collides and is silently
+      # dropped. That is deterministic, not a race -- measured on 693d29cd,
+      # where TULIP4_R11's 1562 objects were discarded every time.
       - name: Restore esp-idf ccache
         uses: actions/cache/restore@v4
         with:
           path: .ccache
-          key: esp-idf-ccache-v5.4.1-${{ github.sha }}
-          restore-keys: esp-idf-ccache-v5.4.1-
+          key: esp-idf-ccache-v5.4.1-AMYBOARD-${{ github.sha }}
+          restore-keys: esp-idf-ccache-v5.4.1-AMYBOARD-
 
       - name: Build AMYboard firmware + assemble images
         uses: espressif/esp-idf-ci-action@v1
@@ -92,16 +97,12 @@ jobs:
         if: always()
         run: sudo chown -R "$(id -u):$(id -g)" .ccache
 
-      # Shared key namespace with tulip-release on purpose: each job restores
-      # the newest entry and saves a superset, so over successive merges the one
-      # cache accumulates objects for both boards. Concurrent runs can race and
-      # one save loses the other's additions -- that self-heals on the next run.
       - name: Save esp-idf ccache
         if: always()
         uses: actions/cache/save@v4
         with:
           path: .ccache
-          key: esp-idf-ccache-v5.4.1-${{ github.sha }}
+          key: esp-idf-ccache-v5.4.1-AMYBOARD-${{ github.sha }}
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
