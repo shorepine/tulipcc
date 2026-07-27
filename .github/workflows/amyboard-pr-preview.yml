@@ -23,6 +23,8 @@ on:
       # tulip-pr-preview reuses for tulip.upgrade(pr=N).
       - 'tulip/shared/**'
       - '.github/workflows/amyboard-pr-preview.yml'
+      # Decides which submodules exist at build time, so treat it as a build input.
+      - '.github/actions/init-submodules/action.yml'
 
   # Fired by shorepine/amy's amyboard-hwci-trigger.yml on an AMY PR: build this
   # pipeline with the `amy` submodule pinned to client_payload.amy_sha, then chain
@@ -97,8 +99,7 @@ jobs:
           echo "Vercel token OK for bwhitmans-projects."
 
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/init-submodules
 
       # For an AMY PR, point the `amy` submodule at the PR's commit so the firmware
       # is built from THIS PR's AMY code — the whole reason for the dispatch. The

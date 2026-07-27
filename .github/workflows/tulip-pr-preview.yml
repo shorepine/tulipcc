@@ -18,6 +18,8 @@ on:
       - 'tulip/shared/**'
       - 'assets/**'
       - '.github/workflows/tulip-pr-preview.yml'
+      # Decides which submodules exist at build time, so treat it as a build input.
+      - '.github/actions/init-submodules/action.yml'
 
 permissions:
   contents: read
@@ -46,8 +48,7 @@ jobs:
           echo "Vercel token OK for bwhitmans-projects."
 
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/init-submodules
 
       - uses: actions/setup-python@v5
         with:
