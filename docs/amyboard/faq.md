@@ -291,10 +291,10 @@ Yes -- it's fine to have TRS MIDI, USB MIDI, and multiple power sources (USB + E
 Easiest: **MIDI channel 10 is a GM drum kit by default** on current firmware -- just play GM drum note numbers (36 = kick, 38 = snare, 42 = closed hat, 46 = open hat, 49 = crash...) on channel 10. In a sketch, set up a synth with a **GM drum-kit patch (384-390: TR-808, TR-909, Linn 9000, MR-12, Tokyo Synthetics, 80s Power Kit, Percussion)** -- the note→sample mapping lives in the patch, so plain note numbers won't make drum sounds without it:
 
 ```python
-amy.send(synth=10, patch=384, num_voices=1, synth_flags=3)
+amy.send(synth=10, patch=384)
 ```
 
-`synth_flags=3` routes notes through the GM note map and ignores note-offs. Drum kits are **single-voice**: the one voice holds a dedicated osc per drum sound, so `num_voices` must be 1. Then trigger from your sketch with `amy.send(synth=10, note=36, vel=1)` or over MIDI. If drums sound wrong or missing after an upgrade, do a **full erase and re-flash** -- the quick upgrade doesn't rewrite the sample banks.
+Drum kits are **single-voice**: the one voice holds a set of dedicated oscs per drum sound, so `num_voices` should be left to default to 1. Then trigger from your sketch with `amy.send(synth=10, note=36, vel=1)` or over MIDI. If drums sound wrong or missing after an upgrade, do a **full erase and re-flash** -- the quick upgrade doesn't rewrite the sample banks.
 
 ### Can I edit the individual drum sounds?
 

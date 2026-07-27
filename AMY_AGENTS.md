@@ -65,9 +65,8 @@ import amy, sequencer
 
 sequencer.tempo(120)
 # GM drum synth: patch=384 is the TR-808 GM drum kit (note 36 = kick, 38 = snare, 42 = hat...);
-# synth_flags=3 routes notes through the GM note map and ignores note-offs.
-# Drum kits are single-voice: one dedicated osc per drum sound — always num_voices=1.
-amy.send(synth=10, num_voices=1, synth_flags=3, patch=384)
+# `num_voices` is not needed, it defaults to 1.
+amy.send(synth=10, patch=384)
 
 KICK = 36
 def loop(step):
@@ -82,9 +81,10 @@ def loop(step):
 
 > **GM drums need a drum-kit patch (384-390).** To play drums by GM note number (36=kick,
 > 38=snare, 42=closed hat, 46=open hat, 49=crash...) load a drum-kit patch: `amy.send(synth=10,
-> num_voices=1, synth_flags=3, patch=384)`. The note→sample mapping lives in the patch.
-> Drum kits are **single-voice**: the one voice holds a dedicated osc per drum sound, so
-> `num_voices` must be 1 (more voices would exhaust AMY's osc pool). You can persistently
+> patch=384)`. The note→sample mapping lives in the patch.
+> Drum kits are **single-voice**: the one voice holds a dedicated osc per drum sound, and
+> the patch specifies `num_voices` as 1, so the patch load command doesn't have to.
+> (more voices would exhaust AMY's osc pool). You can persistently
 > tweak one drum by addressing it by note — `amy.send(synth=10, note=39, pan=0.1)` pans the
 > handclap — and scale the whole kit with `amy.send(synth=10, amp=0.5)` (no osc = all oscs).
 > Seven kits are available: 384 TR-808, 385 TR-909, 386 Linn 9000, 387 Univox MR-12,
@@ -124,7 +124,7 @@ delete it. `AMYSequence` slots and `loop(step)` share the same bar-locked grid: 
 import amy, sequencer
 
 sequencer.tempo(120)
-amy.send(synth=10, patch=384, num_voices=1, synth_flags=3)   # TR-808 GM kit (drum kits are single-voice)
+amy.send(synth=10, patch=384)   # TR-808 GM kit
 
 seq = sequencer.AMYSequence(32, 32)          # one 4/4 bar, 32nd-note grid
 for pos in (0, 8, 16, 24):
@@ -165,7 +165,7 @@ the *content* changes (once per bar/beat, on a knob turn), not unconditionally e
 import amy, amyboard, sequencer
 
 sequencer.tempo(120)
-amy.send(synth=10, patch=384, num_voices=1, synth_flags=3)
+amy.send(synth=10, patch=384)
 d = amyboard.display
 
 def loop(step):
@@ -242,12 +242,12 @@ message — no `loop()` code, no callback.
 
 ---
 
-## Polyphony & note stealing are automatic: `num_voices` sets them; `num_voices=1` is monophonic
+## Polyphony & note stealing are automatic: `num_voices` sets them; `num_voices=1` (the default) is monophonic
 
-The synth allocates and steals voices for you as MIDI notes arrive — you never track
-held notes or implement note priority yourself. A **monophonic** synth is simply
-`num_voices=1`: the single voice is reused for each new note, automatically. Add
-`portamento` for a gliding mono lead.
+The synth allocates and steals voices for you as MIDI notes arrive — you never
+track held notes or implement note priority yourself. A **monophonic** synth is
+simply `num_voices=1` (which is its default value): the single voice is reused
+for each new note, automatically. Add `portamento` for a gliding mono lead.
 
 **Don't** hand-roll a held-note stack in `midi.add_callback` to fake monophony, and
 **don't** set `grab_midi_notes=0` — a synth plays incoming MIDI by default. (Reach for
@@ -259,7 +259,7 @@ can't express, e.g. one key → a whole chord.)
 ```python
 import amy
 
-amy.send(synth=1, patch=0, num_voices=1)   # num_voices=1 -> mono; voice stealing is automatic
+amy.send(synth=1, patch=0)                 # default num_voices=1 -> mono; voice stealing is automatic
 amy.send(synth=1, portamento=80)           # optional: glide between notes for a mono lead
 
 def loop(step):
@@ -370,7 +370,7 @@ Why each piece:
 
 ```python
 import amy
-amy.send(synth=18, num_voices=1, oscs_per_voice=2)
+amy.send(synth=18, oscs_per_voice=2)        # defaults to num_voices=1
 amy.send(synth=18, osc=0, wave=amy.AUDIO_IN0, pan=0, amp=10)   # left
 amy.send(synth=18, osc=1, wave=amy.AUDIO_IN1, pan=1, amp=10)   # right
 amy.send(synth=18, vel=1, note=60)          # note-on sent to both active oscs. note number required but ignored
