@@ -47,9 +47,7 @@ jobs:
       contents: write                # create + clobber the 'tulip' release
     steps:
       - uses: actions/checkout@v4
-        with:
-          # amy + micropython (and nested submodules) are needed to build.
-          submodules: recursive
+      - uses: ./.github/actions/init-submodules
 
       - name: Build TULIP4_R11 firmware + assemble images
         uses: espressif/esp-idf-ci-action@v1
@@ -132,8 +130,7 @@ jobs:
       contents: write                # upload Tulip_Desktop.zip to the 'tulip' release
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/init-submodules
 
       - name: Build Tulip Desktop (universal binary)
         run: |
@@ -265,8 +262,7 @@ jobs:
       contents: write              # upload Tulip_Desktop_Windows.zip to the 'tulip' release
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/init-submodules
 
       - name: Generate AMY drum data
         # stdlib-only generator; the build script touches patches.h itself.

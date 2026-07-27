@@ -44,8 +44,7 @@ jobs:
           echo "Vercel token OK for bwhitmans-projects."
 
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - uses: ./.github/actions/init-submodules
 
       - uses: actions/setup-python@v5
         with:

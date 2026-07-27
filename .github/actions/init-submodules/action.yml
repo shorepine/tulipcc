@@ -1,0 +1,43 @@
+name: Init build submodules
+description: >-
+  Initialize only the submodules our builds actually use. Run this immediately
+  after actions/checkout, in place of its `submodules: recursive` input.
+
+# Why this exists: `submodules: recursive` clones 85 repositories and takes
+# ~5.5 minutes -- about 35% of a ~16-minute firmware+web job. Almost all of it
+# is micropython/lib/pico-sdk -> tinyusb -> every vendor MCU SDK (nuclei-sdk,
+# nxp/mcux-sdk, nrfx, stm32lib, ch32v307, lpcopen, ...), i.e. the RP2040 and
+# STM32 ports. We build esp32s3, macOS, Linux and WASM. None of them read a
+# single file from that tree.
+#
+# The list below is deliberately the same set as tulip/shared/grab_submodules.sh,
+# which is what a local build needs -- keep the two in sync. It is a superset of
+# any one target's needs (axtls/libffi are unix-port only; the esp-idf build gets
+# mbedtls from IDF), which is the point: one list, every target, no per-workflow
+# variants to drift.
+#
+# `tinycc` is deliberately absent. It only powers tulip.install_c_process() on
+# macOS desktop, tulip/macos/build.sh inits and builds it itself, and
+# tulip/macos/Makefile compiles the feature out when libtcc.a is missing -- which
+# is already the case in CI, since the release job runs `make` directly rather
+# than build.sh. Cloning it here would change nothing but the clock.
+#
+# --depth 1 matches what actions/checkout already passes to its own recursive
+# submodule update, so this is not a new constraint.
+
+runs:
+  using: composite
+  steps:
+    - name: Init build submodules
+      shell: bash
+      run: |
+        set -euo pipefail
+        git submodule update --init --depth 1 amy micropython
+        git -C micropython submodule update --init --depth 1 \
+          lib/axtls \
+          lib/berkeley-db-1.xx \
+          lib/libffi \
+          lib/mbedtls \
+          lib/micropython-lib \
+          lib/tinyusb
+        echo "Initialized $(git submodule status --recursive | wc -l | tr -d ' ') submodules."
