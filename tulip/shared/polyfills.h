@@ -6,11 +6,12 @@
 #include "amy.h"
 #endif
 #ifdef ESP_PLATFORM
-// not sure, maybe esp includes?
+#include "esp_timer.h"  // esp_timer_get_time(): the only 64-bit clock on ESP
 extern void esp32s3_display_start();
 extern void esp32s3_display_stop();
 #else
 #include <sys/time.h>
+#include <time.h>  // clock_gettime(CLOCK_MONOTONIC)
 #include <stdlib.h>
 #define MALLOC_CAP_INTERNAL 0
 #define MALLOC_CAP_SPIRAM 0
@@ -21,7 +22,7 @@ extern void esp32s3_display_stop();
 uint8_t rand_uint8();
 void take_semaphore();
 int64_t get_time_ms();
-int32_t get_ticks_ms();
+uint32_t get_ticks_ms();
 int64_t get_time_us();
 void * malloc_caps(uint32_t size, uint32_t flags);
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags);

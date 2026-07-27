@@ -41,7 +41,11 @@
 #endif
 
 STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
-    return mp_obj_new_int(get_ticks_ms());
+    // 64-bit, so this never rolls over -- user code can compare and subtract
+    // these directly. The 32-bit get_ticks_ms() went negative after 24.9 days
+    // and wrapped to zero at 49.7, silently breaking every
+    // `ticks_ms() > deadline` in Python.
+    return mp_obj_new_int_from_ll(get_time_ms());
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ticks_ms_obj, 0, 0, tulip_ticks_ms);
 
@@ -178,7 +182,7 @@ STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
     if(index>=0) {
         defer_callbacks[index] = args[0];
         defer_args[index] = args[1];
-        defer_sysclock[index] = get_ticks_ms() + mp_obj_get_int(args[2]);
+        defer_sysclock[index] = get_time_ms() + mp_obj_get_int(args[2]);
 
     } else {
         mp_raise_ValueError(MP_ERROR_TEXT("No more defer slots available"));

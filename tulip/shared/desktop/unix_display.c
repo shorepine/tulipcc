@@ -14,7 +14,9 @@ SDL_Rect tulip_rect;
 SDL_Texture *framebuffer;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
-int64_t frame_ticks = 0;
+// Same width as get_ticks_ms() so the elapsed-time subtraction below stays
+// modulo 2^32 -- correct even across the 49.7-day tick rollover.
+uint32_t frame_ticks = 0;
 int8_t unix_display_flag = 0;
 SDL_Keymod last_held_mod;
 int drawable_w = 0;
