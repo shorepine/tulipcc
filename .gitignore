@@ -113,3 +113,7 @@ _autosave-*
 *-save.kicad_pcb
 fp-info-cache
 *.lck
+
+# CI ccache dir (see .github/workflows/amyboard-pr-preview.yml) -- lives in the
+# workspace because the esp-idf build runs as root inside a container.
+.ccache/

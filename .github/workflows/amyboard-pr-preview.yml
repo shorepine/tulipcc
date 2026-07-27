@@ -127,6 +127,26 @@ jobs:
           # `git submodule update` can't revert amy to main's pin.
           git add amy
 
+      # ccache has to live in the workspace, not ~/.ccache: the compile below
+      # runs as root INSIDE the esp-idf container, where $HOME is the
+      # container's own /root. Only the bind-mounted workspace comes back to
+      # the runner, so that is the only place actions/cache can see.
+      # Pre-create it as the runner so a cache miss doesn't leave ccache to
+      # create it as root with 0700, which the post-job steps couldn't read.
+      - name: Prepare ccache dir
+        run: mkdir -p .ccache
+
+      # Restore-only on PRs, deliberately. A cache saved from a PR branch is
+      # scoped to that branch -- invisible to other PRs and to main -- so
+      # saving here would be upload time spent for nobody. Entries come from
+      # the release workflows on main, which build these same two boards.
+      - name: Restore esp-idf ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          key: esp-idf-ccache-v5.4.1-${{ github.sha }}
+          restore-keys: esp-idf-ccache-v5.4.1-
+
       # --- Firmware (.bin sets) ---
       # Build AMYBOARD then TULIP4_R11 in ONE esp-idf container: the two targets
       # share most sources, so the second build hits ccache for the common units
@@ -141,6 +161,8 @@ jobs:
           path: tulip/amyboard
           command: >-
             export IDF_CCACHE_ENABLE=1 &&
+            export CCACHE_DIR="$(cd ../.. && pwd)/.ccache" &&
+            export CCACHE_MAXSIZE=800M &&
             python -m pip install littlefs-python &&
             idf.py -DMICROPY_BOARD=AMYBOARD build &&
             cd .. &&
@@ -148,7 +170,8 @@ jobs:
             cd esp32s3 &&
             idf.py -DMICROPY_BOARD=TULIP4_R11 build &&
             cd .. &&
-            python fs_create.py tulip
+            python fs_create.py tulip &&
+            (ccache -s || true)
 
       - name: Upload AMYboard firmware artifact
         uses: actions/upload-artifact@v4
