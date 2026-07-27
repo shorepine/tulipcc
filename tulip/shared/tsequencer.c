@@ -39,7 +39,7 @@ void tulip_amy_sequencer_hook(uint32_t tick_count) {
 
 void tsequencer_init() {
     for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) { sequencer_callbacks[i] = NULL; sequencer_period[i] = 0; sequencer_tick[i] = 0; }
-    for(uint8_t i=0;i<DEFER_SLOTS;i++) { defer_callbacks[i] = NULL; defer_sysclock[i] = 0; }
+    for(uint8_t i=0;i<DEFER_SLOTS;i++) { defer_callbacks[i] = NULL; defer_sysclock[i] = 0; defer_args[i] = NULL; }
     #ifndef AMY_IS_EXTERNAL
     amy_global.config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     #endif
