@@ -70,24 +70,30 @@ If an agent makes changes to `amy`, the agent must follow this exact sequence:
 6. Commit the submodule pointer update in `tulipcc`.
 7. Merge/push `tulipcc` to `main`.
 
-### Refresh the generator's vendored AMY docs when the pin changes
+### Refresh the committed amy-derived files when the pin changes
 
-The AMYboard sketch generator (`tulip/server/amyboardworld_db_api.py`) reads a
-**committed snapshot** of `amy/docs/*.md` from `tulip/server/refdocs/amy/`, because
-the `amy` submodule is not checked out in the Railway deploy. Whenever you bump the
-`amy` pin (either flow above), refresh that snapshot so the generator's docs match the
-pinned commit:
+Two **committed snapshots** are derived from amy and must be refreshed whenever you
+bump the `amy` pin (either flow above):
 
-1. `python3 tulip/server/sync_amy_docs.py` (sources from the pinned commit — the local
-   submodule if checked out at the pin, else GitHub raw at the pinned SHA).
-2. Commit the updated `tulip/server/refdocs/amy/`.
+1. `tulip/server/refdocs/amy/` — the `amy/docs/*.md` snapshot the AMYboard sketch
+   generator (`tulip/server/amyboardworld_db_api.py`) reads, because the `amy`
+   submodule is not checked out in the Railway deploy. Refresh with
+   `python3 tulip/server/sync_amy_docs.py`.
+2. `tulip/shared/amy_kwmap.h` — the C copy of amy's `_KW_MAP_LIST` keyword map that
+   `tulip.amy_message()` (the C fast path installed over `amy.message`) walks,
+   committed so none of the build systems needs its own codegen step. Refresh
+   with `python3 tulip/shared/gen_amy_kwmap.py`.
 
-CI enforces this: `.github/workflows/amy-pin-check.yml` runs
-`sync_amy_docs.py --check` on any PR that moves the `amy` gitlink and fails if
-the snapshot is stale. This is the **only** committed-in-tulipcc file derived
-from amy — the amyboardweb `static/*.generated.js` files are gitignored build
-products copied from the amy submodule's committed `src/*.generated.js`
-(regenerate those in amy with `make c-api`; amy CI keeps them fresh).
+Both scripts source from the pinned commit — the local submodule if checked out at
+the pin, else GitHub raw at the pinned SHA. Commit the refreshed outputs alongside
+the pin bump.
+
+CI enforces this: `.github/workflows/amy-pin-check.yml` runs both scripts with
+`--check` on any PR that moves the `amy` gitlink and fails if either snapshot is
+stale. These are the only committed-in-tulipcc files derived from amy — the
+amyboardweb `static/*.generated.js` files are gitignored build products copied from
+the amy submodule's committed `src/*.generated.js` (regenerate those in amy with
+`make c-api`; amy CI keeps them fresh).
 
 ## Testing `tulipcc`
 

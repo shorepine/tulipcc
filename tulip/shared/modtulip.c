@@ -1778,6 +1778,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_overload_callback), MP_ROM_PTR(&tulip_amy_overload_callback_obj) },
+    // amy.message() in C (amy_connector.c). Pure wire-string building, no AMY
+    // link needed, so it exists on every target including web.
+    { MP_ROM_QSTR(MP_QSTR_amy_message), MP_ROM_PTR(&tulip_amy_message_obj) },
 #ifndef __EMSCRIPTEN__
     // Generated table-driven AMY C API entries (amy_send, amy_ticks_ms,
     // amy_get_synth_commands, amy_dump_state, ...). Regenerate in amy/ with
