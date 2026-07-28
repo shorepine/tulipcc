@@ -88,6 +88,10 @@ Still stuck on a particular machine? **Ask on the [Discord](https://discord.gg/T
 
 No -- AMYboard is **USB device/gadget mode only**: it appears to a computer as a MIDI device, but it **can't host** a USB controller plugged into it. (Tulip does USB host; AMYboard's hardware doesn't.) To play it from a keyboard without a computer, use the **TRS/DIN MIDI in** jack, or put a small **USB-host-to-TRS-MIDI bridge** in between -- you can build one from an RP2040/RP2350 board (a community member did exactly that), or buy a ready-made box like the [CME H2MIDI Pro](https://www.amazon.com/dp/B0DQYD3L7D) (~$49).
 
+### How can I copy a file from my computer to the AMYboard local file system
+
+For large files, it's convenient to write an SD card on your computer, then physically move it to the AMYboard (see [Storage](#storage)).  But for the odd file or two you can use `mpremote`, e.g. `mpremote resume fs cp local.wav :remote.wav`.
+
 ---
 
 ## Displays (OLED)
