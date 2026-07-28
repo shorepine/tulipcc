@@ -738,11 +738,20 @@ static bool amy_put_pystr(char *buf, size_t *len, mp_obj_t o) {
 
 /* A plain decimal, for the int fast path. str(int) IS this, so it is an
  * exact shortcut around the vstr above rather than a second opinion.
- * long long so a 64-bit mp_int_t (desktop) never truncates. */
+ * Hand-rolled, NOT snprintf: the ESP-IDF builds use newlib-nano
+ * (CONFIG_NEWLIB_NANO_FORMAT), whose printf silently mangles %lld -- on
+ * hardware that turned every int argument into garbage while desktop
+ * passed -- and on the VCV/linux builds snprintf is mp_vprintf-backed
+ * with its own format gaps. Digits owe nothing to any libc. */
 static bool amy_put_int(char *buf, size_t *len, mp_int_t i) {
-    char tmp[24];
-    int n = snprintf(tmp, sizeof tmp, "%lld", (long long)i);
-    return n > 0 && amy_put(buf, len, tmp, (size_t)n);
+    char tmp[24];   /* 64-bit mp_int_t: 20 digits + sign fits */
+    char *p = tmp + sizeof tmp;
+    bool neg = i < 0;
+    /* unsigned copy so the most-negative value can't overflow on negate */
+    unsigned long long u = neg ? -(unsigned long long)i : (unsigned long long)i;
+    do { *--p = (char)('0' + (u % 10)); u /= 10; } while (u);
+    if (neg) *--p = '-';
+    return amy_put(buf, len, p, (size_t)(tmp + sizeof tmp - p));
 }
 
 /* amy's trunc():
