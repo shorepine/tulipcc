@@ -1,25 +1,31 @@
 # Guard for PRs that move the amy submodule pin (bot or hand-pinned): verifies
 # the committed files derived from amy are in sync with the new pin.
 #
-# Today that is only tulip/server/refdocs/amy/ (the vendored docs snapshot the
-# Railway sketch-generator deploy reads, since it has no submodule checkout).
+# Today that is tulip/server/refdocs/amy/ (the vendored docs snapshot the
+# Railway sketch-generator deploy reads, since it has no submodule checkout)
+# and tulip/shared/amy_kwmap.h (the C copy of amy's keyword map that
+# tulip.amy_message walks, committed so no build system needs a codegen step).
 # The amyboardweb static/*.generated.js files are NOT committed here — they are
 # copied from the amy submodule's committed src/ outputs at build time by
 # tulip/amyboardweb/dev.py, and amy's own CI (make check-c-api) keeps those
 # fresh, so there is nothing to drift on the tulipcc side.
 #
-# No submodule checkout needed: sync_amy_docs.py falls back to GitHub raw at
-# the pinned SHA.
+# No submodule checkout needed: both scripts fall back to GitHub raw at the
+# pinned SHA.
 name: amy-pin-check
 
 on:
   pull_request:
     paths:
       - 'amy'
+      - 'tulip/shared/amy_kwmap.h'
+      - 'tulip/shared/gen_amy_kwmap.py'
   push:
     branches: [main]
     paths:
       - 'amy'
+      - 'tulip/shared/amy_kwmap.h'
+      - 'tulip/shared/gen_amy_kwmap.py'
   workflow_dispatch:
 
 jobs:
@@ -32,3 +38,5 @@ jobs:
           python-version: '3.13'
       - name: Check refdocs/amy matches the pinned amy SHA
         run: python3 tulip/server/sync_amy_docs.py --check
+      - name: Check amy_kwmap.h matches the pinned amy SHA
+        run: python3 tulip/shared/gen_amy_kwmap.py --check

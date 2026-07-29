@@ -311,7 +311,7 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 | `B`    | `eg1_times[]`, `eg1_values[]` | `bp1`    | string (wire) / arrays (`amy_event`)      | Envelope Generator 1 breakpoints. Wire/Python format remains comma-separated; in C `amy_event`, use typed arrays (`eg1_times[i]`, `eg1_values[i]`). |
 | `b`    | `feedback` | `feedback` | float 0-1 | Use for the ALGO synthesis type in FM or for karplus-strong, or to indicate PCM looping (0 off, >0, on) |
 | `c`    | `chained_osc` | `chained_osc` |  uint 0 to OSCS-1 | Chained oscillator.  Note/velocity events to this oscillator will propagate to chained oscillators.  VCF is run only for first osc in chain, but applies to all oscs in chain. |
-| `G`    | `filter_type` | `filter_type` | 0-4 | Filter type: 0 = none (default.) 1 = lowpass, 2 = bandpass, 3 = highpass, 4 = double-order lowpass. |
+| `G`    | `filter_type` | `filter_type` | 0-5 | Filter type: 0 = none (default.) 1 = lowpass, 2 = bandpass, 3 = highpass, 4 = double-order lowpass, 5 = notch. |
 | `I`    | `ratio` | `ratio`  | float | For ALGO types, ratio of modulator frequency to  base note frequency  |
 | `L`    | `mod_source` | `mod_source` | 0 to OSCS-1 | Which oscillator is used as an modulation/LFO source for this oscillator. Source oscillator will be silent. |
 | `m`    | `portamento`| `portamento` | uint | Time constant (in ms) for pitch changes when note is changed without intervening note-off.  default 0 (immediate), 100 is good. |
