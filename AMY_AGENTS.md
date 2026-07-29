@@ -31,7 +31,7 @@ transfer_file disk_sample algorithm chorus reverb echo patch
 external_channel portamento sequence tempo synth pedal synth_flags num_voices
 oscs_per_voice to_synth grab_midi_notes note_source synth_delay preset
 num_partials start_sample stop_sample bus midi_cc midi_note_cmd cv_trigger
-patch_string
+patch_string wave_submode
 ```
 
 The keys *inside* a coefficient dict (e.g. `duty={'const':…, 'mod':…}`) are a **separate**
