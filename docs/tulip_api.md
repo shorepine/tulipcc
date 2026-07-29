@@ -468,14 +468,14 @@ synth1.note_off(50)
 The `OscSynth` synth lets yo directly control parameters of an AMY oscillator as a managed synth:
 
 ```python
-syn = synth.OscSynth(wave=amy.PCM, patch=10) # PCM wave type, patch=10 (808 Cowbell)
+syn = synth.OscSynth(wave=amy.PCM, preset=10) # PCM wave type, preset=10 (808 Cowbell)
 ```
 
 You can use `OscSynth` and `amy.load_sample` to load samples from WAV files on Tulip storage:
 
 ```python
-amy.load_sample('sample.wav', patch=50)
-s = synth.OscSynth(wave=amy.PCM, patch=50)
+amy.load_sample('sample.wav', preset=50)
+s = synth.OscSynth(wave=amy.PCM, preset=50)
 s.note_on(60, 1.0)
 ```
 
@@ -519,18 +519,18 @@ To load your own WAVE files as samples you can play like an instrument, use `amy
 
 ```python
 # To save space / RAM, you may want to downsample your WAVE files to 11025 or 22050Hz. We detect SR automatically.
-amy.load_sample("flutea4.wav", patch=50) # samples are converted to mono if they are stereo. patch # can be anything
+amy.load_sample("flutea4.wav", preset=50) # samples are converted to mono if they are stereo. preset # can be anything
 
 # You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample.
 # We can detect this in WAVE file metadata if it exists! (Many sample packs include this.)
-amy.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500, patch=50)
+amy.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500, preset=50)
 
-# The patch number can now be used in AMY's PCM sample player. 
-amy.send(osc=20, wave=amy.PCM, patch=50, vel=1, note=50)
+# The preset number can now be used in AMY's PCM sample player. 
+amy.send(osc=20, wave=amy.PCM, preset=50, vel=1, note=50)
 
-# You can unload already allocated patches:
-amy.unload_sample(patch) # frees the RAM and the patch slot
-amy.reset() # frees all allocated PCM patches
+# You can unload already allocated presets:
+amy.unload_sample(50) # frees the RAM and the preset slot
+amy.reset() # frees all allocated PCM presets
 ```
 
 On Tulip Desktop or Web, or with an AMYboard / AMYchip connected to a hardware Tulip over I2C, you can use audio input as well. This is brand new and we're still working out a good API for it. For now, you can set any oscillator to be fed by the L or R channel of an audio input. 
