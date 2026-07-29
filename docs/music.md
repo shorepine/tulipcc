@@ -330,11 +330,11 @@ s = synth.OscSynth(wave=amy.PCM, preset=50)
 s.note_on(60, 1.0)
 ```
 
-You can also load PCM patches with looped segments if you have their loopstart and loopend parameters (these are often stored in the WAVE metadata. If the .wav file has this metadata, we'll parse it. The example file `/sys/ex/vlng3.wav` has it. You can also provide the metadata directly.) To indicate looping, use `wave_submode=amy.PCM_LOOP` (or `PCM_LOOP_FOREVER` to keep the loop going while the ADSR fades it out).
+You can also load PCM patches with looped segments if you have their loopstart and loopend parameters (these are often stored in the WAVE metadata. If the .wav file has this metadata, we'll parse it. The example file `/sys/ex/vlng3.wav` has it. You can also provide the metadata directly.) To indicate looping, use `mode=amy.PCM_LOOP` (or `PCM_LOOP_FOREVER` to keep the loop going while the ADSR fades it out).
 
 ```python
 amy.load_sample("/sys/ex/vlng3.wav", patch=50)  # loads wave looping metadata
-s = synth.OscSynth(wave=amy.CUSTOM, patch=50, wave_submode=amy.PCM_LOOP, num_voices=1)
+s = synth.OscSynth(wave=amy.CUSTOM, patch=50, mode=amy.PCM_LOOP, num_voices=1)
 s.note_on(60, 1.0) # loops
 s.note_on(55, 1.0) # loops
 s.note_off(55) # stops
