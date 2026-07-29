@@ -208,7 +208,7 @@ def game_loop(app):
         tulip.bg_pixel(g_x,g_y,random.choice(app.grass_colors))
 
     #14
-    amy.send(osc=0, wave=amy.PCM, preset=10,  vel=0.25, feedback=1)
+    amy.send(osc=0, wave=amy.PCM, preset=10,  vel=0.25, mode=amy.PCM_LOOP)
 
 
 def deactivate_callback(app):
