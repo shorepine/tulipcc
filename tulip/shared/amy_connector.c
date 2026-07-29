@@ -814,16 +814,27 @@ static bool amy_put_int_of(char *buf, size_t *len, mp_obj_t v) {
     return false;
 }
 
-/* Lists AND tuples: amy's parse_list_or_comma_string joins both.
- * (parse_ctrl_coefs is stricter -- it asserts on tuples -- so the coefs
- * path below does its own list-only check.) */
+/* Lists AND tuples: amy's parse_list_or_comma_string and
+ * parse_ctrl_coefs both join either. */
 static bool amy_seq_items(mp_obj_t v, size_t *n, mp_obj_t **items) {
     if (mp_obj_is_type(v, &mp_type_list)) { mp_obj_list_get(v, n, items); return true; }
     if (mp_obj_is_type(v, &mp_type_tuple)) { mp_obj_tuple_get(v, n, items); return true; }
     return false;
 }
 
-/* amy's parse_list_or_comma_string(): ','.join with None as ''. */
+/* One list/coef element: amy's elem_to_str(). None is '', a float truncs
+ * to the same canonical form a scalar coef gets, everything else str(). */
+static bool amy_put_elem(char *buf, size_t *len, mp_obj_t e) {
+    if (e == mp_const_none)
+        return true;
+    if (mp_obj_is_float(e))
+        return amy_put_trunc(buf, len, e);
+    if (mp_obj_is_small_int(e))
+        return amy_put_int(buf, len, MP_OBJ_SMALL_INT_VALUE(e));
+    return amy_put_pystr(buf, len, e);
+}
+
+/* amy's parse_list_or_comma_string(): ','.join of elem_to_str. */
 static bool amy_put_list(char *buf, size_t *len, mp_obj_t v) {
     size_t n_items;
     mp_obj_t *items;
@@ -832,22 +843,14 @@ static bool amy_put_list(char *buf, size_t *len, mp_obj_t v) {
     for (size_t k = 0; k < n_items; k++) {
         if (k && !amy_put(buf, len, ",", 1))
             return false;
-        mp_obj_t e = items[k];
-        if (e == mp_const_none)
-            continue;
-        if (mp_obj_is_small_int(e)) {
-            if (!amy_put_int(buf, len, MP_OBJ_SMALL_INT_VALUE(e)))
-                return false;
-        } else if (!amy_put_pystr(buf, len, e)) {   /* floats: str(), not %.6f */
+        if (!amy_put_elem(buf, len, items[k]))
             return false;
-        }
     }
     return true;
 }
 
-/* amy's parse_ctrl_coefs(). Four accepted shapes, and note that the
- * SCALAR one truncs while the list/dict ones str() -- that asymmetry is
- * amy's, reproduced rather than tidied. */
+/* amy's parse_ctrl_coefs(): four accepted shapes, elements formatted by
+ * the same elem_to_str as lists. */
 static const char *const AMY_COEF_FIELDS[] = {
     "const", "note", "vel", "eg0", "eg1", "mod", "bend", "ext0", "ext1",
 };
@@ -901,10 +904,8 @@ static bool amy_put_coefs(char *buf, size_t *len, mp_obj_t v) {
         }
         items = vals;
         n_items = AMY_COEF_N;
-    } else if (mp_obj_is_type(v, &mp_type_list)) {
-        mp_obj_list_get(v, &n_items, &items);
-    } else {
-        return false;   /* tuples: parse_ctrl_coefs asserts, so let Python */
+    } else if (!amy_seq_items(v, &n_items, &items)) {
+        return false;
     }
     /* trim_trailing(coefs, x is not None) */
     while (n_items > 0 && items[n_items - 1] == mp_const_none)
@@ -912,9 +913,7 @@ static bool amy_put_coefs(char *buf, size_t *len, mp_obj_t v) {
     for (size_t k = 0; k < n_items; k++) {
         if (k && !amy_put(buf, len, ",", 1))
             return false;
-        if (items[k] == mp_const_none)
-            continue;                      /* to_str(None) -> '' */
-        if (!amy_put_pystr(buf, len, items[k]))
+        if (!amy_put_elem(buf, len, items[k]))
             return false;
     }
     return true;
