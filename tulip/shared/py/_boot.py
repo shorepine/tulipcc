@@ -122,15 +122,13 @@ else:
 # message) and the Python original then runs -- and raises whatever it was
 # going to raise. Kwarg combos that amy.message() warns or errors about while
 # amy.show_warnings is set go straight to Python so those diagnostics still
-# fire; amy.insert_time is applied here, exactly as the Python does.
+# fire.
 _py_amy_message = amy.message
 amy._py_message = _py_amy_message   # the original, reachable for tests/debugging
 def _c_amy_message(**kwargs):
     if amy.show_warnings and ('patch_string' in kwargs or 'num_partials' in kwargs or
             ('voices' in kwargs and ('preset' in kwargs or 'synth' in kwargs))):
         return _py_amy_message(**kwargs)
-    if amy.insert_time is not None and 'time' not in kwargs:
-        kwargs['time'] = amy.insert_time()
     m = tulip.amy_message(**kwargs)
     if m is None:
         return _py_amy_message(**kwargs)

@@ -37,7 +37,7 @@ class AMYSequenceEvent:
         return "%d,%d,%d" % (self.tick, self.sequence.period, self.tag)
 
     def remove(self):
-        amy.send(sequence=",,%d" % (self.tag))
+        amy.send(ticks=",,%d" % (self.tag))
         self.sequence.events.remove(self)
 
     def update(self, position, func, args=[], amy_sequenceable=False, **kwargs):
@@ -49,7 +49,7 @@ class AMYSequenceEvent:
             self.tag = AMYSequenceEvent.SEQUENCE_TAG
             AMYSequenceEvent.SEQUENCE_TAG = AMYSequenceEvent.SEQUENCE_TAG + 1
         sequence = self.amy_sequence_string()
-        self.func(*self.g_args, **self.g_kwargs, sequence=sequence)
+        self.func(*self.g_args, **self.g_kwargs, ticks=sequence)
 
 
 class Sequence:

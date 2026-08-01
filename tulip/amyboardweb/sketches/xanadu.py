@@ -93,33 +93,43 @@ def fm_note_patch(duration=7.5):
     ])
 
 
-def synth_note_on(synth=0, note=60, vel=1, timestamp=0):
-    amy.send(time=timestamp, synth=synth, note=note, vel=vel)
+# Delays are expressed in ticks at AMY's default tempo (108 BPM,
+# 48 PPQ). A delay is turned into an absolute tick.
+TICKS_PER_MS = 108 * 48 / 60000.0
 
-def Note(pitch, vel=1.0, time=0, pitch_shift=0, second_delay=200, use_third=False):
+def synth_note_on(synth=0, note=60, vel=1, delay_ms=0):
+    if delay_ms:
+        ticks = round(amy.sequencer_ticks() + delay_ms * TICKS_PER_MS)
+        amy.send(ticks=str(ticks), synth=synth, note=note, vel=vel)
+    else:
+        amy.send(synth=synth, note=note, vel=vel)
+
+def Note(pitch, vel=1.0, delay_ms=0, pitch_shift=0, second_delay=200, use_third=False):
     """Composite 'note' triggers up to 3 delayed instances."""
-    timestamp = time
     pitch += 1.0  # 1 octave up
     note = pitch2note(pitch)
-    synth_note_on(0, note, vel, timestamp)
+    synth_note_on(0, note, vel, delay_ms)
     if use_third:
-        synth_note_on(1, pitch2note(shift_pitch(pitch, pitch_shift)), vel * 0.5, timestamp + second_delay)
-        synth_note_on(2, pitch2note(pitch), vel * 0.25, timestamp + 2000)
+        synth_note_on(1, pitch2note(shift_pitch(pitch, pitch_shift)), vel * 0.5, delay_ms + second_delay)
+        synth_note_on(2, pitch2note(pitch), vel * 0.25, delay_ms + 2000)
 
-def NoteFM(pitch, vel=1.0, time=0, duration=8000):
+def NoteFM(pitch, vel=1.0, delay_ms=0, duration=8000):
     """Play a note on the FM voice."""
     global synths
-    synth_note_on(3, pitch2note(pitch), vel, time)
+    synth_note_on(3, pitch2note(pitch), vel, delay_ms)
     # Note off
-    synth_note_on(3, pitch2note(pitch), 0, time + duration)  # Note off
+    synth_note_on(3, pitch2note(pitch), 0, delay_ms + duration)  # Note off
 
 
-def broken_chord(base_pitch, intervals, start_time, **kwargs):
-    """Emit a set of notes as a staggered chord."""
+def broken_chord(base_pitch, intervals, start_time=0, **kwargs):
+    """Emit a set of notes as a staggered chord, starting now (start_time was
+    already used by loop() to decide it's time to call this; it's accepted
+    here only because it's a key of the chords[] dicts unpacked into
+    **next_chord)."""
     for index, interval in enumerate([0] + intervals):
         pitch = shift_pitch(base_pitch, interval)
-        NoteFM(pitch - 1.0, 1, start_time)
-        Note(pitch, 1, start_time + 100 * index, **kwargs)
+        NoteFM(pitch=pitch - 1.0, vel=1, delay_ms=0)
+        Note(pitch=pitch, vel=1, delay_ms=100 * index, **kwargs)
 
 def xanadu_init():
     amy.chorus(1)

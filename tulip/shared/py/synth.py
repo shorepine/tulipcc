@@ -12,8 +12,8 @@ class PatchSynth:
     """Manage a polyphonic synthesizer by rotating among a fixed pool of voices.
 
     Provides methods:
-      synth.note_on(midi_note, velocity, time=None, sequence=None)
-      synth.note_off(midi_note, time=None, sequence=None)
+      synth.note_on(midi_note, velocity, ticks=None)
+      synth.note_off(midi_note, ticks=None)
       synth.all_notes_off()
       synth.program_change(patch) changes preset for all voices.
       synth.control_change(control, value) modifies a parameter for all voices.
@@ -91,21 +91,21 @@ class PatchSynth:
     def amy_send(self, **kwargs):
         amy.send(synth=self.synth, **kwargs)
 
-    def note_off(self, note, time=None, sequence=None):
-        self.amy_send(note=note, vel=0, time=time, sequence=sequence)
-        
+    def note_off(self, note, ticks=None):
+        self.amy_send(note=note, vel=0, ticks=ticks)
+
     def all_notes_off(self):
         self.note_off(note=0)  # Note=0 means all notes off.
 
-    def note_on(self, note, velocity=1, time=None, sequence=None, **kwargs):
+    def note_on(self, note, velocity=1, ticks=None, **kwargs):
         self.deferred_init()
         if self.synth is None:
             # Note on after synth.release()?
             raise ValueError('PatchSynth note on with no AMY synth - synth has been released?')
         if velocity == 0:
-            self.note_off(note, time=time, sequence=sequence)
+            self.note_off(note, ticks=ticks)
         else:  # Velocity > 0, note on.
-            self.amy_send(note=note, vel=velocity, time=time, sequence=sequence, **kwargs)
+            self.amy_send(note=note, vel=velocity, ticks=ticks, **kwargs)
 
     def sustain(self, state):
         """Turn sustain on/off."""

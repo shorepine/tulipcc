@@ -63,8 +63,11 @@ class ArpeggiatorSynth:
 
     def arp_step(self,t):
         if(self.running):
-            # time is the actual event time for this event.
-            self.next_note(time=t)
+            # t is the exact AMY tick this step fired on (see
+            # tulip_seq_add_callback / tsequencer.c), so scheduling the note
+            # for that tick keeps it locked to the sequencer even if this
+            # callback itself runs a little late.
+            self.next_note(ticks=t)
 
     def run(self):
         # Prepare to start a new sequence at the first note.
@@ -96,7 +99,7 @@ class ArpeggiatorSynth:
         if self.full_sequence and not self.running:
             self.run()
 
-    def next_note(self, time=None):
+    def next_note(self, ticks=None):
         if self.current_note:
             self.synth.note_off(self.current_note)
             self.current_note = None
@@ -106,7 +109,7 @@ class ArpeggiatorSynth:
             else:
                 self.current_step = (self.current_step + 1) % len(self.full_sequence)
             self.current_note = self.full_sequence[self.current_step]
-            self.synth.note_on(self.current_note, self.velocity, time=time)
+            self.synth.note_on(self.current_note, self.velocity, ticks=ticks)
         else:
             self.stop()
 

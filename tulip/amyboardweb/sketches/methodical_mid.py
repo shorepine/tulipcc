@@ -36,16 +36,22 @@ for event in song:
         vel = 0 if event.status == umidiparser.NOTE_OFF else event.velocity / 256.0
         events.append((utic // 1000, event.note + 12, vel))
 
-# Schedule notes ahead using AMY's `time=` parameter instead of dispatching
+# Schedule notes ahead using AMY's `ticks=` parameter instead of dispatching
 # them live from loop(). AMY's delta queue plays events with sample-accurate
 # timing on the audio worklet, so MicroPython scheduler hiccups (heavy loop()
 # workloads, GC pauses, sysex traffic in control mode, etc.) can't stretch
 # the music out. loop() becomes a queue-refiller: it just has to run often
 # enough to keep ~BUFFER_MS of future events queued.
+#
+# `ticks=` schedules by AMY sequencer tick, not wall-clock ms, so ms offsets
+# are converted using AMY's default tempo (108 BPM, 48 PPQ), anchored to a
+# single (SONG_START_MS, SONG_START_TICKS) reference pair taken at song start.
+TICKS_PER_MS = 108 * 48 / 60000.0
 BUFFER_MS = 2000    # how far ahead of "now" we keep events queued
 LOW_WATER_MS = 500  # refill when the queue gets this shallow
 
 SONG_START_MS = tulip.amy_ticks_ms() + 200  # small head-start so the first notes don't miss
+SONG_START_TICKS = amy.sequencer_ticks()
 _next_idx = 0            # index into `events` of the next unscheduled note
 _last_scheduled_ms = SONG_START_MS
 
@@ -57,7 +63,8 @@ def _schedule_up_to(target_ms):
         play_time = SONG_START_MS + offset_ms
         if play_time > target_ms:
             return
-        amy.send(synth=1, note=note, vel=vel, time=play_time)
+        ticks = round(SONG_START_TICKS + (play_time - SONG_START_MS) * TICKS_PER_MS)
+        amy.send(synth=1, note=note, vel=vel, ticks=ticks)
         _last_scheduled_ms = play_time
         _next_idx += 1
 
