@@ -955,10 +955,11 @@ mp_obj_t tulip_amy_message(size_t n_args, const mp_obj_t *pos, mp_map_t *kwargs)
         if (found < 0)
             return mp_const_none;                /* unknown: let Python raise */
         if (v == mp_const_none) {
-            /* time=None and sequence=None are ignored; any other None is
-             * an error, and Python is where that error should come from. */
-            if (strcmp(AMY_KW[found].name, "time") == 0 ||
-                strcmp(AMY_KW[found].name, "sequence") == 0)
+            /* ticks=None is ignored (synth.py's note_on/note_off pass it on
+             * every unscheduled note, so this must stay on the fast path);
+             * any other None is an error, and Python is where that error
+             * should come from. */
+            if (strcmp(AMY_KW[found].name, "ticks") == 0)
                 continue;
             return mp_const_none;
         }

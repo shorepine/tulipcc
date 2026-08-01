@@ -1202,12 +1202,14 @@ prev_midi_val = 60
 def beat_callback(t):
     global app, cnt, prev_midi_val
     
+    # t is the tick this step fired on, but the callback runs just after it,
+    # and AMY drops a one-off ticks= that's already in the past -- so play now.
     midi_val = app.grid.get_note_in_column(cnt)
     if midi_val > 0:
-        app.synth.note_on(midi_val, 0.6, ticks=t)
+        app.synth.note_on(midi_val, 0.6)
         prev_midi_val = midi_val
     else:
-        app.synth.note_off(prev_midi_val, ticks=t)
+        app.synth.note_off(prev_midi_val)
 
     cnt += 1
     if cnt > NoteGrid.TIMES - 1:

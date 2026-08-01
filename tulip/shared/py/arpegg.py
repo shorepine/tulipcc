@@ -63,11 +63,13 @@ class ArpeggiatorSynth:
 
     def arp_step(self,t):
         if(self.running):
-            # t is the exact AMY tick this step fired on (see
-            # tulip_seq_add_callback / tsequencer.c), so scheduling the note
-            # for that tick keeps it locked to the sequencer even if this
-            # callback itself runs a little late.
-            self.next_note(ticks=t)
+            # t is the AMY tick this step fired on, but tsequencer.c hands us
+            # to mp_sched_schedule, so we always run a little after it. AMY
+            # drops a one-off ticks= whose tick has already passed, so we
+            # can't schedule for t -- play now instead. (Matches what the old
+            # time=t did: t was a tick count fed to a milliseconds parameter,
+            # i.e. always in the past, i.e. always played immediately.)
+            self.next_note()
 
     def run(self):
         # Prepare to start a new sequence at the first note.
