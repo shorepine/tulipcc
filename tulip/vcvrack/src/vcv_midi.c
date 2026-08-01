@@ -14,7 +14,7 @@
 //  - shorepine sysex (F0 00 03 45 ...): zI answered here in C (like
 //    parse_sysex does on hardware); everything else is queued to the
 //    MicroPython thread (mp_embed.c), which processes it with
-//    amy_add_message_from_sysex() and then emits the AK — the same
+//    amy_send_wire_from_sysex() and then emits the AK — the same
 //    process-on-MP-thread-then-ack design as AMYBOARD's scheduled
 //    tulip_amy_send_sysex, without needing AMY's ring slots.
 //  - other sysex -> amy_event_midi_message_received() so Python

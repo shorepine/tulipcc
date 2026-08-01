@@ -347,7 +347,7 @@ STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
         // this data is routed to parse_transfer_message. Internal
         // amy.send() calls (from sketch loop) use amy_add_message
         // directly and bypass the transfer routing.
-        amy_add_message_from_sysex(slot);
+        amy_send_wire_from_sysex(slot);
     }
     // ACK the message AFTER processing. The sender (web) waits for this
     // ACK before sending the next message, ensuring only one message is
