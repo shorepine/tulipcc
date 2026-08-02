@@ -81,9 +81,9 @@ def note2_patch(pitch_dev=0.1, pan=0.5):
 def fm_note_patch(duration=7.5):
     """Patch for hand-made 2-operator FM note."""
     return amy_message_of_send_args([
-        {'osc': 3, 'wave': amy.SINE, 'freq': 1.0 / duration, 'phase': 0.75, 'amp': 1},
-        {'osc': 2, 'wave': amy.SINE, 'ratio': 1, 'amp': '0.5,0,0,0,0,1', 'mod_source': 3},
-        {'osc': 1, 'wave': amy.SINE, 'ratio': 1, 'amp': '1,0,0,1,', 'bp0': '0,0,1000,1,4000,0'},
+        {'osc': 3, 'wave': amy.SINE, 'freq': '6.0,0.5', 'phase': 0.75, 'amp': 1},
+        {'osc': 2, 'wave': amy.SINE, 'ratio': 1, 'amp': '1.5,0,0,0.4,0,0.01', 'mod_source': 3, 'bp0': '4000,1,4000,0,1000,0'},
+        {'osc': 1, 'wave': amy.SINE, 'ratio': 1, 'amp': '1,0,0,1,', 'bp0': '0,0.1,1000,1,4000,0'},
         {'osc': 0, 'wave': amy.ALGO, 'algorithm': 1, 'algo_source': ',,,,2,1', 'bp0': '0,1,1000,1,2000,0'},
     ])
 
@@ -139,27 +139,27 @@ def xanadu_stage1(x):
     tulip.defer(xanadu_stage2, 0, chords[0]['start_time'])
 
 chords = [
-    # F#7addB chord on a guitar
-    {'base_pitch': 4.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
-     'start_time': 2000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third' :True},
-    # D6add9 chord on a guitar
-    {'base_pitch': 4.02, 'intervals': [.07, 1.0, 1.04, 0.09, 1.02],
-     'start_time': 9500},
-    # Bmajadd11 chord on a guitar
-    {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.00, 1.05],
-     'start_time': 17000},
-    # Amajadd9 chord on a guitar
-    {'base_pitch': 4.09, 'intervals': [.07, 2.0, 1.04, 1.02, 1.07],
-     'start_time': 24500},
-    # Bmajadd11 chord on a guitar
-    {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.0, 1.05],
-     'start_time': 32000},
-    # Gmaj6 chord on a guitar
-    {'base_pitch': 4.07, 'intervals': [.07, 1.0, 1.04, 2.04, 1.09],
-     'start_time': 39500},
-    # F#7addB chord on a guitar
-    {'base_pitch': 5.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
-     'start_time': 47000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third': True},
+  # F#7addB chord on a guitar
+  {'base_pitch': 4.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
+   'start_time': 2000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third' :True},
+  # D6add9 chord on a guitar
+  {'base_pitch': 4.02, 'intervals': [.07, 1.0, 1.04, 0.09, 1.02],
+   'start_time': 9500},
+  # Bmajadd11 chord on a guitar
+  {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.00, 1.05],
+   'start_time': 17000},
+  # Amajadd9 chord on a guitar
+  {'base_pitch': 4.09, 'intervals': [.07, 2.0, 1.04, 1.02, 1.07],
+   'start_time': 24500},
+  # Bmajadd11 chord on a guitar
+  {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.0, 1.05],
+   'start_time': 32000},
+  # Gmaj6 chord on a guitar
+  {'base_pitch': 4.07, 'intervals': [.07, 1.0, 1.04, 2.04, 1.09],
+   'start_time': 39500},
+  # F#7addB chord on a guitar
+  {'base_pitch': 5.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
+   'start_time': 47000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third': True},
 ]
 
 def xanadu_stage2(chord_index):

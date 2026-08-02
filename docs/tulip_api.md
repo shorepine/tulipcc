@@ -434,7 +434,7 @@ tulip.defer(hello, 123, 1500) # will be called 1500ms later
 
 ## Music / sound
 
-Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, subtractive and additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/shorepine/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches. It also has support for loading WAVE files in Tulip as samples. 
+Tulip comes with the AMY synthesizer, a very full featured 250-oscillator synth that supports FM, PCM, subtractive and additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/shorepine/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches. It also has support for loading WAVE files in Tulip as samples. 
 
 Once connected to Wi-Fi, Tulip can also control an [Alles mesh.](https://github.com/shorepine/alles/blob/main/README.md) Alles is a wrapper around AMY that lets you control the synthesizer over Wi-Fi to remote speakers, or other computers or Tulips. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/shorepine/alles/blob/main/getting-started.md) for more information and for more music examples.
 
