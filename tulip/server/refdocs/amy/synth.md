@@ -177,36 +177,35 @@ amy.send(osc=0, note=60, vel=0.5)
 We have some helpful patches in `amy.examples`, if you want to use them, or add to them. To make that filter bass, just do `amy.send(synth=0, num_voices=4, patch=amy.examples.filter_bass())` and then `amy.send(synth=0,vel=1,note=50)` to hear it.
 
 
-## AMY's sequencer and timestamps
+## AMY's sequencer and ticks
 
-AMY can accept a `time` (in milliseconds) parameter to schedule events in the future, and also provides a pattern sequencer for repeating events.
-
-The scheduled events are very helpful in cases where you can't rely on an accurate clock from the client, or don't have one. The clock used internally by AMY is based on the audio samples being generated out the speakers, which should run at an accurate 44,100 times a second.  This lets you do things like schedule fast moving parameter changes over short windows of time. 
-
-```python
-start = amy.millis()  # arbitrary start timestamp
-amy.send(osc=0, note=50, vel=1, time=start)
-amy.send(osc=0, note=52, vel=1, time=start + 1000)
-```
-
-Both `amy.send()`s will return immediately, but you'll hear the second note play precisely a second after the first. AMY uses this internal clock to schedule step changes in breakpoints as well. 
-
+AMY provides a musical sequencer, on `ticks`, for both one-off future scheduling and repeating events. There's no millisecond-based scheduling primitive -- everything scheduled ahead of time is expressed in ticks, at the current tempo.
 
 ### The sequencer
 
-AMY starts a musical sequencer that works on `ticks` from startup. You can reset the `ticks` to 0 with an `amy.send(reset=amy.RESET_TIMEBASE)`. Note this will happen immediately, ignoring any `time` or `sequence`.
+AMY starts a musical sequencer that works on `ticks` from startup. You can reset the `ticks` to 0 with an `amy.send(reset=amy.RESET_TIMEBASE)`. Note this will happen immediately, ignoring any pending `ticks=`.
 
 Ticks run at 48 PPQ at the set tempo. The tempo defaults to 108 BPM. This means there are 108 quarter notes a minute, and `48 * 108 = 5184` ticks a minute, 86 ticks a second. The tempo can be changed with `amy.send(tempo=120)`.
 
-You can schedule an event to happen at a precise tick with `amy.send(... ,sequence="tick,period,tag")`. `tick` can be an absolute or offset tick number. If `period` is ommited or 0, `tick` is assumed to be absolute and once AMY reaches `tick`, the rest of your event will play and the saved event will be removed from memory. If an absolute `tick` is in the past, AMY will ignore it. 
+You can schedule an event with `amy.send(..., ticks="tick,period,tag")`. All three values are optional past `tick`:
+```python
+amy.send(osc=0, wave=amy.SAW_UP, eg0="0,1,500,0,500,0")  # Pluck tone
+amy.send(osc=0, note=50, vel=1, ticks=amy.sequencer_ticks() + 96)   # one-off: fires once, ~1s from now
+amy.send(osc=0, note=38, vel=1, ticks="0,24,7")    # repeating, cancelable via tag 7
+amy.send(osc=0, ticks="0,0,7")                     # cancel tag 7
+amy.send(osc=0, note=72, vel=1, ticks="0,24")      # repeating, not individually cancelable
+amy.reset()   # Stop everything
+```
 
-You can schedule repeating events (like a step sequencer or drum machine) with `period`, which is the length of the sequence in ticks. For example a `period` of 48 with `ticks` omitted or 0 will trigger once every quarter note. A `period` of 24 will happen twice every quarter note. A `period` of 96 will happen every two quarter notes. `period` can be any whole number to allow for complex rhythms. 
+`tick` can be an absolute or offset tick number. If `period` is omitted or 0, `tick` is assumed to be absolute: once AMY reaches `tick`, the rest of your event plays once and the saved event is removed from memory. This is also how you schedule a plain one-off event in the future -- give only `tick` (no `period`, no `tag`) and it behaves like the old millisecond `time=` parameter did, except the delay is in ticks, at the current tempo. If an absolute `tick` is in the past, AMY will ignore it.
 
-For pattern sequencers like drum machines, you will also want to use `tick` alongside `period`. If both are given and nonzero, `tick` is assumed to be an offset on the `period`. For example, for a 16-step drum machine pattern running on eighth notes (PPQ/2), you would use a `period` of `16 * 24 = 384`. The first slot of the drum machine would have a `tick` of 0, the 2nd would have a `tick` offset of 24, and so on. 
+You can schedule repeating events (like a step sequencer or drum machine) with `period`, which is the length of the sequence in ticks. For example a `period` of 48 with `tick` equal to 0 will trigger once every quarter note. A `period` of 24 will happen twice every quarter note. A `period` of 96 will happen every two quarter notes. `period` can be any whole number to allow for complex rhythms.
 
-`tag` should be given, and will be `0` if not. You should set `tag` to a random or incrementing number in your code that you can refer to later. `tag` allows you to replace or delete the event once scheduled. 
+For pattern sequencers like drum machines, you will also want to use `tick` alongside `period`. If both are given and `period` is nonzero, `tick` is assumed to be an offset on the `period`. For example, for a 16-step drum machine pattern running on eighth notes (PPQ/2), you would use a `period` of `16 * 24 = 384`. The first slot of the drum machine would have a `tick` of 0, the 2nd would have a `tick` offset of 24, and so on.
 
-If you are including AMY in a program, you can set the [hook `void (*amy_external_sequencer_hook)(uint32_t)`](docs/api.md) to any function. This will be called at every tick with the current tick number as an argument. 
+`tag` is optional. If you give one, you can cancel that event later by sending `ticks="0,0,tag"` with the same `tag`. If you omitted `tag` when setting up the sequence (a 1- or 2-value `ticks=`), the event is still scheduled and still fires, but it isn't addressable by any tag -- there's no way to cancel or replace it individually (only by something like `amy.reset()`, discarding all sequenced events), so only omit `tag` for events you don't need to manage later.
+
+If you are including AMY in a program, you can set the [hook `void (*amy_external_sequencer_hook)(uint32_t)`](docs/api.md) to any function. This will be called at every tick with the current tick number as an argument.
 
 ## Core oscillators
 
