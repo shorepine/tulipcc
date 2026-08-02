@@ -204,9 +204,9 @@ That’s it.  Now we have both bass and drums.
 
 ## Using the AMY scheduler
 
-So far, we’ve been using AMY in “real time” - we time the note events by sending the `amy_add_event()` command just when we want the note to occur.  This is not always convenient or precise, so AMY includes a scheduler so you can specify exactly *when* your new event is supposed to occur.  Using the scheduler, we can send a bunch of note events all at once, including their timing, then sit back and wait as AMY works through the timeline - we don’t have to worry about implementing the timing in our `loop()` function.
+So far, we’ve been using AMY in “real time” - we time the note events by sending the `amy_add_event()` command just when we want the note to occur.  This is not always convenient or precise, so AMY includes a sequencer so you can specify exactly *when* your new event is supposed to occur.  The sequencer keeps its own musical clock, counting “sequencer ticks” at 48 PPQ (parts per quarter note) against AMY’s tempo - so at the tempo of 116 bpm we’ll use below, there are 48 ticks per quarter note, each about 10.8 ms long.  Using the sequencer, we can send a bunch of note events all at once, each stamped with the tick at which it should play, then sit back and wait as AMY works through the timeline - we don’t have to worry about implementing the timing in our `loop()` function.
 
-The third version, [BillieJeanScheduled](https://github.com/shorepine/amy/blob/main/examples/BillieJeanScheduled/BillieJeanScheduled.ino), uses AMY scheduling.  Because we’re adding chords, we need to configure an additional synth.  And just to make it sound a little more like the original, we also turn on AMY’s built-in reverb:
+The third version, [BillieJeanScheduled](https://github.com/shorepine/amy/blob/main/examples/BillieJeanScheduled/BillieJeanScheduled.ino), uses AMY sequencing.  Because we’re adding chords, we need to configure an additional synth.  And just to make it sound a little more like the original, we also turn on AMY’s built-in reverb, and set the tempo the sequencer clock will run at:
 
 ```C
   // Reconfigure synth 1 as a 6-note polyphonic synth (for chords)
@@ -224,10 +224,20 @@ The third version, [BillieJeanScheduled](https://github.com/shorepine/amy/blob/m
   amy_add_event(&e);
 
   // Turn on reverb
-  config_reverb(0.5f, 0.85f, 0.5f, 3000.0f);
+  e = amy_default_event();
+  e.reverb_level = 0.5f;
+  e.reverb_liveness = 0.85f;
+  e.reverb_damping = 0.5f;
+  e.reverb_xover_hz = 3000.0f;
+  amy_add_event(&e);
+
+  // Set tempo for Billie Jean
+  e = amy_default_event();
+  e.tempo = 116.0f;
+  amy_add_event(&e);
 ```
 
-This version tells AMY exactly what time (in milliseconds) it wants each note to occur.  Because of this, we can send all the notes for an entire cycle at once (we could probably send an entire track at once, but for convenience we do it one cycle at a time), and we don’t have to worry about issuing them in order, so we can have different tables for the different instruments.  This means we don’t store the channel (synth) number in the table, but it also means we can specify the duration for the non-drum notes because we can also schedule note-offs for each note we send:
+This version tells AMY exactly which sequencer tick it wants each note to occur on.  Because of this, we can send all the notes for an entire cycle at once (we could probably send an entire track at once, but for convenience we do it one cycle at a time), and we don’t have to worry about issuing them in order, so we can have different tables for the different instruments.  This means we don’t store the channel (synth) number in the table, but it also means we can specify the duration for the non-drum notes because we can also schedule note-offs for each note we send:
 
 ```C
 struct timed_note {
@@ -283,20 +293,24 @@ timed_note chord_notes[] = {
 };
 ```
 
-We have a new function that takes an entire table of `timed_notes` along with a start time offset and a channel (synth), and schedules them all, including note-offs if the table includes nonzero note durations.  Note we reuse some fields in the `amy_event` structure.
+We have a new function that takes an entire table of `timed_notes` along with a starting sequencer tick and a channel (synth), and schedules them all, including note-offs if the table includes nonzero note durations.  The scheduling itself is the `ticks` field of the `amy_event` structure: setting `e.ticks[0]` to an absolute sequencer tick makes AMY hold the event and play it when its clock reaches that tick.  (The `ticks` field can also describe repeating patterns - `e.ticks[1]` is a repeat period and `e.ticks[2]` a tag you can use to replace or cancel an entry - but here we only need the one-shot absolute-tick form.)  The sequencer counts 48 ticks per quarter note, and each “tick” of our pattern tables is an eighth note, so we convert between the two with `amy_ticks_per_tick = 24`.  One thing to watch: an event scheduled for a tick that has already passed is dropped, so we push everything `grace_ticks` into the future to be sure the first notes of a cycle aren’t already stale by the time they arrive:
 
 ```C
+float amy_ticks_per_tick = 24.0;
+
+int grace_ticks = 8;  // Scheduled events in the past are ignored, make sure we're aiming at the future.
+
 void schedule_notes(int time, int channel, struct timed_note *notes, int num_notes) {
   amy_event e = amy_default_event();
   e.synth = channel;
   for (int i = 0; i < num_notes; ++i) {
     e.midi_note = notes[i].note;
     e.velocity = notes[i].velocity;
-    e.time = time + millis_per_tick * notes[i].start_time;
+    e.ticks[0] = time + grace_ticks + amy_ticks_per_tick * notes[i].start_time;
     amy_add_event(&e);
     // Add note-off too if duration > 0
     if (notes[i].duration > 0) {
-      e.time += millis_per_tick * notes[i].duration;
+      e.ticks[0] += amy_ticks_per_tick * notes[i].duration;
       e.velocity = 0;
       amy_add_event(&e);
     }
@@ -304,18 +318,18 @@ void schedule_notes(int time, int channel, struct timed_note *notes, int num_not
 }
 ```
 
-Now the main `loop()` simply spins (while calling `amy_update()`) until the timing indicates that we’re beginning a new cycle of the music, then issues all the notes associated with that cycle as it begins.  We take advantage of this to gradually build the music, starting with the drums, then bringing in the bass, then finally the chords:
+Now the main `loop()` simply spins (while calling `amy_update()`) until the sequencer clock - read with `sequencer_ticks()` - indicates that we’re beginning a new cycle of the music, then issues all the notes associated with that cycle as it begins.  We take advantage of this to gradually build the music, starting with the drums, then bringing in the bass, then finally the chords:
 
 ```C
-int start_millis = 3000;
+int start_tick = 192;
 int last_cycle = -1;
 
 void loop() {
   // Let amy do its processing for this moment.
   amy_update();
 
-  int now = millis();
-  int current_cycle = floor((now - start_millis) / (millis_per_tick * cycle_len));
+  int now = sequencer_ticks();
+  int current_cycle = floor((now - start_tick) / (amy_ticks_per_tick * cycle_len));
   if (current_cycle > last_cycle) {
     // A new cycle began, issue notes.
     // Drums
