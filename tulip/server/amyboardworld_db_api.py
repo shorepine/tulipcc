@@ -628,13 +628,20 @@ def _list_file_rows(
             SELECT id, username, filename, description, tags_json, created_at_ms, size_bytes{extra_cols}
             FROM {table}
             WHERE {where_sql}
-            ORDER BY created_at_ms DESC
+            ORDER BY created_at_ms DESC, id DESC
             LIMIT ?
             """,
             [*params, max(limit * 4, limit)],
         ).fetchall()
 
     if latest_per_user_env:
+        # Keeps the first row per (username, filename), so it depends on the
+        # `id DESC` tie-break above. Uploads that carry an explicit
+        # created_at_ms (the Discord importer, backup restores) can tie
+        # exactly; without the tie-break SQLite resolves the tie by rowid
+        # ascending and the *oldest* duplicate wins. That's what hid 78 Tulip
+        # World sketches behind dead rows whose blobs were lost in the
+        # Feb 2026 Modal->Railway migration.
         deduped: list[sqlite3.Row] = []
         seen: set[tuple[str, str]] = set()
         for row in rows:
