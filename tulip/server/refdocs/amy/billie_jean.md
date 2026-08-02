@@ -293,12 +293,10 @@ timed_note chord_notes[] = {
 };
 ```
 
-We have a new function that takes an entire table of `timed_notes` along with a starting sequencer tick and a channel (synth), and schedules them all, including note-offs if the table includes nonzero note durations.  The scheduling itself is the `ticks` field of the `amy_event` structure: setting `e.ticks[0]` to an absolute sequencer tick makes AMY hold the event and play it when its clock reaches that tick.  (The `ticks` field can also describe repeating patterns - `e.ticks[1]` is a repeat period and `e.ticks[2]` a tag you can use to replace or cancel an entry - but here we only need the one-shot absolute-tick form.)  The sequencer counts 48 ticks per quarter note, and each “tick” of our pattern tables is an eighth note, so we convert between the two with `amy_ticks_per_tick = 24`.  One thing to watch: an event scheduled for a tick that has already passed is dropped, so we push everything `grace_ticks` into the future to be sure the first notes of a cycle aren’t already stale by the time they arrive:
+We have a new function that takes an entire table of `timed_notes` along with a starting sequencer tick and a channel (synth), and schedules them all, including note-offs if the table includes nonzero note durations.  The scheduling itself is the `ticks` field of the `amy_event` structure: setting `e.ticks[0]` to an absolute sequencer tick makes AMY hold the event and play it when its clock reaches that tick.  (The `ticks` field can also describe repeating patterns - `e.ticks[1]` is a repeat period and `e.ticks[2]` a tag you can use to replace or cancel an entry - but here we only need the one-shot absolute-tick form.)  The sequencer counts 48 ticks per quarter note, and each “tick” of our pattern tables is an eighth note, so we convert between the two with `amy_ticks_per_tick = 24`.
 
 ```C
-float amy_ticks_per_tick = 24.0;
-
-int grace_ticks = 8;  // Scheduled events in the past are ignored, make sure we're aiming at the future.
+float amy_ticks_per_tick = 24.0f;
 
 void schedule_notes(int time, int channel, struct timed_note *notes, int num_notes) {
   amy_event e = amy_default_event();
@@ -306,7 +304,7 @@ void schedule_notes(int time, int channel, struct timed_note *notes, int num_not
   for (int i = 0; i < num_notes; ++i) {
     e.midi_note = notes[i].note;
     e.velocity = notes[i].velocity;
-    e.ticks[0] = time + grace_ticks + amy_ticks_per_tick * notes[i].start_time;
+    e.ticks[0] = time + amy_ticks_per_tick * notes[i].start_time;
     amy_add_event(&e);
     // Add note-off too if duration > 0
     if (notes[i].duration > 0) {

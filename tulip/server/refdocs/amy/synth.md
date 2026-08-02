@@ -197,7 +197,7 @@ amy.send(osc=0, note=72, vel=1, ticks="0,24")      # repeating, not individually
 amy.reset()   # Stop everything
 ```
 
-`tick` can be an absolute or offset tick number. If `period` is omitted or 0, `tick` is assumed to be absolute: once AMY reaches `tick`, the rest of your event plays once and the saved event is removed from memory. This is also how you schedule a plain one-off event in the future -- give only `tick` (no `period`, no `tag`) and it behaves like the old millisecond `time=` parameter did, except the delay is in ticks, at the current tempo. If an absolute `tick` is in the past, AMY will ignore it.
+`tick` can be an absolute or offset tick number. If `period` is omitted or 0, `tick` is assumed to be absolute: once AMY reaches `tick`, the rest of your event plays once and the saved event is removed from memory. This is also how you schedule a plain one-off event in the future -- give only `tick` (no `period`, no `tag`) and it behaves like the old millisecond `time=` parameter did, except the delay is in ticks, at the current tempo. If an absolute `tick` is already due or overdue when the event arrives, AMY plays it immediately rather than dropping it -- so a scheduling callback that runs a little late (they all do) still sounds, just a fraction of a tick behind.
 
 You can schedule repeating events (like a step sequencer or drum machine) with `period`, which is the length of the sequence in ticks. For example a `period` of 48 with `tick` equal to 0 will trigger once every quarter note. A `period` of 24 will happen twice every quarter note. A `period` of 96 will happen every two quarter notes. `period` can be any whole number to allow for complex rhythms.
 
