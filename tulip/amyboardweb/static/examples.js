@@ -14,9 +14,11 @@ midi.config.add_synth(synth.PatchSynth(num_voices=6, patch=256))
 import music, tulip
 amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', preset=10)
 s = synth.OscSynth(wave=amy.PCM, preset=10)
+TICKS_PER_MS = 108 * 48 / 60000.0
+base_ticks = tulip.seq_ticks()
 for i,note in enumerate(music.Chord('F:min7').midinotes()):
-    s.note_on(note+24, 1, time=i*4000)
-    s.note_off(note+24, time=20000)
+    s.note_on(note+24, 1, ticks=round(base_ticks + i*4000*TICKS_PER_MS))
+    s.note_off(note+24, ticks=round(base_ticks + 20000*TICKS_PER_MS))
 `},{
     't':'music',
     'd':"Construct a custom FM synth",
@@ -33,23 +35,26 @@ def make_patch(x):
     amy.send(osc=0, wave=amy.ALGO, algorithm=5, algo_source="1,2,3,4", bp0="0,1,147,0", bp1="0,1,179,1", freq="0,1,0,0,1,1")
     amy.stop_store_patch(1024)
 
+TICKS_PER_MS = 108 * 48 / 60000.0
+
 def next(t):
     s = synth.PatchSynth(num_voices=8, patch=1024)
     p = music.Progression(["I", "vi", "IV", "V"], music.Key("E:maj"))
     chord_len = 2000
     note_len = 500
     start = 2000
+    base_ticks = tulip.seq_ticks()
     for x,chord in enumerate(p.chords):
         # Play a chord
         chord_time = (x*chord_len)
         for i,note in enumerate(chord.midinotes()):
-            s.note_on(note-12, 1, time=start+chord_time)
-            s.note_off(note-12, time=start+chord_time+chord_len-100)
+            s.note_on(note-12, 1, ticks=round(base_ticks + (start+chord_time)*TICKS_PER_MS))
+            s.note_off(note-12, ticks=round(base_ticks + (start+chord_time+chord_len-100)*TICKS_PER_MS))
         # And a little arp over it
         for i,note in enumerate(chord.midinotes()):
             note_time = (x*chord_len)+(i*note_len)
-            s.note_on(note, 1, time=start+note_time)
-            s.note_off(note, time=start+note_time+100)
+            s.note_on(note, 1, ticks=round(base_ticks + (start+note_time)*TICKS_PER_MS))
+            s.note_off(note, ticks=round(base_ticks + (start+note_time+100)*TICKS_PER_MS))
 midi.config.reset()
 tulip.defer(make_patch, None, 500)
 tulip.defer(next, None, 1500)

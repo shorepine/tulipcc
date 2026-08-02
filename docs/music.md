@@ -150,15 +150,17 @@ synth1.note_on(50, 1)
 synth2.note_on(50, 0.5)
 ```
 
-You can also "schedule" notes. This is useful for sequencing fast parameter changes. `synth`s accept a `time` parameter, and it's in milliseconds. For example, type this into the REPL.
+You can also "schedule" notes. This is useful for sequencing fast parameter changes. `synth`s accept a `ticks` parameter, an absolute AMY sequencer tick to fire the note on. For example, type this into the REPL.
 
 ```python
 # play a chord all at once
 import music, midi, tulip
 synth4 = synth.PatchSynth(num_voices=4, patch=1)
 chord = music.Chord("F:min7").midinotes()
+TICKS_PER_MS = 108 * 48 / 60000.0    # ticks/ms at the default tempo (108 BPM, 48 PPQ)
+base_ticks = tulip.seq_ticks()
 for i,note in enumerate(chord):
-    synth4.note_on(note, 0.5, time=tulip.amy_ticks_ms() + (i * 1000))   # time is i seconds from now
+    synth4.note_on(note, 0.5, ticks=round(base_ticks + i * 1000 * TICKS_PER_MS))   # i seconds from now
     # each note on will play precisely one second after the last
 ```
 
@@ -211,7 +213,7 @@ syn = synth.PatchSynth(num_voices=1, patch=143)  # DX7 BASS 2
 seq = None
 
 def note(t):
-    syn.note_on(random.choice(chord), 0.6, time=t)
+    syn.note_on(random.choice(chord), 0.6)
 
 def start():
     global seq
@@ -245,7 +247,7 @@ import tulip, midi, music, random, sequencer, synth
 
 def note(t):
     global app
-    app.syn.note_on(random.choice(app.chord), 0.6, time=t)
+    app.syn.note_on(random.choice(app.chord), 0.6)
 
 def start(app):
     app.seq = sequencer.TulipSequence(8, note)

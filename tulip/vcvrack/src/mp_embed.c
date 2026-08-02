@@ -104,7 +104,7 @@ static char *exec_pop(void) {
 
 // Shorepine control-API sysex payloads (zT/zD/zP/zY + base64 transfer
 // chunks) queued from the CoreMIDI thread (vcv_midi.c). The MP thread
-// processes each with amy_add_message_from_sysex() and then emits the AK —
+// processes each with amy_send_wire_from_sysex() and then emits the AK —
 // same process-then-ack contract as hardware's scheduled
 // tulip_amy_send_sysex. The editor keeps one frame in flight awaiting each
 // AK, so a modest queue suffices.
@@ -143,14 +143,14 @@ static char *sysex_pop(void) {
     return msg;
 }
 
-// Process one control frame on the MP thread. amy_add_message_from_sysex
+// Process one control frame on the MP thread. amy_send_wire_from_sysex
 // routes transfer chunks correctly and runs the zP hook, which calls
 // into MicroPython — hence the NLR guard.
 static void process_sysex_msg(char *msg) {
     extern void midi_out(uint8_t *bytes, uint16_t len);
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
-        amy_add_message_from_sysex(msg);
+        amy_send_wire_from_sysex(msg);
         nlr_pop();
     } else {
         fprintf(stderr, "AMYboard VCV: control frame raised, ignoring\n");

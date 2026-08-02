@@ -317,9 +317,13 @@ def c_fired_midi_event(is_sysex):
 def startup_bleep():
     synth = config.get_synth(channel=16)
     if synth:
-        synth.note_on(57, 1, time=tulip.amy_ticks_ms()+0)
-        synth.note_on(69, 1, time=tulip.amy_ticks_ms()+150)
-        synth.note_off(69, time=tulip.amy_ticks_ms()+300)
+        # ticks/ms at AMY's default tempo (108 BPM, 48 PPQ) -- approximate,
+        # not tempo-aware, but this always runs right after boot.
+        ticks_per_ms = 108 * 48 / 60000.0
+        now = amy.sequencer_ticks()
+        synth.note_on(57, 1)
+        synth.note_on(69, 1, ticks=round(now + 150 * ticks_per_ms))
+        synth.note_off(69, ticks=round(now + 300 * ticks_per_ms))
 
 
 def deferred_midi_config(t):

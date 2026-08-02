@@ -296,8 +296,8 @@ import amy
 amy.send(osc=0, wave=amy.AMY_MIDI)                    # osc 0 now sends MIDI instead of audio
 
 # Play a MIDI note on channel 1 every quarter note (48 ticks), held for an eighth note.
-amy.send(osc=0, note=60, vel=1, sequence="0,48,1")    # note on  at tick 0  of each period
-amy.send(osc=0, note=60, vel=0, sequence="24,48,2")   # note off at tick 24 of each period
+amy.send(osc=0, note=60, vel=1, ticks="0,48,1")    # note on  at tick 0  of each period
+amy.send(osc=0, note=60, vel=0, ticks="24,48,2")   # note off at tick 24 of each period
 ```
 
 `amy.AMY_MIDI` always sends on MIDI channel 1, and notes that arrived over MIDI in are not echoed back out. See the [AMY MIDI docs](https://github.com/shorepine/amy/blob/main/docs/midi.md#sending-midi-out) for the full details.
