@@ -184,6 +184,6 @@ Stop all sound immediately.
 
 **Wave types:** `Amy.SINE`, `Amy.PULSE`, `Amy.SAW_DOWN`, `Amy.SAW_UP`, `Amy.TRIANGLE`, `Amy.NOISE`, `Amy.KS`, `Amy.PCM`, `Amy.ALGO`, `Amy.PARTIAL`, `Amy.WAVETABLE`, `Amy.CUSTOM`, `Amy.WAVE_OFF`
 
-**Filter types:** `Amy.FILTER_NONE`, `Amy.FILTER_LPF`, `Amy.FILTER_BPF`, `Amy.FILTER_HPF`, `Amy.FILTER_LPF24`, `Amy.FILTER_NOTCH`
+**Filter types:** `Amy.FILTER_NONE`, `Amy.FILTER_LPF`, `Amy.FILTER_BPF`, `Amy.FILTER_HPF`, `Amy.FILTER_LPF24`, `Amy.FILTER_NOTCH`, `Amy.FILTER_PHASER`
 
 **Envelope types:** `Amy.ENVELOPE_NORMAL`, `Amy.ENVELOPE_LINEAR`, `Amy.ENVELOPE_DX7`, `Amy.ENVELOPE_TRUE_EXPONENTIAL`
