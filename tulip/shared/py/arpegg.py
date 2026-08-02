@@ -63,13 +63,12 @@ class ArpeggiatorSynth:
 
     def arp_step(self,t):
         if(self.running):
-            # t is the AMY tick this step fired on, but tsequencer.c hands us
-            # to mp_sched_schedule, so we always run a little after it. AMY
-            # drops a one-off ticks= whose tick has already passed, so we
-            # can't schedule for t -- play now instead. (Matches what the old
-            # time=t did: t was a tick count fed to a milliseconds parameter,
-            # i.e. always in the past, i.e. always played immediately.)
-            self.next_note()
+            # t is the AMY tick this step fired on. tsequencer.c hands us to
+            # mp_sched_schedule, so we run a little after it -- scheduling for
+            # t anyway pins the note to the beat whenever we're punctual, and
+            # AMY plays a tick that's already gone rather than dropping it, so
+            # running late costs a fraction of a tick instead of the note.
+            self.next_note(ticks=t)
 
     def run(self):
         # Prepare to start a new sequence at the first note.

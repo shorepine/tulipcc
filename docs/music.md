@@ -213,7 +213,7 @@ syn = synth.PatchSynth(num_voices=1, patch=143)  # DX7 BASS 2
 seq = None
 
 def note(t):
-    syn.note_on(random.choice(chord), 0.6)
+    syn.note_on(random.choice(chord), 0.6, ticks=t)
 
 def start():
     global seq
@@ -247,7 +247,7 @@ import tulip, midi, music, random, sequencer, synth
 
 def note(t):
     global app
-    app.syn.note_on(random.choice(app.chord), 0.6)
+    app.syn.note_on(random.choice(app.chord), 0.6, ticks=t)
 
 def start(app):
     app.seq = sequencer.TulipSequence(8, note)
