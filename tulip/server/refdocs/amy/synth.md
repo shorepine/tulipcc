@@ -359,6 +359,26 @@ amy.send(wave=amy.PCM, preset=99, vel=1, mode=amy.PCM_LOOP_FOREVER, eg0='0,1,100
 amy.send(vel=0) # note off
 ```
 
+**Looping needs an in-memory sample.** Presets loaded with `disk_sample` stream
+from the file through a small buffer instead of sitting in memory, so there is
+nothing to loop back into and the loop marks can't be honored.
+
+AMY therefore refuses to enter that configuration rather than accepting it and
+quietly not looping. Both halves are checked as they are set — when you change
+`mode`, and when you change `preset` — and the command that would create the
+impossible pair is dropped with a warning naming the file:
+
+```
+amy: osc 0 preset 1024 streams from drums/kick.wav, which cannot loop;
+     ignoring mode=2. Use load_sample() to loop.
+```
+
+The `mode` is the half dropped when you set both at once, so the sample still
+plays (once, honoring note-off) rather than leaving you a loop mode pointing at
+nothing. Setting a streamed preset on an oscillator that is *already* in a loop
+mode drops the `preset` instead, and says so. Load the sample with
+`load_sample` if you need it to loop.
+
 ### Sampler (aka Memory PCM)
 
 You can also load your own samples into AMY memory at runtime by sending PCM data over the wire protocol. Use `load_sample` in `amy.py` as an example:
