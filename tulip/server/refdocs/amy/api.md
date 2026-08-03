@@ -228,6 +228,7 @@ Hook fields in `amy_config_t`:
 | `amy_external_coef_hook` | `float (uint16_t channel)` | — | Provide external coefficient values (e.g. CV input). |
 | `amy_external_block_done_hook` | `void (void)` | — | Called after each audio block is rendered. |
 | `amy_external_midi_input_hook` | `void (uint8_t *bytes, uint16_t len, uint8_t is_sysex)` | — | Called when MIDI bytes are received. |
+| `amy_external_midi_output_hook` | `void (uint8_t *bytes, uint16_t len)` | — | Called with every run of bytes AMY sends over MIDI out (notes, clock, sysex responses), before — and regardless of — any device interface configured in `midi`. Use it to forward AMY's MIDI output to a transport AMY doesn't drive itself, e.g. BLE MIDI. May be called from the render/sequencer task; keep it fast. |
 | `amy_external_sequencer_hook` | `void (uint32_t tick_count)` | — | Called on each sequencer tick. |
 | `amy_external_fopen_hook` | `uint32_t (char *filename, const char *mode)` | `zT`, `zD`, `zF` | Open a file on host disk. Returns opaque handle. |
 | `amy_external_fwrite_hook` | `uint32_t (uint32_t fptr, uint8_t *bytes, uint32_t len)` | `zT` | Write bytes to a file opened via fopen hook. |
