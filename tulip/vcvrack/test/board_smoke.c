@@ -59,10 +59,10 @@ int main(void) {
     render_seconds("boot + default sketch", 2.0f);
 
     uint8_t note_on[3] = {0x90, 60, 100};
-    amy_event_midi_message_received(note_on, 3, 0, amy_sysclock());
+    amy_event_midi_message_received(note_on, 3, 0);
     render_seconds("juno note on ch1", 1.0f);
     uint8_t note_off[3] = {0x80, 60, 0};
-    amy_event_midi_message_received(note_off, 3, 0, amy_sysclock());
+    amy_event_midi_message_received(note_off, 3, 0);
 
     // CV in visible from Python?
     amyboard_vcv_cv_in[0] = 3.25f;

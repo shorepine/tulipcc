@@ -158,7 +158,7 @@ struct AmyModule : Module {
             uint8_t sysex = (msg.bytes[0] == 0xF0);
             if (sysex && amyboard_vcv_shorepine_frame(msg.bytes.data(), (int)len))
                 continue;
-            amy_event_midi_message_received(msg.bytes.data(), len, sysex, amy_sysclock());
+            amy_event_midi_message_received(msg.bytes.data(), len, sysex);
         }
 
         // AMY/firmware MIDI OUT (AKs, zI OK, zD dumps, tulip.midi_out) ->
