@@ -55,13 +55,23 @@ AMY_FUNCS = {"send", "message", "note_on", "note_off", "amy_send", "play"}
 # SEQUENCE_RENAME  sequence="0,384,1"  -> ticks="0,384,1"
 #                  Pure rename: the tick/period/tag string format is unchanged.
 #
-# CALLBACK_DROP    time=t inside a sequencer callback def f(t).
-#                  Old: `t` was a tick count handed to a *milliseconds*
-#                  parameter, so it was always in the past and AMY played it
-#                  immediately. New: AMY *drops* a one-off `ticks=` already in
-#                  the past, so `ticks=t` would be silence. Correct migration
-#                  is to drop the kwarg and play now -- exactly the fix applied
-#                  to arpegg.py and the web examples in commit fa252530.
+# CALLBACK_TICKS   time=t inside a sequencer callback def f(t)  ->  ticks=t.
+#                  `t` is already an AMY tick, so the value carries over as-is;
+#                  only the keyword changes.
+#
+#                  This one flipped mid-migration. `t` used to be a tick count
+#                  handed to a *milliseconds* parameter -- always in the past,
+#                  so AMY played it immediately. For a while AMY *dropped* a
+#                  one-off `ticks=` already in the past, which made `ticks=t`
+#                  silence (it is what killed the Tulip arpeggiator), and the
+#                  migration then had to drop the kwarg instead. amy#1036 made
+#                  a due-or-overdue one-off play immediately, so keeping the
+#                  tick is correct again -- and better than dropping it: a
+#                  callback that is on time pins the note to the beat, and a
+#                  late one costs a fraction of a tick rather than the note.
+#                  Requires amy >= 1.2.116. Against an older AMY this class
+#                  would produce silence, so do not run this script against
+#                  a world whose devices predate that.
 #
 # PAST_LITERAL     time=1000 (a bare number, i.e. absolute ms 1000 since AMY
 #                  boot -- always in the past). Same reasoning: drop the kwarg.
@@ -71,8 +81,8 @@ AMY_FUNCS = {"send", "message", "note_on", "note_off", "amy_send", "play"}
 #                  needs a real ms->tick conversion anchored on seq_ticks().
 #
 # REVIEW           anything else -- reported, never auto-rewritten.
-CLASSES = ("SEQUENCE_RENAME", "CALLBACK_DROP", "PAST_LITERAL", "MS_CONVERT", "REVIEW")
-AUTO_CLASSES = ("SEQUENCE_RENAME", "CALLBACK_DROP", "PAST_LITERAL", "MS_CONVERT")
+CLASSES = ("SEQUENCE_RENAME", "CALLBACK_TICKS", "PAST_LITERAL", "MS_CONVERT", "REVIEW")
+AUTO_CLASSES = ("SEQUENCE_RENAME", "CALLBACK_TICKS", "PAST_LITERAL", "MS_CONVERT")
 
 
 # ── API helpers ───────────────────────────────────────────────────────────────
@@ -382,7 +392,7 @@ def analyze(src, filename="<sketch>"):
                 cls, note = "MS_CONVERT", "derived from AMY's ms clock -> tick conversion"
             elif _is_past_tick_expr(v, tick_names, ms_names):
                 nm = next(x.id for x in ast.walk(v) if isinstance(x, ast.Name))
-                cls, note = "CALLBACK_DROP", f"sequencer callback tick `{nm}` -- drop kwarg, play now"
+                cls, note = "CALLBACK_TICKS", f"sequencer callback tick `{nm}` -- already a tick, keep the value"
             else:
                 cls, note = "REVIEW", "cannot determine ms-vs-tick intent"
             findings.append(Finding(cls, kw.arg, lineno, col, end_col, snippet, note))
@@ -424,7 +434,8 @@ def rewrite(src, findings, scope="tulipworld"):
     for f in todo:
         line = lines[f.lineno - 1]
         old = line[f.col:f.end_col]
-        if f.cls == "SEQUENCE_RENAME":
+        if f.cls in ("SEQUENCE_RENAME", "CALLBACK_TICKS"):
+            # Value carries over untouched; only the keyword changes.
             new = re.sub(r"^\s*(time|sequence)\s*=", "ticks=", old)
         elif f.cls == "MS_CONVERT":
             expr = re.sub(r"^\s*time\s*=\s*", "", old)
@@ -441,7 +452,7 @@ def rewrite(src, findings, scope="tulipworld"):
                 new = (f"ticks=round({seq_ticks} + "
                        f"(({expr}) - {ticks_ms}) * {TICKS_PER_MS_EXPR})")
             needs_const = True
-        else:  # CALLBACK_DROP / PAST_LITERAL -- remove the kwarg entirely.
+        else:  # PAST_LITERAL -- remove the kwarg entirely.
             before, after = line[:f.col], line[f.end_col:]
             # Also swallow a trailing or leading comma so the call stays valid.
             m = re.match(r"\s*,\s*", after)
