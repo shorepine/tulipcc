@@ -106,6 +106,27 @@ The easiest ways to test `tulipcc` are:
 
 `webdev.py` builds AMY once, builds each app's `stage/`, serves each at its own document root (so absolute `/img`, `/editor/`, `/run/` paths match production), and rebuilds an app when its `static/`, `site/` or the shared `assets/` change. To work on a single app instead: `python3 dev.py` in `tulip/amyboardweb` (AMYboard Web, live file-watching — see its `CLAUDE.md`), or `./build.sh` in `tulip/web` to build Tulip Web's `stage/` (what CI runs).
 
+### Python reaches the device by two different routes
+
+Only one of them is a firmware flash, and mixing them up looks exactly like a
+runtime bug:
+
+- `tulip/shared/py/*.py` (`synth.py`, `arpegg.py`, `sequencer.py`, `midi.py`, …)
+  are **frozen into the firmware**, so a normal build + flash picks them up.
+- `tulip/fs/**` (the bundled examples in `tulip/fs/tulip/ex/`, etc.) live on the
+  **device filesystem** and are **not** part of a firmware flash. They need a
+  separate step, run from `tulip/`:
+
+  ```
+  python fs_create.py tulip flash
+  ```
+
+Forget the second one and an edited example silently keeps running its *old*
+copy on device while your firmware-side edits appear to work — which reads as a
+mysterious behavioral bug in code you just changed. When on-device behavior
+contradicts the source in front of you, check which of these two routes the file
+takes before debugging the code.
+
 ## ESP-IDF Build Commands (Required)
 
 If the user asks to build `amyboard`, or asks to build `tulip cc` / `tulip esp32s3`, first run:
