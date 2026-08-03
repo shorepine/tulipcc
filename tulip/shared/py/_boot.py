@@ -107,8 +107,12 @@ if tulip.board() == "WEB" or tulip.board()=="AMYBOARD_WEB":
     # Override send & bleep are done from JS on web because of click-to-start audio.
 else:
     amy.AMY_SAMPLE_RATE=44100
-    # Override amy's send to work with tulip
-    amy.override_send = lambda x: tulip.amy_send(x)
+    # Nothing to override: amy's own dispatch already resolves _send_wire to
+    # tulip.amy_send here (amy_c_api_mp.inc). Installing the platform default
+    # in amy.override_send would only make it look like the user redirected
+    # AMY elsewhere, which is how transfer chunks lost their sysex marking and
+    # got parsed as wire commands (amy #1045). override_send stays free for
+    # what it's for -- pointing AMY at another board over midi.sysex_amy/i2c.
 
 # amy.message() in C: tulip.amy_message() (amy_connector.c) builds the same
 # wire string several times faster -- a table walk into a stack buffer instead
