@@ -1140,8 +1140,6 @@
           // board's fresh USB descriptor. A sessionStorage flag tells the
           // post-reload page to skip zB (avoiding an infinite reboot loop)
           // and go straight into the sync.
-          var _IS_WINDOWS_CHROME = /Windows/i.test(navigator.userAgent) &&
-                                   /Chrome/i.test(navigator.userAgent);
           window.pageload_control_sync = async function() {
             // Post-reset reload path: reset_amyboard() on Windows Chrome
             // sends zB, sets this flag, and reloads — we land here on the
