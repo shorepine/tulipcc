@@ -32,7 +32,7 @@
 #include <pthread.h>
 
 extern void convert_midi_bytes_to_messages(uint8_t *data, size_t len, uint8_t usb);
-extern void amy_event_midi_message_received(uint8_t *data, uint32_t len, uint8_t sysex, uint32_t time);
+extern void amy_event_midi_message_received(uint8_t *data, uint32_t len, uint8_t sysex);
 extern uint32_t amy_sysclock(void);
 void midi_out(uint8_t *bytes, uint16_t len);
 // mp_embed.c: queue a shorepine control payload for the MP thread (which
@@ -70,7 +70,7 @@ static void handle_sysex_frame(uint8_t *frame, int len) {
         return;
     }
     // Non-shorepine sysex: hand to the firmware's Python midi callback path.
-    amy_event_midi_message_received(frame, (uint32_t)len, 1, amy_sysclock());
+    amy_event_midi_message_received(frame, (uint32_t)len, 1);
 }
 
 // Feed raw MIDI 1.0 bytes (possibly containing partial sysex across calls).
