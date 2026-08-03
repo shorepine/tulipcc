@@ -74,7 +74,26 @@ AMY_FUNCS = {"send", "message", "note_on", "note_off", "amy_send", "play"}
 #                  a world whose devices predate that.
 #
 # PAST_LITERAL     time=1000 (a bare number, i.e. absolute ms 1000 since AMY
-#                  boot -- always in the past). Same reasoning: drop the kwarg.
+#                  boot). By the time a world sketch runs, AMY's millisecond
+#                  clock is far past any such literal, so it means "now": drop
+#                  the kwarg.
+#
+#                  EXCEPT when the sketch resets the timebase. amy_reset_
+#                  sysclock() zeroes amy_global.time and sequencer_tick_count
+#                  together, so after amy.send(reset=amy.RESET_TIMEBASE) a
+#                  literal is measured from zero and is genuinely in the
+#                  FUTURE -- exactly how the original xanadu staggered its
+#                  chords out to 47000ms. Dropping those would collapse the
+#                  piece into a single instant, so they go to REVIEW with the
+#                  conversion spelled out. Not auto-applied because whether the
+#                  reset actually precedes the call at runtime is a question
+#                  about execution order, which this script does not model.
+#
+#                  Residual risk, accepted: a sketch that runs within the first
+#                  few seconds of AMY starting could have a small literal still
+#                  ahead of the clock without any reset. Now that a due-or-
+#                  overdue one-off plays immediately (amy#1036) the damage is
+#                  bounded -- such a note plays early rather than not at all.
 #
 # MS_CONVERT       time=tulip.amy_ticks_ms() + 250, or time=now + 250 where
 #                  `now` came from amy_ticks_ms(). A genuine future ms offset;
@@ -332,6 +351,38 @@ def _tick_taint(tree, ms_names):
     return tick_names
 
 
+def _resets_timebase(tree):
+    """True if the sketch restarts AMY's clocks, making a bare ms literal FUTURE.
+
+    amy_reset_sysclock() zeroes amy_global.time AND sequencer_tick_count
+    together, so after `amy.send(reset=amy.RESET_TIMEBASE)` a literal like
+    time=2000 is two seconds from the reset -- real future scheduling, not the
+    long-past absolute timestamp PAST_LITERAL assumes. Dropping those would
+    collapse a staggered piece into one instant. (RESET_AMY restarts AMY
+    wholesale, which resets the clocks too.)
+
+    Detects `reset=` carrying RESET_TIMEBASE/RESET_AMY by attribute or bare
+    name, and a direct reset_sysclock() call. A computed reset mask is not
+    detected -- see the RESET_LITERAL note about why that is survivable.
+    """
+    for n in ast.walk(tree):
+        if not isinstance(n, ast.Call):
+            continue
+        name = (n.func.attr if isinstance(n.func, ast.Attribute)
+                else getattr(n.func, "id", None))
+        if name == "reset_sysclock":
+            return True
+        for kw in n.keywords:
+            if kw.arg != "reset":
+                continue
+            for x in ast.walk(kw.value):
+                ident = (x.attr if isinstance(x, ast.Attribute)
+                         else (x.id if isinstance(x, ast.Name) else None))
+                if ident in ("RESET_TIMEBASE", "RESET_AMY"):
+                    return True
+    return False
+
+
 def _is_past_tick_expr(v, tick_names, ms_names):
     """True for `t` or `t + 50` where `t` is a known sequencer tick.
 
@@ -365,6 +416,7 @@ def analyze(src, filename="<sketch>"):
     lines = src.split("\n")
     ms_names, _ = _ms_taint(tree)
     tick_names = _tick_taint(tree, ms_names)
+    resets_timebase = _resets_timebase(tree)
 
     findings = []
     for n in ast.walk(tree):
@@ -385,7 +437,19 @@ def analyze(src, filename="<sketch>"):
             elif isinstance(v, ast.Constant) and v.value is None:
                 cls, note = "SEQUENCE_RENAME", "time=None -> ticks=None (no-op default)"
             elif isinstance(v, ast.Constant) and isinstance(v.value, (int, float)):
-                cls, note = "PAST_LITERAL", f"absolute ms {v.value!r} -- already past, drop kwarg"
+                if resets_timebase and v.value:
+                    # The sketch restarts the clocks, so this is a future
+                    # offset from the reset, not a stale absolute timestamp.
+                    # Hand a human the answer rather than guessing: the reset
+                    # zeroes ms and ticks together, so ms N is tick N*0.0864 at
+                    # the default tempo -- but only if the reset really does
+                    # precede this call at runtime, which we can't see.
+                    cls, note = "REVIEW", (
+                        f"ms {v.value!r} measured from a timebase reset, i.e. in the FUTURE -- "
+                        f"dropping it would collapse the timing. If the reset precedes this "
+                        f"call, it becomes ticks=round({v.value!r} * TICKS_PER_MS)")
+                else:
+                    cls, note = "PAST_LITERAL", f"absolute ms {v.value!r} -- already past, drop kwarg"
             elif _direct_ms_call(v):
                 cls, note = "MS_CONVERT", "ms offset from AMY's ms clock -> tick conversion"
             elif any(isinstance(x, ast.Name) and x.id in ms_names for x in ast.walk(v)):
