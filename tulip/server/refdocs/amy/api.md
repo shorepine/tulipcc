@@ -87,7 +87,7 @@ The table below is generated from the same source.
 | Python (all platforms) | C function | MicroPython alias | Godot (`AmySynth`) | What it does |
 |---|---|---|---|---|
 | `amy.send_wire(message)` | `void amy_add_message(char * message)` | `tulip.amy_send` | — | Send a wire-protocol message to AMY |
-| `amy.send_wire_from_sysex(message)` *(CPython only)* | `void amy_send_wire_from_sysex(char * message)` | — | — | Send a wire message as if from sysex (file-transfer routing applies) |
+| `amy.send_wire_from_sysex(message)` | `void amy_send_wire_from_sysex(char * message)` | `tulip.amy_send_wire_from_sysex` | — | Send a wire message as if from sysex (file-transfer routing applies) |
 | `amy.ticks_ms()` | `uint32_t amy_sysclock()` | `tulip.amy_ticks_ms` | — | Read the AMY millisecond clock |
 | `amy.reset_sysclock()` | `void amy_reset_sysclock()` | `tulip.amy_reset_sysclock` | `reset_sysclock` | Reset the AMY millisecond clock to zero |
 | `amy.render_load()` | `float amy_get_render_load()` | `tulip.amy_render_load` | `render_load` | Smoothed fraction of real time AMY spends rendering (0..1) |
