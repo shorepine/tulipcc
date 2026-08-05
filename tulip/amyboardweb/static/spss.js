@@ -6498,9 +6498,12 @@ async function start_amyboard() {
     // Fixed-1024-byte output-buffer variant (pads short blocks) for the
     // scope/waveform UI, overriding the generated tulip.amy_get_output_buffer.
     await mp.registerJsModule('amy_get_output_buffer', get_output_audio_samples);
+    // AMY_C_API_PY_INSTALL already points amy._send_wire (and
+    // amy._send_wire_from_sysex, which transfer chunks need marked as sysex)
+    // at these bindings, so there is nothing to put in amy.override_send --
+    // that one means "the user redirected AMY to some other board".
     await mp.runPythonAsync(`
       import amy, tulip, amy_get_output_buffer as _amy_get_output_buf_js
-      amy.override_send = amy._send_wire
       tulip.amy_get_output_buffer = _amy_get_output_buf_js
     `);
   }

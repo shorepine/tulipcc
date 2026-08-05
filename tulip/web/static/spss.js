@@ -527,11 +527,11 @@ async function start_tulip() {
   mp.registerJsModule("jssleep", sleep_ms);
 
   // Set up the micropython context for AMY.
+  // AMY_C_API_PY_INSTALL already points amy._send_wire (and
+  // amy._send_wire_from_sysex, which transfer chunks need marked as sysex)
+  // at these bindings, so there is nothing to put in amy.override_send --
+  // that one means "the user redirected AMY to some other board".
   await mp.runPythonAsync(AMY_C_API_PY_INSTALL);
-  await mp.runPythonAsync(`
-    import amy
-    amy.override_send = amy._send_wire
-  `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');

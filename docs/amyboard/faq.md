@@ -418,6 +418,11 @@ amy.override_send = midi.sysex_amy
 
 There's nothing built-in for polychaining / voice-splitting, but you can write your own `override_send` to divide notes across boards.
 
+Set `amy.override_send = None` to point AMY back at the local board. While an
+override is set, everything goes to the far board -- including the chunks of
+`amy.load_sample()` / `amy.transfer_file()`, so the sample lands over there and
+not locally.
+
 ### How many can I power over the I2C chain?
 
 Roughly **4** is a safe bet, maybe one or two beyond that. Each board draws ~350 mA from the 3V3_IN line, and the voltage sags across each board's supply FET down the chain (measured ~2.94 V at the 4th board, which still ran fine). If you're chaining more than a few, give them their own power.
