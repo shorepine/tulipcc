@@ -908,7 +908,11 @@ def cv_out(volts, channel=0):
         tulip.vcv_cv_out(channel, volts)
         return
     addr = 88 # GP8413
-    # With rev1 scaling, 0x0000 -> -10v, 0x7fff -> +10v
+    # With rev1 scaling, 0x0000 -> -10v, 0x7fff -> +10v.
+    # The output stage (TL074, 30K/10K from A3V3) is gain 4 offset -9.9v,
+    # sized for the GP8413's power-up 0-5V range: jack = 4*dac - 9.9.
+    # Never write the DAC range register (0x01) to 10V mode -- it would
+    # double every output and clip positive voltages at the op-amp rail.
     val = int(((volts + 10)/20.0) * 0x8000)
     if(val < 0):
         val = 0
