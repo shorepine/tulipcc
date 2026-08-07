@@ -273,8 +273,11 @@ float cv_input_hook(uint16_t channel) {
 #ifdef ESP_PLATFORM
 // FreeRTOS task: reads both ADS1015 channels in a loop, updates cv_cached_value.
 void cv_read_task(void *pvParameter) {
-    int32_t min = 1058;  // -5V
-    int32_t max = 21312; // 5V
+    // Bench-calibrated (loopback vs multimeter, 2026-08-07): raw = 20080 + 2003*V.
+    // The ADC saturates at raw 32752 / raw 0, so the readable window is about
+    // -10V to +6.3V -- inputs above +6.3V clip (the jack itself is fine to ±10V).
+    int32_t min = 10064; // -5V
+    int32_t max = 30096; // +5V
     // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
     // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
     // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
@@ -288,11 +291,12 @@ void cv_read_task(void *pvParameter) {
         for(uint8_t ch = 0; ch < 2; ch++) {
             if(!cv_local_override[ch]) {
                 int32_t raw = read_ads1015_raw(ch);  // Put uint16_t into int32_t.
+                // Map [min, max] -> [-5v, +5v]
                 cv_cached_value[ch] = (
                     (((float)(raw - min))
                      / ((float)(max - min)))
                     * 10.0
-                ) - 10.0;
+                ) - 5.0;
             }
         }
         xTaskDelayUntil(&last_wake, cv_period);
