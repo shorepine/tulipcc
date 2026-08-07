@@ -300,32 +300,3 @@ void cv_read_task(void *pvParameter) {
 }
 #endif
 
-// Write to the GP8413
-uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
-    if(external_map[osc]==1 || external_map[osc]==2) {
-#ifdef ESP_PLATFORM
-        // -5v to +5v? 
-        float volts = S2F(buf[0])*5.0;
-        int32_t val = (int32_t)(((volts + 10)/20.0) * 0x8000);
-        if(val < 0) val = 0;
-        if(val > 0x7fff) val = 0x7fff;
-        uint8_t bytes[3];
-        bytes[2] = (val & 0xff00) >> 8;
-        bytes[1] = (val & 0x00ff);
-        uint8_t ch = 0x02;
-        uint8_t addr = 88;
-        uint8_t channel = external_map[osc]-1;
-        if(channel == 1) ch = 0x04;
-        bytes[0] = ch;
-        i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
-        // silence this output
-        return 1;
-#endif
-        return 0;
-    } else if(external_map[osc]>2) { // python audio buffer callback, WIP
-        
-        return 0;
-    } 
-    return 0;
-}
-
