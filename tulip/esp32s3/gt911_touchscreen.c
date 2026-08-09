@@ -137,13 +137,21 @@ void run_gt911(void *param) {
             if(esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 3)) {
                 //fprintf(stderr, "TP pressed %d,%d str %d count %d\n", touch_x[0], touch_y[0], touch_strength[0], touch_cnt);
                 for(uint8_t i=0;i<touch_cnt;i++) {
-                    last_touch_x[i] = touch_x[i] + touch_x_delta;
+                    int16_t tx = touch_x[i] + touch_x_delta;
                     #ifdef TDECK
                         // tdeck has swapped y that mirror_y doesn't fix
-                        last_touch_y[i] = ((V_RES-touch_y[i]) + touch_y_delta)*touch_y_scale;
+                        int16_t ty = ((V_RES-touch_y[i]) + touch_y_delta)*touch_y_scale;
                     #else
-                        last_touch_y[i] = (touch_y[i] + touch_y_delta)*touch_y_scale;
+                        int16_t ty = (touch_y[i] + touch_y_delta)*touch_y_scale;
                     #endif
+                    // The calibration delta/scale can push edge touches just outside the
+                    // screen; clamp so they land on the edge instead of getting dropped
+                    if(tx < 0) tx = 0;
+                    if(tx >= H_RES) tx = H_RES-1;
+                    if(ty < 0) ty = 0;
+                    if(ty >= V_RES) ty = V_RES-1;
+                    last_touch_x[i] = tx;
+                    last_touch_y[i] = ty;
                 }
                 for(uint8_t i=touch_cnt;i<3;i++) {
                     last_touch_x[i] = -1;
