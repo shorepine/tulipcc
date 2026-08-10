@@ -676,10 +676,16 @@ window.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  // Number of independent mix buses (AMY_NUM_BUSES). Each has its own FX
+  // Number of independent mix buses. Each has its own FX
   // (EQ/Chorus/Reverb/Echo) and master volume; each channel (synth) is
   // assigned to one bus (default 0).
-  const NUM_BUSES = (typeof AMY !== "undefined" && Number.isInteger(AMY.AMY_NUM_BUSES)) ? AMY.AMY_NUM_BUSES : 4;
+  // The bus count became a runtime setting in amy 1.2.131 (amy_config
+  // .max_buses), so the exported constant is now the *default* the web build
+  // boots with; AMY_NUM_BUSES is the pre-1.2.131 spelling.
+  const NUM_BUSES = (typeof AMY === "undefined") ? 4
+    : Number.isInteger(AMY.AMY_DEFAULT_NUM_BUSES) ? AMY.AMY_DEFAULT_NUM_BUSES
+    : Number.isInteger(AMY.AMY_NUM_BUSES) ? AMY.AMY_NUM_BUSES
+    : 4;
   window.AMY_UI_NUM_BUSES = NUM_BUSES;
 
   function resetBusState() {
@@ -948,9 +954,14 @@ function set_knobs_from_events(events, synth, opts) {
         if (Number.isFinite(event.echo[1])) { fx[fxBus].echo[1] = event.echo[1]; }
         if (Number.isFinite(event.echo[3])) { fx[fxBus].echo[2] = event.echo[3]; }
       }
-      if (Array.isArray(event.volume)) {
-        // V is a vector whose slots are RELATIVE to the event's bus:
-        // "y1V0.4" = bus 1 volume 0.4, legacy "V,0.4" = bus 1 too.
+      if (Number.isFinite(event.volume)) {
+        // V is a scalar addressing the event's own bus: "y1V0.4" = bus 1
+        // volume 0.4 (amy 1.2.131, "scalar volume, no bus-count constants").
+        if (fxBus >= 0 && fxBus < numBuses) fx[fxBus].volume = event.volume;
+      } else if (Array.isArray(event.volume)) {
+        // Legacy vector form (amy <= 1.2.130), whose slots were RELATIVE to
+        // the event's bus: "V,0.4" = bus 1 too. Kept so sketches parsed by an
+        // older AMY build still position the mirrors.
         for (let vi = 0; vi < event.volume.length; vi += 1) {
           if (!Number.isFinite(event.volume[vi])) continue;
           const vBus = fxBus + vi;

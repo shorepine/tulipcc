@@ -497,7 +497,7 @@ void run_amy(uint8_t midi_out_pin) {
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
 #ifdef TULIP_USER_C_DSP
-    extern void tulip_bus_postprocess_hook(uint8_t bus, SAMPLE *buf, uint16_t len);
+    extern void tulip_bus_postprocess_hook(uint16_t bus, SAMPLE *buf, uint16_t len);
     amy_config.amy_external_bus_postprocess_hook = tulip_bus_postprocess_hook;
 #endif
     amy_config.audio = AMY_AUDIO_IS_I2S;
@@ -564,7 +564,7 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
 #ifdef TULIP_USER_C_DSP
-    extern void tulip_bus_postprocess_hook(uint8_t bus, SAMPLE *buf, uint16_t len);
+    extern void tulip_bus_postprocess_hook(uint16_t bus, SAMPLE *buf, uint16_t len);
     amy_config.amy_external_bus_postprocess_hook = tulip_bus_postprocess_hook;
     extern uint8_t tulip_user_render_hook(uint16_t osc, SAMPLE *buf, uint16_t len);
     amy_config.amy_external_render_hook = tulip_user_render_hook;

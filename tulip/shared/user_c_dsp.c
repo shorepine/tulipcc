@@ -190,7 +190,8 @@ static const udsp_export_t udsp_exports[] = {
 
 // Runs on the AMY render task, once per bus per block. buf is the bus'
 // S8.23 buffer, passed to user effects directly.
-void tulip_bus_postprocess_hook(uint8_t bus, int32_t *buf, uint16_t len) {
+void tulip_bus_postprocess_hook(uint16_t bus, int32_t *buf, uint16_t len) {
+    if (bus >= USER_C_DSP_MAX_BUSES) return;  // no bit for it in bus_mask
     for (int i = 0; i < USER_C_DSP_SLOTS; i++) {
         user_c_effect_fn_t fn = (user_c_effect_fn_t)__atomic_load_n(&slots[i].fn, __ATOMIC_ACQUIRE);
         if (fn != NULL && slots[i].kind == USER_C_DSP_KIND_EFFECT && (slots[i].bus_mask & (1u << bus))) {
@@ -230,7 +231,10 @@ static int find_slot(const char *name) {
 }
 
 int user_c_dsp_set(const char *name, int bus, int on) {
-    if (bus < 0 || bus >= AMY_NUM_BUSES) return -2;
+    // How many buses AMY runs is a runtime setting; bus_mask caps us further.
+    int max_buses = amy_global.config.max_buses;
+    if (max_buses > USER_C_DSP_MAX_BUSES) max_buses = USER_C_DSP_MAX_BUSES;
+    if (bus < 0 || bus >= max_buses) return -2;
     int i = find_slot(name);
     if (i < 0) return -1;
     if (slots[i].kind != USER_C_DSP_KIND_EFFECT) return -3;
