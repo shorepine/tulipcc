@@ -51,6 +51,15 @@ def lv_depad(obj, remove_scroll = False):
     if(remove_scroll):
         obj.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
+# Make a dropdown's open list fully opaque with square corners so it passes LVGL's
+# cover check. Otherwise every scroll tick redraws the widgets underneath the list
+# first, which flickers on hardware where LVGL renders into the live scanned-out bg.
+def lv_dropdown_opaque(dropdown):
+    lst = dropdown.get_list()
+    lst.set_style_clip_corner(False, 0)
+    lst.set_style_radius(0, 0)
+    lst.set_style_bg_opa(lv.OPA.COVER, 0)
+
 
 def current_uiscreen():
     global current_app_string

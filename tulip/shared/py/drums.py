@@ -1,7 +1,7 @@
 # drums.py
 # lvgl drum machine for Tulip
 
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_ticks
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv_dropdown_opaque, lv, frame_callback, ticks_ms, seq_ticks
 import amy
 import sequencer
 from patches import drumkit
@@ -141,6 +141,7 @@ class DrumRow(UIElement):
         self.dropdown.set_width(100)
         self.dropdown.align_to(self.group, lv.ALIGN.LEFT_MID,0,0)
         lv_depad(self.dropdown)
+        lv_dropdown_opaque(self.dropdown)
         for i in range(4):
             for j in range(4):
                 d = DrumSwitch(switch_color_idx=i, row=row, col = j + i*4, synth=self.synth)
