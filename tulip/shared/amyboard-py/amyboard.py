@@ -493,6 +493,7 @@ def start_amy():
             sys.print_exception(e)
         return
     init_pcm9211()
+    init_gp8413()  # newer GP8413 batches (v1.5 boards) power up half-scale
     # AMY binds its MIDI UART TX to this pin at start; set_midi_type() right after is
     # the single MIDI OUT init sequence (it also holds the unused TRS leg high). It
     # needs AMY's UART driver, which amy_start() installs, so it must come second.
@@ -872,6 +873,17 @@ def init_pcm9211(addr=0x40):
         else:
             print("Write 0x%02x to 0x%02x returned 0x%02x" % (val, reg, r))
 
+def init_gp8413(addr=88):
+    """Select the CV DAC's 5V full-scale output range (register 0x01 = 0x11).
+
+    GP8413 date-code batches differ in their power-up range: 25+ parts
+    (v1.4 boards) default to the 5V full scale the output stage expects,
+    but 26+ parts (v1.5 boards) default to half that, leaving CV out
+    spanning only -10v..0v. 0x11 selects the correct range on both
+    batches (bench-verified a no-op on 25+). The setting is volatile, so
+    this must run every boot before any CV output."""
+    get_i2c().writeto_mem(addr, 0x01, bytes([0x11]))
+
 def set_cv_out(channel=0, synth=1):
     """Route a synth's audio output to a CV channel instead of speakers.
 
@@ -910,9 +922,9 @@ def cv_out(volts, channel=0):
     addr = 88 # GP8413
     # With rev1 scaling, 0x0000 -> -10v, 0x7fff -> +10v.
     # The output stage (TL074, 30K/10K from A3V3) is gain 4 offset -9.9v,
-    # sized for the GP8413's power-up 0-5V range: jack = 4*dac - 9.9.
-    # Never write the DAC range register (0x01) to 10V mode -- it would
-    # double every output and clip positive voltages at the op-amp rail.
+    # sized for a 5V-full-scale DAC: jack = 4*dac - 9.9. Newer GP8413
+    # batches (v1.5 boards) power up at half that full scale, so
+    # init_gp8413() must have selected the range before writing values.
     val = int(((volts + 10)/20.0) * 0x8000)
     if(val < 0):
         val = 0
