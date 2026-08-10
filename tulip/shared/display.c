@@ -1029,11 +1029,18 @@ void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
 
 void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
     if(touch_held) {
-        if(last_touch_x[0] >= 0 && last_touch_x[0] < H_RES && last_touch_y[0] >= 0 && last_touch_y[0] < V_RES) {
-            data->point.x = last_touch_x[0];
-            data->point.y = last_touch_y[0];
-            data->state = LV_INDEV_STATE_PRESSED;
-        }
+        // Clamp to the screen instead of dropping the point -- touch calibration can
+        // map edge touches slightly out of range, and dropping them makes the
+        // launcher / app switcher buttons at the screen corners miss taps
+        int16_t x = last_touch_x[0];
+        int16_t y = last_touch_y[0];
+        if(x < 0) x = 0;
+        if(x >= H_RES) x = H_RES-1;
+        if(y < 0) y = 0;
+        if(y >= V_RES) y = V_RES-1;
+        data->point.x = x;
+        data->point.y = y;
+        data->state = LV_INDEV_STATE_PRESSED;
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
     }

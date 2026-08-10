@@ -475,6 +475,7 @@ static esp_err_t touch_gt911_reset(esp_lcd_touch_handle_t tp)
 static esp_err_t touch_gt911_read_cfg(esp_lcd_touch_handle_t tp)
 {
     uint8_t buf[4];
+    uint8_t range[4];
 
     assert(tp != NULL);
 
@@ -483,6 +484,15 @@ static esp_err_t touch_gt911_read_cfg(esp_lcd_touch_handle_t tp)
 
     ESP_LOGI(TAG, "TouchPad_ID:0x%02x,0x%02x,0x%02x", buf[0], buf[1], buf[2]);
     ESP_LOGI(TAG, "TouchPad_Config_Version:%d", buf[3]);
+
+    // Log the coordinate range the panel's burned-in config reports over. Panels have
+    // shipped with a y range larger than V_RES (e.g. 750 vs 600) -- that is what the
+    // touch_y_scale calibration compensates for, so this tells us what a given unit needs.
+    if (touch_gt911_i2c_read(tp, ESP_LCD_TOUCH_GT911_CONFIG_REG + 1, range, 4) == ESP_OK) {
+        ESP_LOGI(TAG, "TouchPad_Output_Range:%dx%d",
+                 (uint16_t)range[0] | ((uint16_t)range[1] << 8),
+                 (uint16_t)range[2] | ((uint16_t)range[3] << 8));
+    }
 
     return ESP_OK;
 }
