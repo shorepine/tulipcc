@@ -312,7 +312,6 @@ class JunoDropDown(tulip.UIElement):
         self.dropdown.set_dir(lv.DIR.BOTTOM)
         self.dropdown.add_event_cb(self.cb, lv.EVENT.VALUE_CHANGED, None)
         self.dropdown.set_height(40)
-        tulip.lv_dropdown_opaque(self.dropdown)
         self.current_index = initial_value
         self.update_items(items)  # Triggers first call to set_fn
 
