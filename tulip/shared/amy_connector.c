@@ -852,9 +852,20 @@ static bool amy_put_list(char *buf, size_t *len, mp_obj_t v) {
 /* amy's parse_ctrl_coefs(): four accepted shapes, elements formatted by
  * the same elem_to_str as lists. */
 static const char *const AMY_COEF_FIELDS[] = {
-    "const", "note", "vel", "eg0", "eg1", "mod", "bend", "ext0", "ext1",
+    /* Wire order, so index == coef slot. 'mod1' is last, not beside 'mod0':
+     * amy appends new control inputs so stored patch strings, which are
+     * positional, keep reading the same way. */
+    "const", "note", "vel", "eg0", "eg1", "mod0", "bend", "ext0", "ext1", "mod1",
 };
-#define AMY_COEF_N 9
+#define AMY_COEF_N 10
+
+/* Superseded coef names, mapped to their slot in AMY_COEF_FIELDS. amy's
+ * parse_ctrl_coefs keeps accepting these, so the fast path must too or it
+ * would bail to Python for every pre-two-modulator patch. */
+static const struct { const char *name; int slot; } AMY_COEF_ALIASES[] = {
+    {"mod", 5},   /* named the only modulator before there were two */
+};
+#define AMY_COEF_ALIAS_N 1
 
 static bool amy_put_coefs(char *buf, size_t *len, mp_obj_t v) {
     if (mp_obj_is_str(v)) {
@@ -898,6 +909,9 @@ static bool amy_put_coefs(char *buf, size_t *len, mp_obj_t v) {
             for (int f = 0; f < AMY_COEF_N; f++)
                 if (strlen(AMY_COEF_FIELDS[f]) == kl &&
                     memcmp(AMY_COEF_FIELDS[f], kp, kl) == 0) { slot = f; break; }
+            for (int f = 0; slot < 0 && f < AMY_COEF_ALIAS_N; f++)
+                if (strlen(AMY_COEF_ALIASES[f].name) == kl &&
+                    memcmp(AMY_COEF_ALIASES[f].name, kp, kl) == 0) { slot = AMY_COEF_ALIASES[f].slot; break; }
             if (slot < 0)
                 return false;              /* unrecognised: Python raises */
             vals[slot] = m->table[i].value;
