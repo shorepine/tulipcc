@@ -36,10 +36,12 @@ uint16_t *sprite_h_px;//[SPRITES];
 uint8_t *sprite_vis;//[SPRITES];
 uint32_t *sprite_mem;//[SPRITES];
 
-// LVGL renders into this shadow of bg; lv_flush_cb_8b blits finished areas into bg.
-// LVGL can't render directly into bg: on hardware the RGB panel scans bg out
-// continuously, so mid-render widget states would be visible as flicker.
+// LVGL renders into this small band buffer (PARTIAL mode); lv_flush_cb_8b blits
+// each finished band into bg. LVGL can't render directly into bg: on hardware the
+// RGB panel scans bg out continuously, so mid-render widget states would be
+// visible as flicker.
 uint8_t * lv_buf;
+#define LV_BUF_BYTES (((H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL)/10)
 
 uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
@@ -1013,13 +1015,13 @@ void display_teardown(void) {
 
 void lv_flush_cb_8b(lv_display_t * display, const lv_area_t * area, unsigned char * px_map)
 {
-    // In DIRECT mode px_map is the start of the full lv_buf. Copy the finished
-    // area into bg, whose rows the display is scanning out.
-    uint32_t stride = (H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL;
-    uint32_t x0 = area->x1*BYTES_PER_PIXEL;
+    // In PARTIAL mode px_map holds just this band, rows packed at the band's width
+    // (LV_DRAW_BUF_STRIDE_ALIGN is 1). Copy it into bg, whose rows the display is
+    // scanning out.
+    uint32_t bg_stride = (H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL;
     uint32_t w = (area->x2 - area->x1 + 1)*BYTES_PER_PIXEL;
     for(int32_t y = area->y1; y <= area->y2; y++) {
-        memcpy(bg + y*stride + x0, px_map + y*stride + x0, w);
+        memcpy(bg + y*bg_stride + area->x1*BYTES_PER_PIXEL, px_map + (y - area->y1)*w, w);
     }
     // Inform LVGL that you are ready with the flushing and buf is not used anymore
     lv_display_flush_ready(display);
@@ -1102,7 +1104,7 @@ void setup_lvgl() {
     lv_display_set_antialiasing(lv_display, 0);
     lv_display_set_color_format(lv_display, LV_COLOR_FORMAT_RGB332);
     lv_display_set_flush_cb(lv_display, lv_flush_cb_8b);
-    lv_display_set_buffers(lv_display, lv_buf, NULL, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX), LV_DISPLAY_RENDER_MODE_DIRECT);
+    lv_display_set_buffers(lv_display, lv_buf, NULL, LV_BUF_BYTES, LV_DISPLAY_RENDER_MODE_PARTIAL);
     
     lv_tick_set_cb(u32_ticks_ms);
 
@@ -1146,8 +1148,8 @@ void display_init(void) {
     // Create the background FB
     // 1536000 bytes
     bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    // LVGL's shadow render target, same geometry as bg (see lv_flush_cb_8b)
-    lv_buf = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    // LVGL's band render buffer (see lv_flush_cb_8b)
+    lv_buf = (uint8_t*)calloc_caps(32, 1, LV_BUF_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     // 614400 bytes
     bg_tfb = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
