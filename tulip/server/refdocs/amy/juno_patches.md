@@ -34,10 +34,10 @@ v3w3c4L1Z
 v4w1c5L1Z
 v5w5L1Z
 v1f0.609A148,1.0,10000,0Z
-v2a0.001,0,0,0,0,0f440,1,,,,0,1d0.72,,,,,0m0Z
-v3a1,0,0,0,0,0f440,1,,,,0,1m0Z
-v4a0.551,0,0,0,0,0f220,1,,,,0,1m0Z
-v5a0.001,0,0,0,0,0Z
+v2a0,,0,0f440,1,,,,0,1d0.72,,,,,0m0Z
+v3a1,,0,0f440,1,,,,0,1m0Z
+v4a0.551,,0,0f220,1,,,,0,1m0Z
+v5a0,,0,0Z
 v0F300.23,0.661,,2.252,0,0R1.015Z
 v0a0.591,,1,1,0A518,1,83561,0.299,310,0Z
 x7,-3,-3k1,,0.5,0.5Z"
@@ -57,13 +57,13 @@ amy.send(osc=3, wave=amy.SAW_UP, chained_osc=4, mod_source=1)
 amy.send(osc=4, wave=amy.PULSE, chained_osc=5, mod_source=1)
 amy.send(osc=5, wave=amy.NOISE, mod_source=1)
 amy.send(osc=1, freq=0.609, bp1='148,1.0,10000,0')
-amy.send(osc=2, amp={'const': 0.001, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod': 0'},
-         freq={'const': 440, 'note': 1, 'mod': 0, 'bend': 1}, duty={'const': 0.72, 'mod': 0}, portamento=0)
-amy.send(osc=3, amp={'const': 1, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod': 0'},
-         freq={'const': 440, 'note': 1, 'mod': 0, 'bend': 1}, portamento=0)
-amy.send(osc=4, amp={'const': 0.551, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod': 0'},
-         freq={'const': 220, 'note': 1, 'mod': 0, 'bend': 1}, portamento=0)
-amy.send(osc=5, amp={'const': 0.001, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod': 0'})
+amy.send(osc=2, amp={'const': 0, 'vel': 0, 'eg0': 0},
+         freq={'const': 440, 'note': 1, 'mod0': 0, 'bend': 1}, duty={'const': 0.72, 'mod0': 0}, portamento=0)
+amy.send(osc=3, amp={'const': 1, 'vel': 0, 'eg0': 0},
+         freq={'const': 440, 'note': 1, 'mod0': 0, 'bend': 1}, portamento=0)
+amy.send(osc=4, amp={'const': 0.551, 'vel': 0, 'eg0': 0},
+         freq={'const': 220, 'note': 1, 'mod0': 0, 'bend': 1}, portamento=0)
+amy.send(osc=5, amp={'const': 0, 'vel': 0, 'eg0': 0})
 amy.send(osc=0, amp={'const': 0.591, 'vel': 1, 'eg0': 1, 'eg1': 0}, bp0='518,1,83561,0.299,310,0')
 amy.send(eq='7,-3,-3', chorus='1,,0.5,0.5')
 ```

@@ -316,7 +316,7 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 | `c`    | `chained_osc` | `chained_osc` |  uint 0 to OSCS-1 | Chained oscillator.  Note/velocity events to this oscillator will propagate to chained oscillators.  VCF is run only for first osc in chain, but applies to all oscs in chain. |
 | `G`    | `filter_type` | `filter_type` | 0-6 | Filter type: 0 = none (default.) 1 = lowpass, 2 = bandpass, 3 = highpass, 4 = double-order lowpass, 5 = notch, 6 = phaser. |
 | `I`    | `ratio` | `ratio`  | float | For ALGO types, ratio of modulator frequency to  base note frequency  |
-| `L`    | `mod_source` | `mod_source` | 0 to OSCS-1 | Which oscillator is used as an modulation/LFO source for this oscillator. Source oscillator will be silent. |
+| `L`    | `mod_source` | `mod_source` | 0 to OSCS-1, up to two, comma-separated | Which oscillator(s) are used as modulation/LFO sources for this oscillator. Source oscillators will be silent. The first feeds the `mod0` control coefficient and the second `mod1`, so `mod_source=[3, 4]` makes osc 3 the `mod0` input and osc 4 the `mod1` input. |
 | `m`    | `portamento`| `portamento` | uint | Time constant (in ms) for pitch changes when note is changed without intervening note-off.  default 0 (immediate), 100 is good. |
 | `n`    | `midi_note` | `note` | float, but typ. uint 0-127 | Midi note, sets frequency.  Fractional Midi notes are allowed. |
 | `o`    | `algorithm` | `algorithm` | uint 1-32 | DX7 FM algorithm to use for ALGO type |
