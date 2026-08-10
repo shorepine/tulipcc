@@ -107,37 +107,26 @@ We've fixed a lot of USB issues recently, so [upgrade to the latest firmware](fi
 
 ## CV out voltages are wrong (v1.5 boards)
 
-Boards from the newest production run (revision **v1.5**) power up with the CV DAC in
-the wrong output range, so every CV out voltage comes out **half scale and 5V low**:
-`cv_out(0, 0)` measures about **-5V** at the jack, `cv_out(5, 0)` about -2.5V, and
-nothing above ~0V is reachable. Pitch CV sounds several octaves flat. Earlier boards
-(v1.4 and before) are **not** affected.
+Boards from the newest production run (revision **v1.5**) shipped with a newer
+date-code batch of the GP8413 CV DAC that powers up in a half-scale output range:
+every CV out voltage comes out **half scale and 5V low** -- `cv_out(0, 0)` measures
+about **-5V** at the jack, and nothing above ~0V is reachable, so pitch CV sounds
+several octaves flat. The board circuits are identical across revisions; only the DAC
+chip batch changed. v1.4 and earlier boards are not affected.
 
-**Check whether your board is affected.** Connect via [serial](python.md) and run
-`amyboard.cv_out(0, 0)`, then measure CV out 1 with a multimeter -- or patch CV out 1
-to CV in 1 and read it back:
+**Fix: [upgrade your firmware](firmware.md).** Firmware from August 2026 onward
+selects the correct DAC range at every boot, on all board revisions.
+
+If you can't upgrade yet, run this once per boot before any CV output (the top of
+your `sketch.py` is a good place):
 
 ```python
 import amyboard
-amyboard.cv_out(0, 0)
-amyboard.cv_in(0)   # close to 0V: your board is fine. Close to -5V: affected.
-```
-
-**The fix** -- switch the DAC to its 10V range. The setting does not survive a power
-cycle, so run this every boot, before any CV output (the top of your `sketch.py` is a
-good place):
-
-```python
 amyboard.get_i2c().writeto_mem(88, 0x01, bytes([0x11]))
 ```
 
-> **Only run this on an affected board.** On v1.4 and earlier the same command
-> *doubles* every CV output (positive voltages slam into the +11V rail) -- the two
-> revisions use different analog output stages. Use the check above if you're not
-> sure which you have.
-
-A firmware update that handles this automatically is in the works; this page will be
-updated when it ships.
+It's safe on every revision (a no-op on v1.4-era DACs, which already power up in the
+correct range), but it does not survive a power cycle, so it must run each boot.
 
 ## Board won't boot / crashes on startup
 
