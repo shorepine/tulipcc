@@ -198,6 +198,7 @@ amy_start(amy_config);
 | `audio` | `AMY_AUDIO_IS_NONE`, `AMY_AUDIO_IS_I2S`, `AMY_AUDIO_IS_USB_GADGET`, `AMY_AUDIO_IS_MINIAUDIO`| I2S or miniaudio | Which audio interface(s) are active |
 | `write_samples_fn` | fn ptr | `NULL` | If provided, `amy_update` will call this with each new block of samples | 
 | `max_oscs` | Int | 180 | How many oscillators to support |
+| `max_buses` | Int | 4 | How many FX buses to support. No compile-time ceiling — every bus-indexed table is allocated from this at `amy_start`. Each bus costs a few KB of mix buffers even when idle, plus whatever its effects allocate once switched on |
 | `max_sequencer_tags` | Int | 256 | How many sequencer items to handle |
 | `max_voices` | Int | 64 | How many voices |
 | `max_synths` | Int | 64 | How many synths |
@@ -224,7 +225,7 @@ Hook fields in `amy_config_t`:
 | Hook | Signature | Used by | Description |
 | ---- | --------- | ------- | ----------- |
 | `amy_external_render_hook` | `uint8_t (uint16_t osc, SAMPLE *buf, uint16_t len)` | — | Custom oscillator renderer for redirecting the output waveforms on an osc-by-osc level. Return 1 if handled, in which case that osc does not contribute to the normal output. |
-| `amy_external_bus_postprocess_hook` | `void (uint8_t bus, SAMPLE *buf, uint16_t len)` | — | Custom effect processing, called at the end of each bus' effects chain (after EQ/chorus/echo/reverb), before buses are mixed to the output. `buf` is `AMY_NCHANS` sequential (non-interleaved) channel blocks of `len` `SAMPLE`s (S8.23 in `int32_t`, see above) each; modify it in place. Called every block for each bus from 0 up to the highest bus activated so far — so bus 0 is always processed, but a hook installed for bus 2 only starts firing once something (an osc assignment, a bus FX setting) has touched bus 2. |
+| `amy_external_bus_postprocess_hook` | `void (uint16_t bus, SAMPLE *buf, uint16_t len)` | — | Custom effect processing, called at the end of each bus' effects chain (after EQ/chorus/echo/reverb), before buses are mixed to the output. `buf` is `AMY_NCHANS` sequential (non-interleaved) channel blocks of `len` `SAMPLE`s (S8.23 in `int32_t`, see above) each; modify it in place. Called every block for each bus from 0 up to the highest bus activated so far — so bus 0 is always processed, but a hook installed for bus 2 only starts firing once something (an osc assignment, a bus FX setting) has touched bus 2. |
 | `amy_external_coef_hook` | `float (uint16_t channel)` | — | Provide external coefficient values (e.g. CV input). |
 | `amy_external_block_done_hook` | `void (void)` | — | Called after each audio block is rendered. |
 | `amy_external_midi_input_hook` | `void (uint8_t *bytes, uint16_t len, uint8_t is_sysex)` | — | Called when MIDI bytes are received. |
@@ -384,9 +385,9 @@ Switch kits with `amy.send(synth=10, patch=38x)`, or over MIDI with bank select 
 
 Each of the `y` buses has separate effects units.  You set their parameters with commands such as `amy.send(bus=0, reverb=1)` (or `y0h1`).
 
-The final mixdown of the buses onto the AMY output is controlled by one value per bus passed to the `volume` (`V`) command.
+The final mixdown of the buses onto the AMY output is controlled per bus by the `volume` (`V`) command: `bus=N, volume=X` (`yNVX` on the wire) sets bus N's volume, and with no `bus` it sets bus 0.
 
-Default AMY has 4 buses, 0..3.  If the bus (`y`) is not specified for one of these commands, it defaults to 0.
+Default AMY has 4 buses, 0..3.  Set `max_buses` in `amy_config_t` before `amy_start` to run as many as you have RAM for — there is no compile-time limit.  A bus number outside the configured range is rejected with a warning and treated as bus 0.  If the bus (`y`) is not specified for one of these commands, it defaults to 0.
 
 | Wire code   | C `amy_event` | Python / JS   | Type-range  | Notes                                 |
 | ------ | -------- | ---------- | ----------  | ------------------------------------- |
@@ -405,7 +406,7 @@ Default AMY has 4 buses, 0..3.  If the bus (`y`) is not specified for one of the
 | `zC`   | **TODO** | `external_midi_sync` | 0/1/2 | MIDI clock sync: 1 = the sequencer follows incoming MIDI realtime clock/start/stop (0xF8/0xFA/0xFC); 2 = AMY is the clock master, sending those messages (0xF8 at 24 PPQ from the internal tempo, 0xFA/0xFC on transport start/stop); 0 (default) = internal clock, neither follows nor sends. |
 | `N`    | `latency_ms`| `latency_ms` | uint | Sets latency in ms. default 0 (see LATENCY) |
 | `s`    | `pitch_bend` | `pitch_bend` | float | Sets the global pitch bend, by default modifying all note frequencies by (fractional) octaves up or down |
-| `V`    | `volume`| `volume` | float, float, ...  | Volume knob for each bus in the final mixdown, default 1.0 |
+| `V`    | `volume`| `volume` | float  | Volume knob for the addressed bus (`bus`/`y`, default 0) in the final mixdown, default 1.0 |
 | `g`    | `client` | `client` | uint | Client number for Alles distributed synthesis. |
 | `W`    | `external_channel` | `external_channel` | uint | External channel routing (used by Tulip for CV output). |
 | `D`    | **TODO** | `debug`  |  uint, 2-4  | 2 shows queue sample, 3 shows oscillator data, 4 shows modified oscillator. Will interrupt audio! |
