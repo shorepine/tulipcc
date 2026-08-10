@@ -34,8 +34,8 @@ num_partials start_sample stop_sample bus midi_cc midi_note_cmd cv_trigger
 patch_string mode
 ```
 
-The keys *inside* a coefficient dict (e.g. `duty={'const':…, 'mod':…}`) are a **separate**
-set — `const, note, vel, eg0, eg1, mod, bend, ext0, ext1` — not interchangeable with the
+The keys *inside* a coefficient dict (e.g. `duty={'const':…, 'mod0':…}`) are a **separate**
+set — `const, note, vel, eg0, eg1, mod0, bend, ext0, ext1, mod1` — not interchangeable with the
 kwargs above (see the LFO section). If a name isn't in the right list, it doesn't exist.
 
 > Maintainers: resync this list from `_KW_MAP_LIST` in `amy/amy/__init__.py` when AMY adds kwargs.
@@ -270,18 +270,25 @@ That whole sketch is a playable mono synth — MIDI on channel 1 drives it, no c
 
 ---
 
-## LFOs / modulation: a silent osc + `mod_source` + a `'mod'` coefficient (there is no `lfo_osc` / `'lfo0'`)
+## LFOs / modulation: a silent osc + `mod_source` + a `'mod0'` coefficient (there is no `lfo_osc` / `'lfo0'`)
 
 An LFO is just another oscillator routed into a *carrier* osc. To modulate a carrier
 parameter with it:
 
 1. Make a low-freq osc and **don't** give it `vel`/`note` — an osc used as a mod source is silent.
 2. On the carrier, route it in with **`mod_source=<lfo osc number>`** — the kwarg is `mod_source`, **not** `lfo_osc`/`lfoN_osc`.
-3. Add a **`'mod'`** entry to the *target parameter's* coefficient dict, e.g. `duty={'const': 0.5, 'mod': 0.4}` — the key is `'mod'`, **not** `'lfo0'`. Depth ≈ LFO `amp` × the `'mod'` value.
+3. Add a **`'mod0'`** entry to the *target parameter's* coefficient dict, e.g. `duty={'const': 0.5, 'mod0': 0.4}` — the key is `'mod0'`, **not** `'lfo0'`. Depth ≈ LFO `amp` × the `'mod0'` value.
+
+An osc has **two** mod slots. Pass a list to fill both — `mod_source=[lfo_a, lfo_b]` — and the
+first feeds the `'mod0'` coefficient, the second `'mod1'`. Use `mod_source=[None, lfo_b]` to set
+only the second. A bare `mod_source=N` still means slot 0, and `'mod'` is still accepted as an
+alias for `'mod0'`, so existing patches need no change.
 
 Only `amp`, `freq`, `filter_freq`, `duty`, `pan` accept coefficient dicts. The keys, in
-wire order, are: `const, note, vel, eg0, eg1, mod, bend, ext0, ext1`. (Full list:
-`amy/docs/synth.md#ctrlcoefficients`.) **Before emitting any `amy.send(...)`, check each
+wire order, are: `const, note, vel, eg0, eg1, mod0, bend, ext0, ext1, mod1`. Note `mod1` is
+**last, not next to `mod0`** — new control inputs are appended so that positional coefficient
+strings keep their meaning. That ordering is a good reason to always write dicts rather than
+vectors like `'440,1,0,0,0,0,1'`. (Full list: `amy/docs/synth.md#ctrlcoefficients`.) **Before emitting any `amy.send(...)`, check each
 kwarg is a real AMY keyword** (`_KW_MAP_LIST` in `amy/amy/__init__.py`) — don't invent ones like `lfo0_osc`.
 
 ### A "synth" is MIDI-driven: set the voice shape first, never send `note`/`vel`/`freq`
@@ -300,7 +307,7 @@ import amy
 amy.send(synth=1, num_voices=6, oscs_per_voice=2)        # osc0 = carrier, osc1 = LFO
 amy.send(synth=1, osc=1, wave=amy.SINE, freq=0.5, amp=1) # the LFO: no vel -> silent
 amy.send(synth=1, osc=0, wave=amy.PULSE,
-         duty={'const': 0.5, 'mod': 0.4}, mod_source=1)  # PWM driven by osc1
+         duty={'const': 0.5, 'mod0': 0.4}, mod_source=1)  # PWM driven by osc1
 # CC 1 -> LFO rate, 0.1..5 Hz.  CMD i%iv1f%v == amy.send(synth=%i, osc=1, freq=%v)
 amy.send(synth=1, midi_cc="1,0,0.1,5,0,i%iv1f%v")
 
@@ -312,7 +319,7 @@ No `note`/`vel`/`freq`, no `midi.add_callback` — the synth sounds from incomin
 `midi_cc` (see the section above) retunes the LFO at control rate.
 
 > Source of truth: `tulip/amyboardweb/sketches/universal_hair.py` (synth + `amy.PULSE` + `mod_source`)
-> and `sineclock.py` (`mod_source` + `freq={'const':…, 'mod':…}`); coefficient sources in
+> and `sineclock.py` (`mod_source` + `freq={'const':…, 'mod0':…}`); coefficient sources in
 > `amy/docs/synth.md` (ctrl/coefficients); wire codes `osc`→`v`, `freq`→`f`, `synth`→`i` in `_KW_MAP_LIST`.
 
 ---
@@ -337,7 +344,7 @@ amy.send(synth=1, num_voices=5, oscs_per_voice=3)
 amy.send(synth=1, osc=0, wave=amy.SAW_DOWN, pan=0.2)
 # osc 1: saw B, right, ~8 cents sharp; osc2 LFO drifts its pitch -> phasing
 amy.send(synth=1, osc=1, wave=amy.SAW_DOWN, pan=0.8,
-         freq='442,1,0,0,0,0.01,1', mod_source=2)
+         freq={'const': 442, 'note': 1, 'mod0': 0.01, 'bend': 1}, mod_source=2)
 # osc 2: slow sine LFO.  a mod_source osc is silent, so it needs NO note-on.
 amy.send(synth=1, osc=2, wave=amy.SINE, freq=0.15, amp=1)
 
@@ -425,14 +432,14 @@ amy.send(synth=1, osc=0,
 # OSCA A (osc 2) is a SAW_UP (sawtooth) wave -- the main harmonic source for this patch.
 # It also extends the `chained_osc` chain to include osc 3.
 amy.send(synth=1, osc=2, wave=amy.SAW_UP,
-         amp={'const': 1, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod': 0},
-         freq={'const': 440, 'note': 1, 'mod': 0, 'bend': 1},
+         amp={'const': 1, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod0': 0},
+         freq={'const': 440, 'note': 1, 'mod0': 0, 'bend': 1},
          mod_source=1, chained_osc=3)
 # OSC B (osc 3) is a PULSE (square/PWM) wave tuned one octave below OSC B
 amy.send(synth=1, osc=3, wave=amy.PULSE,
-         amp={'const': 0.5, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod': 0},
-         freq={'const': 220, 'note': 1, 'mod': 0, 'bend': 1},
-         duty={'const': 0.72, 'mod': 0.1},
+         amp={'const': 0.5, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod0': 0},
+         freq={'const': 220, 'note': 1, 'mod0': 0, 'bend': 1},
+         duty={'const': 0.72, 'mod0': 0.1},
          mod_source=1)
 ```
 

@@ -1085,7 +1085,8 @@ function get_wire_commands_for_juno_patch(patch) {
         }
       } else if (event.osc >= 0) {
         // Non-CTL, non-LFO osc, don't assume what order they come in.
-        const parsedModSource = Number(event.mod_source);
+        // mod_source can name two oscs ("1,2"); the LFO display tracks the first.
+        const parsedModSource = Number(String(event.mod_source).split(',')[0]);
         if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
           mod_source_osc = parsedModSource;  // Should never change the original value.
         }
