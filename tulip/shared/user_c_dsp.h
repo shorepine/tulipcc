@@ -23,7 +23,12 @@
 #define USER_C_DSP_KIND_OSC 1
 
 // Registered as amy_config.amy_external_bus_postprocess_hook (SAMPLE == int32_t s8.23).
-void tulip_bus_postprocess_hook(uint8_t bus, int32_t *buf, uint16_t len);
+// Bus count is an AMY runtime setting (amy_config.max_buses), hence uint16_t.
+void tulip_bus_postprocess_hook(uint16_t bus, int32_t *buf, uint16_t len);
+
+// Effect-to-bus enables are a bitmask, so this is the ceiling a user effect
+// can be routed to no matter how large amy_config.max_buses is.
+#define USER_C_DSP_MAX_BUSES 32
 
 // Registered as amy_config.amy_external_render_hook (desktop; ESP chains via CV).
 uint8_t tulip_user_render_hook(uint16_t osc, int32_t *buf, uint16_t len);
