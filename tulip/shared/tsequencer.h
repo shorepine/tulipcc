@@ -14,16 +14,13 @@
 extern uint32_t sequencer_tick_count;
 #define AMY_SEQUENCER_PPQ 48
 #endif
-extern mp_obj_t sequencer_callbacks[SEQUENCER_SLOTS];
 extern uint32_t sequencer_period[SEQUENCER_SLOTS];
 extern uint32_t sequencer_tick[SEQUENCER_SLOTS];
 
-extern mp_obj_t defer_callbacks[DEFER_SLOTS];
 // 64-bit absolute deadline (get_time_ms()). This was uint32_t off the 32-bit
 // tick, so a defer straddling the 49.7-day rollover either fired instantly or
 // waited another 49.7 days.
 extern int64_t defer_sysclock[DEFER_SLOTS];
-extern mp_obj_t defer_args[DEFER_SLOTS];
 
 
 void tsequencer_init();
