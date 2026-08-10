@@ -116,6 +116,21 @@ So you can do:
 ```
 AMY infers the number of oscs needed for the patch from the cumulated commands. If you store a new patch over an old one, that old memory is freed and re-allocated. (We rely on `malloc` for all of this.)
 
+#### Loading DX7 sysex (.SYX) files as user patches
+
+`amy.fm` converts DX7 patches straight from sysex data into a user patch, on any platform AMY's Python runs on (including Tulip and AMYboard). Hand `fm.load_syx()` the bytes of a `.SYX` file — the common 32-voice bank sysex, a single-voice sysex, or raw packed (128-byte) / unpacked (155-byte) voice data — or a base64 string of any of those, which is handy for pasting a patch into a self-contained script or AMYboard sketch:
+
+```python
+>>> from amy import fm
+>>> syx = open('ROM1A.SYX', 'rb').read()
+>>> fm.syx_names(syx)                             # list the 32 voice names in the bank
+['BRASS   1 ', 'BRASS   2 ', ...]
+>>> fm.load_syx(syx, voice=10, patch=1024)        # store voice 10 as user patch 1024
+'E.PIANO 1 '
+>>> amy.send(synth=1, num_voices=6, patch=1024)   # and play it
+>>> amy.send(synth=1, note=60, vel=1)
+```
+
 You can do something very similar directly into a synth, provided it has been initialized with the correct number of oscs.  So we could get
 the same final synth as above with these commands:
 ```python
