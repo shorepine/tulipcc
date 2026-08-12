@@ -27,19 +27,21 @@ song = umidiparser.MidiFile(song_fn)
 # Parse the whole file once into (amy_tick, note, velocity) triples.
 #
 # The song is kept in AMY sequencer TICKS, not milliseconds. A MIDI file times
-# events in "miditicks", its own subdivision of a quarter note, so the
-# conversion to AMY's 48-ticks-per-quarter grid is a pure musical ratio with no
-# tempo term in it at all:
+# events in "miditicks", its own subdivision of a quarter note, so converting
+# to AMY's 48-ticks-per-quarter grid is a plain integer divide -- Methodical.MID
+# is 96 PPQ, so it is a divide by 2, with no tempo term and no rounding.
 #
-#     amy_tick = miditicks * AMY_SEQUENCER_PPQ / miditicks_per_quarter
+# Nothing is lost to that divide: the file is quantized to 32nd notes (3107 of
+# its 3122 note events sit exactly on a 12-miditick boundary) and exactly one
+# event lands on an odd miditick, where the truncation moves it 5 ms earlier.
 #
-# That is the whole reason to work in ticks. Speed is then AMY's business: the
-# song plays at whatever `amy.send(tempo=...)` says, and changing tempo mid-song
-# stretches it correctly. Converting to ms here instead would bake one tempo
-# into every timestamp, and every later tempo change would desynchronise the
-# song from anything else AMY is sequencing.
+# Working in ticks is what makes tempo a real control: ticks carry musical
+# position and AMY's tempo decides the speed, so `amy.send(tempo=...)` stretches
+# the song correctly. Converting to ms here instead would bake one tempo into
+# every timestamp and desynchronise the song from anything else AMY sequences.
 AMY_PPQ = amy.AMY_SEQUENCER_PPQ    # 48
-mtpq = song.miditicks_per_quarter
+mtpq = song.miditicks_per_quarter  # 96 for Methodical.MID
+MIDITICKS_PER_AMY_TICK = mtpq // AMY_PPQ   # 2
 
 events = []
 miditicks = 0
@@ -57,16 +59,18 @@ for event in song:
     if event.status == umidiparser.NOTE_ON or event.status == umidiparser.NOTE_OFF:
         # Methodical.MID encodes all note-offs as vel=0 note-ons; keep that.
         vel = 0 if event.status == umidiparser.NOTE_OFF else event.velocity / 256.0
-        # Round to nearest tick rather than truncating: at 48 PPQ a tick is a
-        # 32nd-note triplet, so consistently rounding down would drag the beat.
-        events.append(((miditicks * AMY_PPQ + mtpq // 2) // mtpq,
+        events.append((miditicks // MIDITICKS_PER_AMY_TICK,
                        event.note + 12, vel))
 
-# Play at the file's own tempo by default, so this sounds like the recording
-# rather than like whatever AMY happened to be set to. Everything above is in
-# ticks, so this is now a single knob: set a different tempo here, or send
-# `amy.send(tempo=...)` while it plays, and the song follows.
-amy.send(tempo=60000000.0 / song_tempo_us)   # us per quarter -> BPM
+# Setting the tempo is what preserves the file's original timing: pick the BPM
+# that makes one AMY tick last exactly MIDITICKS_PER_AMY_TICK miditicks, and the
+# wall-clock schedule comes out identical to the file by construction. Here that
+# is 120 BPM -- an AMY quarter (48 ticks) spans 96 miditicks, one file quarter.
+#
+# It is also the only knob now: change it here, or send `amy.send(tempo=...)`
+# while the song plays, and everything retimes together.
+amy.send(tempo=60000000.0 * mtpq
+               / (song_tempo_us * AMY_PPQ * MIDITICKS_PER_AMY_TICK))
 
 # Schedule notes ahead using AMY's `ticks=` parameter instead of dispatching
 # them live from loop(). AMY's delta queue plays events with sample-accurate
