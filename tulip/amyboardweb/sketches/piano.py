@@ -4,5 +4,5 @@
 
 import amy
 amy.send(synth=1,patch=256,num_voices=6)
-def loop():
+def loop(tick):
     pass

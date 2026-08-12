@@ -115,7 +115,7 @@ def _schedule_up_to(target_tick):
 # with plenty of lead time.
 _schedule_up_to(START_TICK + BUFFER_TICKS)
 
-def loop():
+def loop(tick):
     # Once every event has been queued, AMY is handling the rest on its own.
     if _next_idx >= len(events):
         return

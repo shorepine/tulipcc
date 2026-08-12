@@ -1365,7 +1365,7 @@ OUTPUT CONTRACT (strict):
 - Respond with ONLY the contents of sketch.py as plain MicroPython source.
 - No Markdown, no code fences, no explanation before or after the code.
 - Begin with comment lines, including one line of the form: # DESCRIPTION: <short summary>
-- You MUST define a top-level loop(step) function. It may just `pass`. loop(step) is called once per 32nd note while the sketch runs, starting on a bar downbeat; use it for sequencing, timing, and reading inputs. step is the global 32nd-note index on the sequencer's bar-locked grid: step % 32 == 0 is always a downbeat, 8 steps = one beat, and it is the same grid AMYSequence events fire on, so derive all rhythm from step (never keep your own call counter and never do BPM-to-milliseconds math).
+- You MUST define a top-level loop(tick) function taking exactly one argument. It may just `pass`. A zero-argument loop() is an ERROR and the sketch will not run. loop(tick) is called once per 32nd note while the sketch runs, starting on a bar downbeat; use it for sequencing, timing, and reading inputs. tick is AMY's absolute sequencer tick -- the same value amy.send(ticks=...) schedules against, so you can pass it straight back (ticks=tick + 48 is one beat later) with no clock read and no conversion. For 32nd-note counting divide it: step = tick // amyboard.TICKS_PER_STEP (import amyboard), where step % 32 == 0 is always a downbeat, 8 steps = one beat, and it is the same grid AMYSequence events fire on. Derive all rhythm from tick/step (never keep your own call counter and never do BPM-to-milliseconds math).
 - Top-level code runs once at boot (set up synths, effects, callbacks there).
 - Only use the APIs documented below. Do NOT invent functions, modules, or parameters.
 - Keep sketches self-contained and runnable in the web simulator: no network, no filesystem, no SD card, no long blocking loops, and never call time.sleep() inside loop().
@@ -1410,9 +1410,9 @@ THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe
 
 OTHER MODULES
 - import midi: midi.add_callback(fn) registers fn(msg) for incoming MIDI. msg is a 3-byte sequence [status, data1, data2]; note-on is (status & 0xF0)==0x90 with vel>0, note-off is 0x80 (or 0x90 with vel==0).
-- import tulip: tulip.amy_ticks_ms() returns a millisecond clock. Only for non-musical timing (UI debounce etc.) -- musical timing should always come from loop(step).
+- import tulip: tulip.amy_ticks_ms() returns a millisecond clock. Only for non-musical timing (UI debounce etc.) -- musical timing should always come from loop(tick).
 - from music import Chord, Key: Chord("C:maj").annotations is a list of semitone offsets; Key("A:min") for scales. Root note names are 'C','C#','D','D#','E','F','F#','G','G#','A','A#','B'.
-- import sequencer: sequencer.tempo(bpm) sets the sketch tempo (the loop(step) grid follows it).
+- import sequencer: sequencer.tempo(bpm) sets the sketch tempo (the loop(tick) grid follows it).
 - Standard library available: random, math.
 
 CONVENTIONS
@@ -1426,12 +1426,12 @@ EXAMPLES (each is a complete, valid sketch.py)
 import amy
 amy.send(synth=1, patch=256, num_voices=6)
 
-def loop(step):
+def loop(tick):
     pass
 
 # AMYboard Sketch
 # DESCRIPTION: Each MIDI key triggers a major chord rooted at that key.
-import amy, midi
+import amy, midi, amyboard
 from music import Chord
 
 amy.send(synth=1, grab_midi_notes=0)
@@ -1461,7 +1461,7 @@ def midi_cb(m):
 
 midi.add_callback(midi_cb)
 
-def loop(step):
+def loop(tick):
     pass
 
 # AMYboard Sketch
@@ -1487,8 +1487,9 @@ def midi_cb(m):
 
 midi.add_callback(midi_cb)
 
-def loop(step):
+def loop(tick):
     global arp_idx, last_played
+    step = tick // amyboard.TICKS_PER_STEP
     if step % 4:            # an 8th note is 4 steps on the 32nd-note grid
         return
     if last_played is not None:
@@ -1510,7 +1511,7 @@ import amy, amyboard
 
 amy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.25}, filter_type=amy.FILTER_LPF24)
 
-def loop(step):
+def loop(tick):
     r = (amyboard.cv_in(1) + 10.0) / 5.0  # map CV2 to roughly 0-4
     amy.send(synth=1, resonance=r)
 """
@@ -1543,6 +1544,7 @@ def _validate_sketch(code: str) -> tuple[bool, str]:
         return False, f"syntax error: {exc}"
     imports_amy = False
     defines_loop = False
+    loop_arity_ok = False
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             if any(alias.name.split(".")[0] in ("amy", "amyboard") for alias in node.names):
@@ -1552,10 +1554,16 @@ def _validate_sketch(code: str) -> tuple[bool, str]:
                 imports_amy = True
         elif isinstance(node, ast.FunctionDef) and node.name == "loop":
             defines_loop = True
+            # The sketch runner calls loop(tick) unconditionally, so a
+            # zero-argument loop() is a hard error at run time. Catch it here
+            # rather than letting it reach a board and fail every 32nd note.
+            loop_arity_ok = len(node.args.args) == 1 or node.args.vararg is not None
     if not imports_amy:
         return False, "does not import amy or amyboard"
     if not defines_loop:
         return False, "does not define a loop() function"
+    if not loop_arity_ok:
+        return False, "loop() must take exactly one argument: def loop(tick)"
     return True, ""
 
 

@@ -28,50 +28,50 @@ def tags(code: str) -> list[str]:
 
 
 # --- nothing hardware-y ---
-check("plain synth sketch has no tags", tags("import amy\namy.send(synth=1, patch=256)\ndef loop():\n    pass\n") == [])
+check("plain synth sketch has no tags", tags("import amy\namy.send(synth=1, patch=256)\ndef loop(tick):\n    pass\n") == [])
 check("empty code has no tags", tags("") == [])
-check("comment mentions don't count", tags("# use the display and encoder for this\nimport amy\ndef loop():\n    pass\n") == [])
-check("description line doesn't count", tags("# DESCRIPTION: encoder controls the display brightness\nimport amy\ndef loop():\n    pass\n") == [])
+check("comment mentions don't count", tags("# use the display and encoder for this\nimport amy\ndef loop(tick):\n    pass\n") == [])
+check("description line doesn't count", tags("# DESCRIPTION: encoder controls the display brightness\nimport amy\ndef loop(tick):\n    pass\n") == [])
 
 # --- display ---
 check("init_display", tags("import amyboard\namyboard.init_display()\namyboard.display.text('hi',0,0,255)\namyboard.display_refresh()") == ["display"])
 check("display.fill_rect", tags("import amyboard\namyboard.display.fill_rect(0,0,10,10,255)\namyboard.display.show()") == ["display"])
-check("draw_waveform helper", tags("import amyboard\ndef loop():\n    amyboard.draw_waveform()") == ["display"])
-check("set_display_rotation", tags("import amyboard\namyboard.set_display_rotation(180)\ndef loop(step):\n    pass\n") == ["display"])
+check("draw_waveform helper", tags("import amyboard\ndef loop(tick):\n    amyboard.draw_waveform()") == ["display"])
+check("set_display_rotation", tags("import amyboard\namyboard.set_display_rotation(180)\ndef loop(tick):\n    pass\n") == ["display"])
 
 # --- encoder (unified API) ---
-check("amyboard.encoder()", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    v = enc.read(0)") == ["encoder"])
-check("legacy read_encoder", tags("import amyboard\ndef loop():\n    v = amyboard.read_encoder()") == ["encoder"])
-check("legacy m5_8encoder module", "8encoder" in tags("import m5_8encoder\ndef loop():\n    pass"))
+check("amyboard.encoder()", tags("import amyboard\nenc = amyboard.encoder()\ndef loop(tick):\n    v = enc.read(0)") == ["encoder"])
+check("legacy read_encoder", tags("import amyboard\ndef loop(tick):\n    v = amyboard.read_encoder()") == ["encoder"])
+check("legacy m5_8encoder module", "8encoder" in tags("import m5_8encoder\ndef loop(tick):\n    pass"))
 
 # --- encoder count evidence ---
-check("index 1-3 means quad", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    a = enc.read(0)\n    b = enc.read(3)") == ["encoder", "quad-encoder"])
-check("range(4) loop means quad", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    for i in range(4):\n        enc.read(i)") == ["encoder", "quad-encoder"])
-check("forced adafruit_quad means quad", tags("import amyboard\nenc = amyboard.encoder(type='adafruit_quad')\ndef loop():\n    pass") == ["encoder", "quad-encoder"])
-check("index 4-7 means 8encoder", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    enc.led(7, 255, 0, 0)") == ["encoder", "8encoder"])
-check("range(8) loop means 8encoder", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    for i in range(8):\n        enc.read(i)") == ["encoder", "8encoder"])
-check("forced m5stack means 8encoder", tags("import amyboard\nenc = amyboard.encoder(type=\"m5stack\")\ndef loop():\n    pass") == ["encoder", "8encoder"])
-check("switch() means 8encoder", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    if enc.switch():\n        pass") == ["encoder", "8encoder"])
-check("8 evidence beats 4 evidence", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    enc.read(2)\n    enc.read(6)") == ["encoder", "8encoder"])
-check("adaptive enc.encoders loop stays plain #encoder", tags("import amyboard\nenc = amyboard.encoder()\ndef loop():\n    for i in range(enc.encoders):\n        enc.read(i)") == ["encoder"])
+check("index 1-3 means quad", tags("import amyboard\nenc = amyboard.encoder()\ndef loop(tick):\n    a = enc.read(0)\n    b = enc.read(3)") == ["encoder", "quad-encoder"])
+check("range(4) loop means quad", tags("import amyboard\nenc = amyboard.encoder()\ndef loop(tick):\n    for i in range(4):\n        enc.read(i)") == ["encoder", "quad-encoder"])
+check("forced adafruit_quad means quad", tags("import amyboard\nenc = amyboard.encoder(type='adafruit_quad')\ndef loop(tick):\n    pass") == ["encoder", "quad-encoder"])
+check("index 4-7 means 8encoder", tags("import amyboard\nenc = amyboard.encoder()\ndef loop(tick):\n    enc.led(7, 255, 0, 0)") == ["encoder", "8encoder"])
+check("range(8) loop means 8encoder", tags("import amyboard\nenc = amyboard.encoder()\ndef loop(tick):\n    for i in range(8):\n        enc.read(i)") == ["encoder", "8encoder"])
+check("forced m5stack means 8encoder", tags("import amyboard\nenc = amyboard.encoder(type=\"m5stack\")\ndef loop(tick):\n    pass") == ["encoder", "8encoder"])
+check("switch() means 8encoder", tags("import amyboard\nenc = amyboard.encoder()\ndef loop(tick):\n    if enc.switch():\n        pass") == ["encoder", "8encoder"])
+check("8 evidence beats 4 evidence", tags("import amyboard\nenc = amyboard.encoder()\ndef loop(tick):\n    enc.read(2)\n    enc.read(6)") == ["encoder", "8encoder"])
+check("adaptive enc.encoders loop stays plain #encoder", tags("import amyboard\nenc = amyboard.encoder()\ndef loop(tick):\n    for i in range(enc.encoders):\n        enc.read(i)") == ["encoder"])
 
 # --- 8angle ---
-check("m58angle module", tags("import m58angle\ndef loop():\n    v = m58angle.get(0)") == ["8angle"])
+check("m58angle module", tags("import m58angle\ndef loop(tick):\n    v = m58angle.get(0)") == ["8angle"])
 
 # --- cv ---
-check("cv_in", tags("import amy, amyboard\ndef loop():\n    r = amyboard.cv_in(1)") == ["cv"])
-check("cv_out", tags("import amy, amyboard\ndef loop():\n    amyboard.cv_out(5.0, channel=0)") == ["cv"])
-check("set_cv_out", tags("import amy, amyboard\namyboard.set_cv_out(0, synth=2)\ndef loop():\n    pass") == ["cv"])
-check("ext0 modulation routing", tags("import amy\namy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.25})\ndef loop():\n    pass") == ["cv"])
-check("ext1 modulation routing", tags('import amy\namy.send(synth=1, amp={"const": 1, "ext1": 0.5})\ndef loop():\n    pass') == ["cv"])
+check("cv_in", tags("import amy, amyboard\ndef loop(tick):\n    r = amyboard.cv_in(1)") == ["cv"])
+check("cv_out", tags("import amy, amyboard\ndef loop(tick):\n    amyboard.cv_out(5.0, channel=0)") == ["cv"])
+check("set_cv_out", tags("import amy, amyboard\namyboard.set_cv_out(0, synth=2)\ndef loop(tick):\n    pass") == ["cv"])
+check("ext0 modulation routing", tags("import amy\namy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.25})\ndef loop(tick):\n    pass") == ["cv"])
+check("ext1 modulation routing", tags('import amy\namy.send(synth=1, amp={"const": 1, "ext1": 0.5})\ndef loop(tick):\n    pass') == ["cv"])
 
 # --- audio-in ---
-check("AUDIO_IN0 wave", tags("import amy\namy.send(synth=18, osc=0, wave=amy.AUDIO_IN0, amp=10)\ndef loop():\n    pass") == ["audio-in"])
-check("start_sample from audio-in bus", tags("import amy\namy.start_sample(preset=30, max_frames=44100, bus=2, midinote=60)\ndef loop():\n    pass") == ["audio-in"])
-check("start_sample from another bus is not audio-in", tags("import amy\namy.start_sample(preset=30, max_frames=44100, bus=0, midinote=60)\ndef loop():\n    pass") == [])
+check("AUDIO_IN0 wave", tags("import amy\namy.send(synth=18, osc=0, wave=amy.AUDIO_IN0, amp=10)\ndef loop(tick):\n    pass") == ["audio-in"])
+check("start_sample from audio-in bus", tags("import amy\namy.start_sample(preset=30, max_frames=44100, bus=2, midinote=60)\ndef loop(tick):\n    pass") == ["audio-in"])
+check("start_sample from another bus is not audio-in", tags("import amy\namy.start_sample(preset=30, max_frames=44100, bus=0, midinote=60)\ndef loop(tick):\n    pass") == [])
 
 # --- combinations ---
-check("display + encoder", tags("import amyboard\namyboard.init_display()\nenc = amyboard.encoder()\ndef loop():\n    amyboard.display.text(str(enc.read(0)),0,0,255)\n    amyboard.display.show()") == ["display", "encoder"])
+check("display + encoder", tags("import amyboard\namyboard.init_display()\nenc = amyboard.encoder()\ndef loop(tick):\n    amyboard.display.text(str(enc.read(0)),0,0,255)\n    amyboard.display.show()") == ["display", "encoder"])
 
 # --- against the bundled example sketches ---
 SKETCHES = Path(__file__).resolve().parents[1] / "amyboardweb" / "sketches"

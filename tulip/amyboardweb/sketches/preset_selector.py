@@ -42,7 +42,7 @@ def load_preset(idx):
 
 draw()
 
-def loop():
+def loop(tick):
     global current_index, prev_btn
     raw = enc_offset - amyboard.read_encoder(seesaw_dev=SEESAW)
     idx = raw % NUM_PRESETS

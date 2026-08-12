@@ -115,7 +115,7 @@ def get_chord_bar():
     """Which bar within the current chord (0-3)."""
     return (step % STEPS_PER_CHORD) // STEPS_PER_BAR
 
-def loop():
+def loop(tick):
     global step, bars_played, current_bass_pattern, current_piano_pattern, prog, chords
     step += 1
     if step < 5:

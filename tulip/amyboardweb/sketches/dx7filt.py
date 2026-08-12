@@ -1,7 +1,7 @@
 # AMYboard Sketch
 # Top-level code runs once at boot. loop() is called every 32nd note.
 # DESCRIPTION: A DX7 like patch with controllable filter
-def loop():
+def loop(tick):
     pass
 
 # Do not edit. Set automatically by the knobs on AMYboard Online.

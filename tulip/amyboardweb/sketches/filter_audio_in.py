@@ -18,5 +18,5 @@ amy.send(synth=18, osc=1, vel=1, note=60)
 amy.send(synth=18, osc=0, filter_freq={'const': 300, 'ext0': 0.25}, filter_type=amy.FILTER_LPF24)
 amy.send(synth=18, osc=1, filter_freq={'const': 300, 'ext0': 0.25}, filter_type=amy.FILTER_LPF24)
 
-def loop():
+def loop(tick):
     pass

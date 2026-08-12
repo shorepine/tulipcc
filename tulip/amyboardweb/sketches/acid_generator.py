@@ -137,7 +137,7 @@ def is_16th_boundary():
     """True on every other 32nd note (= 16th note grid)."""
     return step % 2 == 0
 
-def loop():
+def loop(tick):
     global step, bar_count, bass_pattern, prev_note
     global kick_pat, snare_pat, hat_pat, ohat_pat, clap_pat, root
     step += 1

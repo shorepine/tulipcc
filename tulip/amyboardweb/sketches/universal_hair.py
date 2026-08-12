@@ -38,7 +38,7 @@ def rand_perm(n):
 
 tick = 0
 
-def loop():
+def loop(_tick):   # sketch keeps its own `tick` counter below
     global current_notes, target_notes, pan_values, root, root_offsets, next_notes_to_change
     global tick
     if tick >= 40:

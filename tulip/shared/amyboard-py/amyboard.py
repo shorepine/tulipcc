@@ -5,6 +5,18 @@ from tulip import wifi, upgrade
 i2c = None
 display = None # Display instance (unified interface for all display types)
 
+# A sketch's loop(tick) is called every 32nd note and receives the AMY
+# sequencer's absolute tick.  This is the tick span of one of those calls, so
+# `step = tick // amyboard.TICKS_PER_STEP` recovers the bar-locked 32nd-note
+# index (step % 32 == 0 on a downbeat).  Derived from AMY's PPQ rather than
+# hardcoded: 4 quarter notes per bar / 32 steps per bar * PPQ = 6 at 48 PPQ.
+TICKS_PER_STEP = int((4.0 / 32.0) * amy.AMY_SEQUENCER_PPQ)
+
+# Consecutive loop() exceptions before the sketch loop gives up. It fires
+# every 32nd note, so a persistently broken loop() would otherwise flood the
+# console and starve the REPL.
+_MAX_LOOP_FAILS = 8
+
 # Web encoder emulation state (used when running on AMYBOARD_WEB)
 _web_encoder_pos = 0      # cumulative encoder position
 _web_encoder_button = False  # current button state
@@ -207,12 +219,13 @@ class Display:
 
 DEFAULT_SKETCH_SOURCE = """\
 # AMYboard Sketch
-# Code put here runs first, then loop(step) is called every 32nd note,
-# starting on a bar downbeat. step counts 32nd notes on the sequencer's
-# bar-locked grid, so step % 32 == 0 is always a downbeat.
+# Code put here runs first, then loop(tick) is called every 32nd note,
+# starting on a bar downbeat. tick is AMY's sequencer tick, so it can go
+# straight into amy.send(ticks=...). For 32nd-note counting divide it:
+# step = tick // amyboard.TICKS_PER_STEP  (step % 32 == 0 on a downbeat).
 import amyboard, amy
 
-def loop(step):
+def loop(tick):
     pass
 
 # Do not edit. Set automatically by the knobs on AMYboard Online.
@@ -671,24 +684,35 @@ def run_sketch():
 def _start_sketch_loop(loop_fn):
     """Schedule loop_fn via TulipSequence (every 32nd note).
 
-    Sketch loops ride the AMY sequencer's absolute tick count -- the same
-    clock AMYSequence events fire on. The first call is held until a bar
-    boundary (4 beats), so a sketch that keeps its own step counter starts
-    on the downbeat, in phase with any AMY-sequenced patterns. A sketch can
-    instead declare loop(step): step is the global 32nd-note index on that
-    bar-locked grid (step % 32 == 0 is always a downbeat), which stays in
-    phase even if a callback is ever dropped.
+    A sketch MUST declare loop(tick).  tick is the AMY sequencer's absolute
+    tick count -- the same clock AMYSequence events and `ticks=` scheduling
+    use, so it can be passed straight back to amy.send(ticks=...) without
+    any conversion or clock read.  The first call is held until a bar
+    boundary (4 beats), so a sketch starts on the downbeat in phase with any
+    AMY-sequenced patterns.
+
+    For 32nd-note counting, divide: `step = tick // amyboard.TICKS_PER_STEP`
+    gives the old bar-locked step index, where step % 32 == 0 is a downbeat.
+
+    The argument is not optional.  This used to accept a zero-argument
+    loop() as well, deciding which by calling loop(step) and catching
+    TypeError -- but MicroPython binds arguments before running the body
+    (objfun.c: INIT_CODESTATE precedes mp_execute_bytecode), so an arity
+    error and a TypeError raised *inside* a one-argument loop are
+    indistinguishable at the call site.  A sketch whose first loop() happened
+    to raise TypeError was permanently misfiled as zero-argument and then
+    failed on every subsequent call.  Requiring the argument removes the
+    guess rather than making it cleverer.
     """
     import sequencer
     global _sketch_seq
-    ticks_per_step = int((4.0 / 32.0) * sequencer.PPQ)  # one 32nd note
     ticks_per_bar = 4 * sequencer.PPQ
     _busy = False
     _started = False
-    _takes_step = None
+    _fails = 0
 
     def _guarded_loop(tick):
-        nonlocal _busy, _started, _takes_step
+        nonlocal _busy, _started, _fails
         if _busy:
             return
         _busy = True
@@ -697,23 +721,27 @@ def _start_sketch_loop(loop_fn):
                 if tick % ticks_per_bar:
                     return  # hold loop() until the next downbeat
                 _started = True
-            step = tick // ticks_per_step
-            if _takes_step is None:
-                # First call decides the signature: prefer loop(step), fall
-                # back to loop() for sketches that don't take an argument.
-                try:
-                    loop_fn(step)
-                    _takes_step = True
-                except TypeError:
-                    _takes_step = False
-                    loop_fn()
-            elif _takes_step:
-                loop_fn(step)
-            else:
-                loop_fn()
+            loop_fn(tick)
+            _fails = 0
         except Exception as e:
+            # Uniform for every exception type -- deliberately no special
+            # case for TypeError.  An un-migrated `def loop():` raises one,
+            # but so does a real bug inside a correct loop(tick), and (see
+            # above) the two are indistinguishable here.  The traceback
+            # already says "function takes 0 positional arguments but 1 were
+            # given" when that is what happened.
+            _fails += 1
             print("sketch.loop() error:")
             sys.print_exception(e)
+            if _fails == _MAX_LOOP_FAILS:  # exactly once, not on every later call
+                # Failing every 32nd note floods the console and starves the
+                # REPL. Nothing has succeeded in _MAX_LOOP_FAILS calls, so
+                # stop rather than keep retrying.
+                print("sketch.loop() failed %d times in a row -- stopping the "
+                      "sketch loop. If loop() takes no argument, it now must: "
+                      "`def loop(tick):` (step = tick // amyboard.TICKS_PER_STEP)"
+                      % _fails)
+                stop_sketch()
         finally:
             _busy = False
 
