@@ -171,7 +171,7 @@ chord_iterator = iter(chords)
 next_chord = next(chord_iterator)
 base_time = amy.millis()
 
-def loop():
+def loop(tick):
     global base_time, next_chord, chord_iterator
     time_ms = amy.millis()
     if next_chord and time_ms >= base_time + next_chord['start_time']:

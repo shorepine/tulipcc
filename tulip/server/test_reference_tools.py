@@ -108,7 +108,7 @@ check("cache: string content tolerated", _count_cc(_msgs_str) == 0)
 # --- agentic loop control flow (mocked Anthropic client, no network) ---
 import types  # noqa: E402
 
-_VALID_SKETCH = "import amy\namy.send(synth=1, patch=0, num_voices=1)\ndef loop():\n    pass\n"
+_VALID_SKETCH = "import amy\namy.send(synth=1, patch=0, num_voices=1)\ndef loop(tick):\n    pass\n"
 
 
 def _ns(**kw):

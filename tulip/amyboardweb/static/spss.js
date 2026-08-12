@@ -92,7 +92,7 @@ var AMYBOARD_DEFAULT_SKETCH =
   "# starting on a bar downbeat. step counts 32nd notes on the sequencer's\n" +
   "# bar-locked grid, so step % 32 == 0 is always a downbeat.\n" +
   "import amyboard, amy\n\n" +
-  "def loop(step):\n    pass\n\n" +
+  "def loop(tick):\n    pass\n\n" +
   "# Do not edit. Set automatically by the knobs on AMYboard Online.\n" +
   "_auto_generated_knobs = \"\"\"\n\"\"\"\n";
 function _get_default_sketch() {
@@ -5893,7 +5893,7 @@ async function _reset_amyboard_send_and_cleanup() {
     console.log('reset: zP factory_reset sent');
     await sleep_ms(2000);
     // Set JS state to defaults.
-    var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop(step) is called every 32nd note,\n# starting on a bar downbeat. step counts 32nd notes on the sequencer's\n# bar-locked grid, so step % 32 == 0 is always a downbeat.\nimport amyboard, amy\n\ndef loop(step):\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
+    var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop(tick) is called every 32nd note,\n# starting on a bar downbeat. tick is AMY's sequencer tick, so it can go\n# straight into amy.send(ticks=...). For 32nd-note counting divide it:\n# step = tick // amyboard.TICKS_PER_STEP  (step % 32 == 0 on a downbeat).\nimport amyboard, amy\n\ndef loop(tick):\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
     // SYNC 2: clear the knob log so a later Write doesn't re-emit the old
     // session's knobs (the default sketch has an empty knobs block).
     if (window.knob_log && typeof window.knob_log.clear === 'function') window.knob_log.clear();

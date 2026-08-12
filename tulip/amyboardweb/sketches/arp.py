@@ -32,7 +32,7 @@ def midi_cb(m):
 midi.add_callback(midi_cb)
 
 
-def loop():
+def loop(tick):
     global arp_idx, last_played, last_step_ms
     now = tulip.amy_ticks_ms()
     if now - last_step_ms < STEP_MS:

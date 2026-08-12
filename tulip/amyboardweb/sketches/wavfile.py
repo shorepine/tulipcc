@@ -13,7 +13,7 @@ amy.load_sample(WAV_PATH, preset=PRESET)
 amy.send(synth=1, oscs_per_voice=1, num_voices=4, wave=amy.PCM, preset=PRESET)
 
 
-def loop():
+def loop(tick):
     pass
 
 # Do not edit. Set automatically by the knobs on AMYboard Online.

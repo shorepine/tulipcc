@@ -22,5 +22,5 @@ amy.send(synth=1, osc=0, wave=amy.ALGO, algorithm=5, algo_source=',,4,3,2,1', bp
 
 count = 0
 
-def loop():
+def loop(tick):
 	pass

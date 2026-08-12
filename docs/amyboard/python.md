@@ -178,7 +178,7 @@ amy.send(synth=10, patch=384)                 # Channel 10: TR-808 GM drum kit (
 # Set CV out 1 to 0V on startup
 amyboard.cv_out(0.0, channel=0)
 
-def loop():
+def loop(tick):
     pass
 ```
 

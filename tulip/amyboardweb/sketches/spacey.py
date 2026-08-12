@@ -1,7 +1,7 @@
 # AMYboard Sketch
 # Code put here runs first, then loop() is called every 32nd note.
 # DESCRIPTION: A spacey-like patch with reverb and echo
-def loop():
+def loop(tick):
     pass
 
 # Do not edit. Set automatically by the knobs on AMYboard Online.

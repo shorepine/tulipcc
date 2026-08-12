@@ -43,7 +43,7 @@ def midi_cb(m):
 midi.add_callback(midi_cb)
 
 
-def loop():
+def loop(tick):
     pass
 
 # Do not edit. Set automatically by the knobs on AMYboard Online.

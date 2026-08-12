@@ -20,5 +20,5 @@ amy.send(synth=18, osc=1, wave=amy.AUDIO_IN1, pan=1, amp=10)
 amy.send(synth=18, osc=0, vel=1, note=60)
 amy.send(synth=18, osc=1, vel=1, note=60)
 
-def loop():
+def loop(tick):
     pass

@@ -28,7 +28,7 @@ amy.send(synth=1, num_voices=6, patch=1024)
 BELLS = [52, 59, 64, 68, 71, 68, 64, 59]
 count = 0
 
-def loop():
+def loop(tick):
     global count
     if count % 16 == 0:
         amy.send(synth=1, note=BELLS[(count // 16) % len(BELLS)], vel=0.8)

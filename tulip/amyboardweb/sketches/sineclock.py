@@ -64,7 +64,7 @@ vel = 0.1
 start_sine_clock(hour=hour, minute=minute, second=second, vel=vel)
 
 
-def loop():
+def loop(tick):
     pass
 
 # Do not edit. Set automatically by the knobs on AMYboard Online.

@@ -57,7 +57,7 @@ tabla_pattern = [6, 14, 22, 30]          # percussion answers on the "e"s
 
 step = -1
 
-def loop():
+def loop(tick):
     global step, kit_idx
     step += 1
     bar_step = step % STEPS_PER_BAR

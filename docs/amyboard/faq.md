@@ -119,7 +119,7 @@ Some panels (especially off-brand ones) come up sideways. For SH1107 you can fix
 amyboard.set_display_rotation(90)   # or 180 / 270
 ```
 
-Put the call anywhere **above** the `def loop():` line -- everything above it runs once at startup. Rotation only works on SH1107 panels (on the SSD1327 and in the web simulator it's a harmless no-op).
+Put the call anywhere **above** the `def loop(tick):` line -- everything above it runs once at startup. Rotation only works on SH1107 panels (on the SSD1327 and in the web simulator it's a harmless no-op).
 
 ### Can I connect two OLED displays at once?
 

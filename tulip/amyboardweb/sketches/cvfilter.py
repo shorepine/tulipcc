@@ -10,7 +10,7 @@ import amy, amyboard
 # Set filter-freq to be set by ext0 (CV1) 
 amy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.25}, filter_type=amy.FILTER_LPF24)
 
-def loop():
+def loop(tick):
     # During loop, see if cv2 is active and set resonance
     r = (amyboard.cv_in(1) + 10.0) / 5.0 # 0-4
     amy.send(synth=1, resonance=r)
