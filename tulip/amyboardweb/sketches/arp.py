@@ -1,20 +1,22 @@
 # AMYboard Sketch
-# Top-level code runs once at boot. loop() is called every 32nd note.
+# Top-level code runs once at boot. loop(tick) is called every 32nd note.
 # DESCRIPTION: Hold MIDI keys; plays them in order as 8th-note arpeggios.
 # In simulate mode, you have to use MIDI input, not the onscreen keyboard.
 
-import amy, midi, tulip
+import amy, midi, amyboard
 
 # Tell synth 1 to not grab midi notes - we'll play them from this sketch.
 amy.send(synth=1, grab_midi_notes=0)
 
-# 8th note at 120 BPM = 250 ms per step.
-STEP_MS = 250
+# Advance the arp every 8th note. loop() runs on the sequencer's 32nd-note
+# grid, so an 8th note is 4 of those steps -- no wall clock, and it follows
+# the tempo instead of assuming one (this used to be a hardcoded 250 ms,
+# i.e. an 8th note only while the tempo happened to be 120 BPM).
+STEP_STEPS = 4
 
 held = set()           # midi note numbers currently held down
 arp_idx = 0            # next index into the sorted held list to play
 last_played = None     # most recently triggered note (so we can release it)
-last_step_ms = 0       # last time we advanced the arp
 
 
 def midi_cb(m):
@@ -33,11 +35,9 @@ midi.add_callback(midi_cb)
 
 
 def loop(tick):
-    global arp_idx, last_played, last_step_ms
-    now = tulip.amy_ticks_ms()
-    if now - last_step_ms < STEP_MS:
+    global arp_idx, last_played
+    if (tick // amyboard.TICKS_PER_STEP) % STEP_STEPS:
         return
-    last_step_ms = now
 
     # Release the previous step's note before triggering the next one.
     if last_played is not None:
