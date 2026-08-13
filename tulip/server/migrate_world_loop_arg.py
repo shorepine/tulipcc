@@ -67,6 +67,19 @@ STEP_EXPR = "%s // amyboard.TICKS_PER_STEP"
 # SKIP      No top-level `def loop`, or already migrated, or unparseable.
 CLASSES = ("ADD_ARG", "RENAME", "RESCALE", "SKIP")
 
+# Which classes are safe to publish BEFORE the firmware that requires the
+# argument has shipped -- see --classes.
+#
+# ADD_ARG and RENAME run correctly on both firmwares. The old runner senses
+# the signature and calls loop(step); these sketches now accept an argument
+# and ignore it, so nothing changes for them. The new runner calls
+# loop(tick). Either way they behave exactly as before.
+#
+# RESCALE does NOT survive that: it divides the argument by TICKS_PER_STEP,
+# which is right when the argument is a tick and 6x too slow when the old
+# runner passes a step. So it has to land with the firmware, not ahead of it.
+FIRMWARE_AGNOSTIC = ("ADD_ARG", "RENAME")
+
 
 # ── API helpers (same shapes as migrate_world_ticks.py) ───────────────────────
 
@@ -170,6 +183,31 @@ def _first_body_line(fn, lines):
     return fn.body[-1].end_lineno if fn.body else fn.lineno
 
 
+def _already_migrated(fn):
+    """True if loop's body already starts with the derivation this script inserts.
+
+    Without this the script is not idempotent: after a successful run the
+    parameter IS read (by the derivation itself), so a second pass would
+    re-classify the sketch as RESCALE, rename `tick` to `_tick` (because
+    `tick` now appears in the source) and insert a SECOND derivation line.
+    Re-running would quietly corrupt every rescaled sketch.
+    """
+    for stmt in fn.body:
+        if isinstance(stmt, (ast.Global, ast.Nonlocal)):
+            continue
+        if (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant)
+                and isinstance(stmt.value.value, str)):
+            continue
+        if (isinstance(stmt, ast.Assign)
+                and isinstance(stmt.value, ast.BinOp)
+                and isinstance(stmt.value.op, ast.FloorDiv)
+                and isinstance(stmt.value.right, ast.Attribute)
+                and stmt.value.right.attr == "TICKS_PER_STEP"):
+            return True
+        return False
+    return False
+
+
 def classify_and_rewrite(src):
     """Return (cls, new_src, note). new_src is None when nothing changes."""
     try:
@@ -184,6 +222,8 @@ def classify_and_rewrite(src):
         return "SKIP", None, "loop(*args) already accepts the tick"
     if len(args.args) > 1:
         return "SKIP", None, "loop() takes %d args -- needs a human" % len(args.args)
+    if args.args and _already_migrated(fn):
+        return "SKIP", None, "already migrated (derivation present)"
 
     lines = src.split("\n")
     def_i = fn.lineno - 1
@@ -198,6 +238,12 @@ def classify_and_rewrite(src):
         return "ADD_ARG", "\n".join(lines), "added parameter %r" % name
 
     param = args.args[0].arg
+    if param == TICK_NAME or param.startswith("_" + TICK_NAME):
+        # Already migrated, or already named sensibly. Renaming it again would
+        # be pure churn -- and would burn a new version of every sketch on a
+        # re-run, since _free_name() sees the existing `tick` and proposes
+        # `_tick`.
+        return "SKIP", None, "parameter already named %r" % param
     reads = [n for n in ast.walk(fn)
              if isinstance(n, ast.Name) and n.id == param and isinstance(n.ctx, ast.Load)]
     name = _free_name(src)
@@ -270,6 +316,9 @@ def main():
     ap.add_argument("--write-diffs", metavar="DIR", help="dump before/after files")
     ap.add_argument("--apply", action="store_true", help="re-upload rewritten sketches")
     ap.add_argument("--scope", choices=SCOPES, help="limit to one world")
+    ap.add_argument("--classes", default="all",
+                    help="which classes to rewrite: 'all', 'safe' (ADD_ARG+RENAME, "
+                         "publishable before the firmware ships), or a comma-separated list")
     opts = ap.parse_args()
     if not (opts.report or opts.write_diffs or opts.apply):
         opts.report = True
@@ -277,6 +326,18 @@ def main():
     token = os.environ.get("WORLD_ADMIN_TOKEN")
     if opts.apply and not token:
         sys.exit("--apply needs WORLD_ADMIN_TOKEN in the environment")
+
+    if opts.classes == "all":
+        want = set(CLASSES)
+    elif opts.classes == "safe":
+        want = set(FIRMWARE_AGNOSTIC)
+    else:
+        want = {c.strip().upper() for c in opts.classes.split(",")}
+        bad = want - set(CLASSES)
+        if bad:
+            sys.exit("unknown class(es): %s" % ", ".join(sorted(bad)))
+    if want != set(CLASSES):
+        print("limiting rewrites to: %s" % ", ".join(sorted(want)))
 
     counts = dict.fromkeys(CLASSES, 0)
     failures = []
@@ -294,9 +355,15 @@ def main():
                 continue
             cls, new_src, note = classify_and_rewrite(src)
             counts[cls] += 1
+            if cls not in want:
+                continue
             if new_src is None:
                 if opts.verbose and cls == "SKIP":
                     print("  SKIP     %s/%s: %s" % (item["username"], fname, note))
+                continue
+            if new_src == src:
+                counts[cls] -= 1
+                counts["SKIP"] += 1
                 continue
             ok, why = verify(new_src)
             if not ok:
