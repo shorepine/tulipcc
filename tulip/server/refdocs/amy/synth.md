@@ -98,7 +98,21 @@ amy.send(synth=1, note=60, vel=1)
 ```
 .. will sound two sine tones a fifth apart, even though the two oscs are not chained and we only issued a single note-one.
 
+### Changing a synth's voice count
 
+You can change `num_voices` on a synth that is already running, and the synth keeps the sound it has *now* -- not the patch it started from:
+
+```python
+amy.send(synth=0, num_voices=1, patch=1)
+amy.send(synth=0, osc=0, filter_freq=2000, resonance=4)  # tweak the live synth
+amy.send(synth=0, num_voices=4)                          # 4 voices of the TWEAKED sound
+```
+
+Changing the voice count rebuilds all of the synth's voices, so AMY copies one of the existing voices into the new ones; everything you configured after the patch was loaded comes along, and the patch is not reloaded.  Note and velocity aren't part of an osc's configuration, so resizing a synth while it's playing copies the sound, not the notes.  This works for a synth that never had a patch at all -- one built with `oscs_per_voice` or a `patch_string` and then configured osc by osc resizes like any other.
+
+To load a *different* sound, name it: `amy.send(synth=0, patch=13)`, or a fresh `patch_string`, replaces the voices' configuration as before.
+
+A synth built from a `patch_string` carries no patch *number* (the one AMY assigns internally is released as soon as the patch is loaded, so it never occupies a user patch slot).  Anything that asks such a synth for its patch number gets "none": in particular, a bare MIDI program change on that channel selects from bank 0 (the Juno patches) instead of inferring a bank from the current patch.  Synths sitting on a numbered patch -- built-in, or one of your own at 1024+ -- infer their bank as before.
 
 ### User patches
 
