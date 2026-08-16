@@ -27,7 +27,7 @@ Legend for the platform columns: **Py** = pyamy.c, **MP** = modtulip.c,
 | `void amy_add_message(char*)` | ✅ `send_wire` | ✅ `tulip.amy_send` | ✅ cwrap `['string']` → `amy_js_message` module | `amy.override_send` routes to each |
 | `void amy_add_message_from_sysex(char*)` | ✅ `send_wire_from_sysex` | ✅ inside `tulip.amy_send_sysex` (ring-buffer slot + AK ack) | ➖ (web sends sysex *to* hardware instead) | — |
 | `uint32_t amy_sysclock()` | ✅ `ticks_ms` | ✅ `tulip.amy_ticks_ms` | ✅ cwrap → `amy_sysclock` module → `tulip.amy_ticks_ms`, `amy.ticks_ms` | `tulip.amy_ticks_ms()` everywhere |
-| `void amy_reset_sysclock()` | ➖ | ➖ | ✅ (called from JS `runCodeBlock`) | — |
+| `void amy_reset_sysclock()` | ➖ | ➖ | ➖ | C hosts only; see note below |
 | `float amy_get_render_load()` | ✅ `render_load` | ✅ `tulip.amy_render_load` | ❌ missing on web | |
 | `void amy_set_render_load_threshold(float)` | ✅ | ✅ `tulip.amy_set_render_load_threshold` | ❌ missing on web | |
 | `void *yield_synth_commands(uint8_t synth, char *s, size_t len, bool include_fx, void *state)` | ✅ looped in `get_synth_commands` | ✅ looped in `tulip.amy_get_synth_commands` | ✅ looped in JS `get_synth_commands()` w/ manual `_malloc` + heap-string readback, installed as a Python lambda | three hand-written copies of the same generator loop |
@@ -95,7 +95,10 @@ generated from a field map later.
 - `dump_state`: CPython + web, **not exposed to MicroPython**.
 - `get_synth_commands`: the generator loop is hand-written **three times** with
   three different buffer strategies (C stack buffer ×2, JS heap malloc).
-- `amy_reset_sysclock`: web-only, never exposed to Python anywhere.
+- `amy_reset_sysclock`: not bound to any scripting layer. RESET_TIMEBASE is
+  an ordinary event, so `reset_sysclock()` is written natively in each
+  binding as a send of that reset bit, and both `spss.js` copies do the
+  same. The C function exists for C hosts.
 - Input-buffer functions: exported to WASM but the JS side has rotted into
   comments.
 - Naming: `ticks_ms` (Py) vs `tulip.amy_ticks_ms` (MP) vs `amy.ticks_ms` (web
