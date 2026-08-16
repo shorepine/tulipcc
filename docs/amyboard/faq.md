@@ -205,7 +205,38 @@ Not easily -- the unused ESP32-S3 GPIOs aren't broken out to any header, so you'
 
 ### Should I read encoders / update the display in `loop()` or with `tulip.defer()`?
 
-Either works -- `tulip.defer()` uses the same sequencer as `loop()`, it just lets you set the next-call delay. For most people `loop()` is simplest: it runs ~32 times per beat (so timing scales with tempo). Read or update **one thing per call** so the system can keep up, and avoid heavy loops of your own.
+Either works -- `tulip.defer()` uses the same sequencer as `loop()`, it just lets you set the next-call delay. For most people `loop()` is simplest: it runs every 32nd note, which is 8 times per beat (32 times per bar), so timing scales with tempo -- see [How often is `loop()` called?](#how-often-is-loop-called) for the exact rate. Read or update **one thing per call** so the system can keep up, and avoid heavy loops of your own.
+
+### How often is `loop()` called?
+
+Every 32nd note of the AMY sequencer, so the rate scales with tempo:
+
+**`loop()` interval in ms = 7500 / tempo**
+
+| tempo | interval |
+|---|---|
+| 60 | 125 ms |
+| 108 (default) | 69 ms |
+| 120 | 62.5 ms |
+| 240 | 31 ms |
+
+(AMY's sequencer runs at 48 PPQ, and a 32nd note is 6 ticks.)
+
+If you need faster -- polling CV in, say -- register your own callback on the sequencer instead. The floor is 1 tick, or **1250 / tempo ms** (21 ms at tempo 60, 5.2 ms at tempo 240):
+
+```python
+import tulip
+tag = tulip.seq_add_callback(my_fn, 0, 1)   # fn(tick), every sequencer tick
+# tulip.seq_remove_callback(tag) to stop
+```
+
+Three things cap how fast you can usefully go:
+
+- `cv_in()` is refreshed by a background task at the audio block rate (~5.8 ms), so polling faster than that just re-reads the same value.
+- Callbacks are dispatched through MicroPython's scheduler, so there's jitter on top of the period.
+- If your `loop()` takes longer than one interval, the overlapping call is **skipped**, not queued -- a slow `loop()` silently halves its own rate. `cv_out()` is a blocking I2C write, so it isn't free.
+
+For continuously mapping a CV input to a synth parameter, skip the polling loop entirely and use AMY's CtrlCoefs, which run at audio rate in C -- see [Modular Synth Setup](modular.md#example-cv-input-controls-amy-filter-with-ctrlcoefs).
 
 ---
 

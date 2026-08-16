@@ -165,7 +165,7 @@ See the [Modular Synth Setup](modular.md) page for detailed CV and encoder examp
 
 ## The sketch.py startup script
 
-AMYboard automatically runs `sketch.py` from your current environment directory on boot. The top-level code runs once at startup, and if you define a `loop()` function it will be called repeatedly (~60ms interval). Use it to set up your default configuration:
+AMYboard automatically runs `sketch.py` from your current environment directory on boot. The top-level code runs once at startup, and if you define a `loop(tick)` function it will be called every 32nd note of the sequencer -- an interval of `7500 / tempo` ms, so 69 ms at the default tempo of 108 and 125 ms at tempo 60. See [How often is `loop()` called?](faq.md#how-often-is-loop-called) if you need a faster callback. Use it to set up your default configuration:
 
 ```python
 # /user/current/sketch.py

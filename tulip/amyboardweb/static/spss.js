@@ -88,9 +88,10 @@ const CURRENT_ENV_DIR = CURRENT_BASE_DIR;
 // there is no MicroPython. Keep it in sync with amyboard.py's DEFAULT_SKETCH_SOURCE.
 var AMYBOARD_DEFAULT_SKETCH =
   "# AMYboard Sketch\n" +
-  "# Code put here runs first, then loop(step) is called every 32nd note,\n" +
-  "# starting on a bar downbeat. step counts 32nd notes on the sequencer's\n" +
-  "# bar-locked grid, so step % 32 == 0 is always a downbeat.\n" +
+  "# Code put here runs first, then loop(tick) is called every 32nd note,\n" +
+  "# starting on a bar downbeat. tick is AMY's sequencer tick, so it can go\n" +
+  "# straight into amy.send(ticks=...). For 32nd-note counting divide it:\n" +
+  "# step = tick // amyboard.TICKS_PER_STEP  (step % 32 == 0 on a downbeat).\n" +
   "import amyboard, amy\n\n" +
   "def loop(tick):\n    pass\n\n" +
   "# Do not edit. Set automatically by the knobs on AMYboard Online.\n" +
