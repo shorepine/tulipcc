@@ -936,8 +936,8 @@ if (typeof amyModule === 'function') _amy_wasm_ready = amyModule().then(async fu
   );
   amy_bleep = amy_c_api.bleep;
   amy_add_message = amy_c_api.send_wire;
-  // Native, not a C binding: amy dropped the reset_sysclock C entry point
-  // (amy#1081) because RESET_TIMEBASE is an ordinary event.
+  // RESET_TIMEBASE is an ordinary AMY event and amy's C API doesn't bind
+  // reset_sysclock, so send the event.
   amy_reset_sysclock = function() { amy_add_message('S' + AMY.RESET_TIMEBASE + 'Z'); };
   amy_ticks = amy_c_api.sequencer_ticks;
   amy_sysclock = amy_c_api.ticks_ms;

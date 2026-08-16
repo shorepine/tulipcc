@@ -43,9 +43,9 @@ amyModule().then(async function(am) {
   );
   amy_bleep = amy_c_api.bleep;
   amy_add_message = amy_c_api.send_wire;
-  // Native, not a C binding: amy dropped the reset_sysclock C entry point
-  // (amy#1081) because RESET_TIMEBASE is an ordinary event. 16384 is
-  // RESET_TIMEBASE in src/amy.h; this page has no AMY constants object.
+  // RESET_TIMEBASE is an ordinary AMY event and amy's C API doesn't bind
+  // reset_sysclock, so send the event. 16384 is RESET_TIMEBASE in
+  // src/amy.h; this page has no AMY constants object to name it.
   amy_reset_sysclock = function() { amy_add_message('S16384Z'); };
   amy_ticks = amy_c_api.sequencer_ticks;
   amy_sysclock = amy_c_api.ticks_ms;
