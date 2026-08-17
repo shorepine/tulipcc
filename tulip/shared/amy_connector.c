@@ -49,8 +49,6 @@ void midi_out(uint8_t * bytes, uint16_t len) {
 // A queue to store the AMY midi messages coming IN
 uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
 uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
-extern mp_obj_t midi_callback;
-extern mp_obj_t amy_overload_callback;
 
 int16_t midi_queue_head = 0;
 int16_t midi_queue_tail = 0;
@@ -59,8 +57,8 @@ int16_t midi_queue_tail = 0;
 // (it has already reset the synth and played its bleep). Hand off to Python
 // with the load as a percent -- a small int, so no cross-task heap allocation.
 void tulip_amy_overload_hook(float load) {
-    if (amy_overload_callback != NULL)
-        mp_sched_schedule(amy_overload_callback, MP_OBJ_NEW_SMALL_INT((mp_int_t)(load * 100.0f)));
+    if (MP_STATE_PORT(amy_overload_callback) != NULL)
+        mp_sched_schedule(MP_STATE_PORT(amy_overload_callback), MP_OBJ_NEW_SMALL_INT((mp_int_t)(load * 100.0f)));
 }
 
 
@@ -226,7 +224,7 @@ void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
             }
             sysex_len = len;
         }
-        if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_true);
+        if(MP_STATE_PORT(midi_callback)!=NULL) mp_sched_schedule(MP_STATE_PORT(midi_callback), mp_const_true);
     } else {
         for(uint32_t i = 0; i < (uint32_t)len; i++) {
             if(i < MAX_MIDI_BYTES_PER_MESSAGE) {
@@ -243,7 +241,7 @@ void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
         }
 
         // We tell Python that a MIDI message has been received
-        if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_false);
+        if(MP_STATE_PORT(midi_callback)!=NULL) mp_sched_schedule(MP_STATE_PORT(midi_callback), mp_const_false);
     }
 }
 
