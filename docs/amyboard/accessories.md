@@ -67,7 +67,7 @@ amyboard.draw_waveform()
 
 ### Rotary encoders
 
-AMYboard supports three different rotary-encoder accessories (described below). They
+AMYboard supports four different rotary-encoder accessories (described below). They
 have different encoder counts, LED layouts, and I2C protocols, so the easiest way to
 use any of them — and to write a sketch that runs unchanged on whichever one you have
 (or in the web simulator) — is the unified `amyboard.encoder()` API. It autodetects
@@ -77,10 +77,11 @@ the connected device and gives you one consistent interface:
 import amyboard
 
 enc = amyboard.encoder()   # autodetect everything that's connected
-print(enc.type)            # "adafruit_single", "adafruit_quad", "m5stack", "web",
-                           # "multi" (mixed device types), or None
+print(enc.type)            # "adafruit_single", "adafruit_quad", "adafruit_ano",
+                           # "m5stack", "web", "multi" (mixed types), or None
 print(enc.devices)         # each attached device as (type, i2c_address)
 print(enc.encoders)        # total number of encoders across all attached devices
+print(enc.buttons)         # total number of buttons (>= enc.encoders)
 print(enc.leds)            # total number of addressable LEDs
 
 for i in range(enc.encoders):
@@ -93,11 +94,12 @@ enc.reset()                # zero every encoder back to 0 (or enc.reset(i) for j
 enc.switch()               # M5Stack toggle-switch state (False on other devices)
 ```
 
-**Multiple encoder boards on one bus.** Both Adafruit breakouts have address
-jumpers (single: up to 8 boards at 0x36–0x3D, quad: up to 8 at 0x49–0x50), and
+**Multiple encoder boards on one bus.** The Adafruit breakouts have address
+jumpers (single: up to 8 boards at 0x36–0x3D, quad: up to 8 at 0x49–0x50, ANO: up
+to 16 at 0x49–0x58), and
 `amyboard.encoder()` finds *every* attached device and presents them as one
 `Encoder` with a flat index space. Indices run across devices in a fixed order —
-M5Stack first, then quads, then singles, each by ascending I2C address — so two
+M5Stack first, then quads, ANOs, singles, each by ascending I2C address — so two
 single encoders at 0x36 and 0x37 give `enc.encoders == 2`, with the 0x36 board as
 encoder 0. To bind exactly one specific board instead, pass its address (and
 optionally the type):
@@ -116,6 +118,35 @@ enc = amyboard.encoder(invert=True)   # flip every encoder
 enc.invert(True, 2)                   # ...or flip just encoder 2
 enc.invert(False)                     # back to the hardware's native direction
 ```
+
+**More buttons than encoders.** Most boards have one push button per encoder, so
+`enc.button(i)` pairs with `enc.read(i)`. The ANO navigation encoder is the
+exception — one encoder, five switches — so its buttons occupy five slots in the
+flat index space and `enc.buttons` is larger than `enc.encoders`.
+
+**Boards that share an address.** The ANO adapter and the quad breakout both
+answer at 0x49 out of the box, so autodetection identifies each seesaw board by
+the product ID its firmware reports rather than by address alone. If some *other*
+seesaw board on your bus is being picked up as an encoder, leave its address out
+of the scan:
+
+```python
+enc = amyboard.encoder(exclude=(0x49,))
+```
+
+**Teaching AMYboard a new seesaw board.** For a seesaw accessory this firmware
+doesn't know about yet, register it from your sketch — no firmware rebuild:
+
+```python
+amyboard.register_seesaw_device("my_board", product_id=1234,
+                                addrs=range(0x49, 0x51),
+                                encoders=2, button_pins=(1, 2))
+enc = amyboard.encoder()      # now finds it, and reports type "my_board"
+```
+
+`product_id` is the number the board's seesaw firmware reports — Adafruit's
+product number, which their `simpletest` examples print. `button_pins` and
+`neopixel_pin` are seesaw pin numbers, as in Adafruit's own example code.
 
 If no encoder is attached `enc.encoders` is 0 and every method returns a safe default,
 so sketches still run. The per-device functions documented below still work for
@@ -167,6 +198,17 @@ amyboard.set_neopixel(1, 0, 64, 0)   # encoder 1 -> dim green
 amyboard.set_neopixel(2, 0, 0, 64)   # encoder 2 -> dim blue
 amyboard.set_neopixel(3, 32, 32, 0)  # encoder 3 -> dim yellow
 amyboard.show_neopixels()            # latch staged colors to the LEDs
+```
+
+ - [**Adafruit ANO Rotary Navigation Encoder to I2C Adapter**](https://www.adafruit.com/product/5740) -- A scroll-wheel rotary encoder ringed by a five-way navigation switch (select, up, left, down, right), running seesaw firmware. No LEDs. It ships at 0x49 — the same address as the quad breakout — and four address jumpers take it up to 0x58, so up to 16 can share the bus. Use `amyboard.encoder()`; its five switches are buttons 0–4 of that device:
+
+```python
+import amyboard
+
+enc = amyboard.encoder()               # or amyboard.encoder(type="adafruit_ano")
+pos = enc.read(0)                      # scroll-wheel position
+if enc.button(amyboard.ANO_SELECT):    # ANO_SELECT/UP/LEFT/DOWN/RIGHT == 0..4
+    print("center pressed")
 ```
 
  - ![M5Stack 8-Encoder Unit](img/accessory_m5_8encoder.jpg)  

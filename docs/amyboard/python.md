@@ -131,7 +131,7 @@ amyboard.cv_out(5.0, channel=0)    # Output 5V on CV out 1
 volts = amyboard.cv_in(channel=0)   # Read CV in 1
 
 # Rotary encoders.  amyboard.encoder() autodetects every attached accessory
-# (Adafruit single/quad or M5Stack 8Encoder) and gives one API for all --
+# (Adafruit single/quad/ANO or M5Stack 8Encoder) and gives one API for all --
 # multiple boards (via their address jumpers) combine into one flat index space.
 enc = amyboard.encoder()            # pass invert=True if yours counts backwards
 print(enc.type, enc.encoders)       # e.g. "m5stack" 8; enc.devices lists (type, addr)
