@@ -1221,6 +1221,16 @@ _ADAFRUIT_ANO_ADDRS = tuple(range(0x49, 0x59))     # 0x49..0x58
 # addresses anyway needs an explicit type= plus addr=.
 _ONBOARD_I2C_ADDRS = (0x48, 0x58)
 
+# Names for the addresses we can identify without probing, so scan_i2c() can say
+# what a device is instead of just that something answered.
+_KNOWN_I2C_ADDRS = {
+    0x3C: "OLED display",
+    0x3D: "OLED display",
+    0x41: "M5Stack 8Encoder unit",
+    0x48: "ADS1015 CV input ADC",
+    0x58: "GP8413 CV output DAC",
+}
+
 # Fixed per-device config. seesaw / button_pins / neopixel_pin only apply to the
 # seesaw (Adafruit) devices; the M5Stack unit exposes everything through one
 # register map. A device has one button per encoder unless button_pins says
@@ -1604,6 +1614,54 @@ def encoder(type=None, addr=None, invert=False, exclude=()):
     read()/button()/led()/reset() API, and register_seesaw_device() to add a
     seesaw board this firmware doesn't know about."""
     return Encoder(type=type, addr=addr, invert=invert, exclude=exclude)
+
+
+def scan_i2c(verbose=True):
+    """Report every device on the I2C bus and how autodetection reads it.
+
+    Run this when an accessory isn't picked up, or is picked up as the wrong
+    board. For each address it prints the device we can identify, and for seesaw
+    accessories the firmware product ID the chip reports plus the encoder type
+    amyboard.encoder() would bind it to -- the quad breakout and the ANO
+    navigation encoder both ship at 0x49, so the address alone proves nothing.
+
+        >>> amyboard.scan_i2c()
+        0x3c  -                OLED display
+        0x49  adafruit_ano     seesaw board, firmware product 5740
+        0x58  -                GP8413 CV output DAC (on-board, not probed)
+
+    Returns [(addr, encoder_type or None, description), ...]."""
+    try:
+        present = sorted(get_i2c().scan())
+    except Exception as e:
+        if verbose:
+            print("I2C bus unavailable: %s" % e)
+        return []
+    detected = {}
+    for t, a in _detect_encoder_devices():
+        detected[a] = t
+    rows = []
+    for addr in present:
+        t = detected.get(addr)
+        desc = _KNOWN_I2C_ADDRS.get(addr, "")
+        if addr in _ONBOARD_I2C_ADDRS:
+            desc = (desc or "on-board device") + " (on-board, not probed)"
+        else:
+            candidate = False
+            for _name, addrs in _SEESAW_ADDR_RANGES:
+                if addr in addrs:
+                    candidate = True
+                    break
+            if candidate and _seesaw_present(addr):
+                product = _seesaw_product(addr)
+                desc = "seesaw board, firmware product %s" % (
+                    product if product else "unknown")
+        if not desc:
+            desc = "unidentified device"
+        rows.append((addr, t, desc))
+        if verbose:
+            print("0x%02x  %-16s %s" % (addr, t if t else "-", desc))
+    return rows
 
 
 def monitor_encoders():

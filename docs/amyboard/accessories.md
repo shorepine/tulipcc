@@ -126,9 +126,18 @@ flat index space and `enc.buttons` is larger than `enc.encoders`.
 
 **Boards that share an address.** The ANO adapter and the quad breakout both
 answer at 0x49 out of the box, so autodetection identifies each seesaw board by
-the product ID its firmware reports rather than by address alone. If some *other*
-seesaw board on your bus is being picked up as an encoder, leave its address out
-of the scan:
+the product ID its firmware reports rather than by address alone. If an accessory
+isn't picked up, or is picked up as the wrong board, ask what's on the bus:
+
+```python
+>>> amyboard.scan_i2c()
+0x3c  -                OLED display
+0x49  adafruit_ano     seesaw board, firmware product 5740
+0x58  -                GP8413 CV output DAC (on-board, not probed)
+```
+
+If some *other* seesaw board on your bus is being picked up as an encoder, leave
+its address out of the scan:
 
 ```python
 enc = amyboard.encoder(exclude=(0x49,))
