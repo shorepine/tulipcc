@@ -1150,11 +1150,13 @@ def show_neopixels(seesaw_dev=0x49):
 # ---------------------------------------------------------------------------
 # Unified rotary-encoder API
 # ---------------------------------------------------------------------------
-# AMYboard works with three different rotary-encoder accessories on the I2C bus,
+# AMYboard works with four different rotary-encoder accessories on the I2C bus,
 # each with its own wire protocol, encoder count, and LED layout:
 #
 #   "adafruit_single" - Adafruit I2C QT Rotary Encoder (0x36-0x3D): 1 enc, 1 LED
 #   "adafruit_quad"   - Adafruit Quad Rotary Encoder Breakout (0x49-0x50): 4 enc, 4 LED
+#   "adafruit_ano"    - Adafruit ANO Navigation Encoder adapter (0x49-0x58): 1 enc,
+#                       5 switches (select/up/left/down/right), no LEDs
 #   "m5stack"         - M5Stack Unit 8Encoder (0x41): 8 encoders, 8 LEDs + a toggle
 #   "web"             - the in-browser simulator's single emulated encoder
 #
@@ -1166,18 +1168,27 @@ def show_neopixels(seesaw_dev=0x49):
 #   enc.type                   # "adafruit_quad" | "m5stack" | ... | "multi" | None
 #   enc.devices                # list of (type, i2c_addr) per attached device
 #   enc.encoders               # total number of encoders (int)
+#   enc.buttons                # total number of buttons (>= enc.encoders)
 #   enc.leds                   # total number of addressable LEDs (int)
 #   enc.read(i)                # cumulative position of encoder i, starts at 0
-#   enc.button(i)              # True while encoder i's push button is held
+#   enc.button(i)              # True while button i is held (one per encoder,
+#                              # except the ANO's five: ANO_SELECT/UP/LEFT/...)
 #   enc.led(i, r, g, b)        # light encoder i's LED (0..255 each), applied now
 #   enc.reset(i)               # zero encoder i (omit i to zero them all)
 #   enc.invert(True, i)        # make encoder i count the other way (omit i: all)
 #   enc.switch()               # M5Stack toggle (always False on other devices)
 #
+# Telling boards apart: the quad and the ANO both answer at 0x49, so autodetection
+# reads each seesaw board's firmware product ID rather than trusting its address
+# (see _SEESAW_PRODUCT_IDS). register_seesaw_device() teaches this module about a
+# seesaw board it doesn't know yet, from a sketch, with no firmware rebuild;
+# amyboard.encoder(exclude=(0x49,)) leaves an address out of the scan entirely.
+#
 # Multiple devices: the Adafruit breakouts have address jumpers (single: up to 8
-# boards at 0x36-0x3D, quad: up to 8 at 0x49-0x50), and autodetection finds every
-# attached device and presents them as ONE Encoder — indices run across devices in
-# a fixed order (M5Stack first, then quads, then singles, each by ascending I2C
+# boards at 0x36-0x3D, quad: up to 8 at 0x49-0x50, ANO: up to 16 at 0x49-0x58),
+# and autodetection finds every attached device and presents them as ONE Encoder
+# — indices run across devices in
+# a fixed order (M5Stack first, then quads, ANOs, singles, each by ascending I2C
 # address), so e.g. two singles at 0x36 + 0x37 give enc.encoders == 2 with the
 # 0x36 board as encoder 0. Pass addr= (and optionally type=) to bind exactly one
 # specific device instead.
@@ -1193,27 +1204,82 @@ def show_neopixels(seesaw_dev=0x49):
 _M5_8ENCODER_ADDR = 0x41
 _ADAFRUIT_QUAD_ADDR = 0x49
 _ADAFRUIT_SINGLE_ADDR = 0x36
+_ADAFRUIT_ANO_ADDR = 0x49
 
-# Each Adafruit breakout has three address jumpers, so up to 8 boards of each
-# type can share the bus.
+# Each Adafruit breakout has address jumpers, so several boards of each type can
+# share the bus: three jumpers on the single and quad encoders (8 addresses), four
+# on the ANO navigation adapter (16). The ANO defaults to 0x49, the same address
+# as the quad, so address alone can't tell them apart -- see _SEESAW_PRODUCT_IDS.
 _ADAFRUIT_SINGLE_ADDRS = tuple(range(0x36, 0x3E))  # 0x36..0x3D
 _ADAFRUIT_QUAD_ADDRS = tuple(range(0x49, 0x51))    # 0x49..0x50
+_ADAFRUIT_ANO_ADDRS = tuple(range(0x49, 0x59))     # 0x49..0x58
 
-# Fixed per-device config. button_pins / neopixel_pin only apply to the seesaw
-# (Adafruit) devices; the M5Stack unit exposes everything through one register map.
+# AMYboard's own I2C chips, never probed as encoder accessories: the ADS1015 CV
+# input ADC (0x48) and the GP8413 CV output DAC (0x58, which falls inside the
+# ANO's jumper range). A seesaw probe writes to a register, so scanning these
+# would poke the board's own CV hardware. An accessory jumpered onto one of these
+# addresses anyway needs an explicit type= plus addr=.
+_ONBOARD_I2C_ADDRS = (0x48, 0x58)
+
+# Names for the addresses we can identify without probing, so scan_i2c() can say
+# what a device is instead of just that something answered.
+_KNOWN_I2C_ADDRS = {
+    0x3C: "OLED display",
+    0x3D: "OLED display",
+    0x41: "M5Stack 8Encoder unit",
+    0x48: "ADS1015 CV input ADC",
+    0x58: "GP8413 CV output DAC",
+}
+
+# Fixed per-device config. seesaw / button_pins / neopixel_pin only apply to the
+# seesaw (Adafruit) devices; the M5Stack unit exposes everything through one
+# register map. A device has one button per encoder unless button_pins says
+# otherwise -- the ANO has one encoder but five switches (select/up/left/down/
+# right), which show up as buttons 0..4 of that device.
 _ENCODER_PROFILES = {
     "adafruit_single": {"addr": _ADAFRUIT_SINGLE_ADDR, "encoders": 1, "leds": 1,
-                        "button_pins": (24,), "neopixel_pin": 6},
+                        "seesaw": True, "button_pins": (24,), "neopixel_pin": 6},
     "adafruit_quad":   {"addr": _ADAFRUIT_QUAD_ADDR, "encoders": 4, "leds": 4,
-                        "button_pins": (12, 14, 17, 9), "neopixel_pin": 18},
+                        "seesaw": True, "button_pins": (12, 14, 17, 9),
+                        "neopixel_pin": 18},
+    "adafruit_ano":    {"addr": _ADAFRUIT_ANO_ADDR, "encoders": 1, "leds": 0,
+                        "seesaw": True, "button_pins": (1, 2, 3, 4, 5)},
     "m5stack":         {"addr": _M5_8ENCODER_ADDR, "encoders": 8, "leds": 8},
 }
+
+# Button indices of the ANO navigation encoder's five switches, in the order its
+# button_pins are listed: enc.button(amyboard.ANO_UP), etc. (offset by the
+# device's first button index if other encoder boards are also attached).
+ANO_SELECT, ANO_UP, ANO_LEFT, ANO_DOWN, ANO_RIGHT = 0, 1, 2, 3, 4
 
 # Hardware-ID codes a seesaw chip can report (SAMD09 and the ATtiny 8x6/8x7/161x
 # parts Adafruit ships). Anything else at a candidate address is some other
 # device — the OLED display lives at 0x3C/0x3D, inside the single-encoder
 # jumper range, and an ADS1115 can sit inside the quad range.
 _SEESAW_HW_IDS = (0x55, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89)
+
+# Product IDs a seesaw board reports in the top half of its version register
+# (Adafruit's own product number). This is the only dependable way to tell the
+# boards apart, because the quad encoder and the ANO navigation encoder both
+# answer at 0x49 by default -- treating an ANO as a quad pulls up and drives
+# seesaw pins that board uses for something else, which reads as a flaky encoder.
+_SEESAW_PRODUCT_IDS = {
+    4991: "adafruit_single",  # I2C QT rotary encoder breakout
+    5880: "adafruit_single",  # ...same board, encoder pre-soldered
+    5752: "adafruit_quad",    # quad rotary encoder breakout
+    5740: "adafruit_ano",     # ANO navigation encoder to I2C adapter
+    6310: "adafruit_ano",     # ...same board, encoder pre-soldered
+}
+
+# Addresses worth probing for a seesaw board, and the type to fall back to for a
+# board at that address whose product ID we don't recognize (firmware older than
+# the version register, or a board newer than this list). Also fixes the order
+# devices appear in the flat index space. register_seesaw_device() prepends here.
+_SEESAW_ADDR_RANGES = [
+    ("adafruit_quad", _ADAFRUIT_QUAD_ADDRS),
+    ("adafruit_ano", _ADAFRUIT_ANO_ADDRS),
+    ("adafruit_single", _ADAFRUIT_SINGLE_ADDRS),
+]
 
 # How many callbacks a button should be held for before Encoder.button_event returns HELD
 _BUTTON_HOLD_STEPS = 6
@@ -1233,13 +1299,57 @@ def _seesaw_present(addr, delay=0.008):
         return False
 
 
-def _detect_encoder_devices():
+def _seesaw_product(addr, delay=0.008):
+    """Product ID the seesaw firmware at addr reports, or None if it can't be read."""
+    try:
+        i2c = get_i2c()
+        i2c.writeto(addr, bytes([0x00, 0x02]))  # STATUS_BASE, STATUS_VERSION
+        time.sleep(delay)
+        return struct.unpack(">I", i2c.readfrom(addr, 4))[0] >> 16
+    except OSError:
+        return None
+
+
+def register_seesaw_device(type, product_id=None, addrs=None, encoders=1, leds=0,
+                           button_pins=(), neopixel_pin=None):
+    """Teach amyboard about another Adafruit seesaw encoder board at runtime.
+
+    For seesaw accessories this firmware doesn't know about yet -- no firmware
+    rebuild needed, just call this from a sketch before amyboard.encoder():
+
+        amyboard.register_seesaw_device("my_board", product_id=1234,
+                                        addrs=range(0x49, 0x51),
+                                        encoders=2, button_pins=(1, 2))
+        enc = amyboard.encoder()
+
+    product_id is the number the board's seesaw firmware reports (Adafruit's
+    product number, which their simpletest examples print); pass it and
+    autodetection identifies the board positively instead of guessing from its
+    address. addrs is the address range to probe, and takes priority over the
+    built-in ranges for boards whose product ID is unknown. button_pins/
+    neopixel_pin are seesaw pin numbers, as in Adafruit's own example code."""
+    _ENCODER_PROFILES[type] = {
+        "addr": (tuple(addrs)[0] if addrs else None), "encoders": encoders,
+        "leds": leds, "seesaw": True, "button_pins": tuple(button_pins),
+        "neopixel_pin": neopixel_pin,
+    }
+    if product_id is not None:
+        _SEESAW_PRODUCT_IDS[product_id] = type
+    if addrs is not None:
+        _SEESAW_ADDR_RANGES.insert(0, (type, tuple(addrs)))
+
+
+def _detect_encoder_devices(exclude=()):
     """Scan the I2C bus and return every attached encoder as a (type, addr) list.
 
-    Order is fixed: M5Stack first (distinct address), then Adafruit quads, then
-    Adafruit singles, each by ascending I2C address. Candidate seesaw addresses
-    are verified with a hardware-ID probe so the OLED display (0x3C/0x3D) or
-    other devices sharing the jumper ranges are never mistaken for encoders."""
+    Order is fixed: M5Stack first (distinct address), then the seesaw boards by
+    type (quads, ANOs, singles) and ascending I2C address within each type.
+    Candidate seesaw addresses are verified with a hardware-ID probe, so the OLED
+    display (0x3C/0x3D) or other devices sharing the jumper ranges are never
+    mistaken for encoders, and each board is then identified by the product ID its
+    firmware reports -- the quad and the ANO both live at 0x49 by default.
+    Addresses in exclude are skipped entirely (for a non-encoder seesaw board that
+    would otherwise be probed), as are AMYboard's own CV chips (_ONBOARD_I2C_ADDRS)."""
     if web():
         return [("web", None)]
     if _vcv():
@@ -1248,15 +1358,30 @@ def _detect_encoder_devices():
         present = set(get_i2c().scan())
     except Exception:
         return []
+    present -= set(exclude)
+    present -= set(_ONBOARD_I2C_ADDRS)
     devices = []
     if _M5_8ENCODER_ADDR in present:
         devices.append(("m5stack", _M5_8ENCODER_ADDR))
-    for addr in _ADAFRUIT_QUAD_ADDRS:
-        if addr in present and _seesaw_present(addr):
-            devices.append(("adafruit_quad", addr))
-    for addr in _ADAFRUIT_SINGLE_ADDRS:
-        if addr in present and _seesaw_present(addr):
-            devices.append(("adafruit_single", addr))
+    found = {}
+    for addr in sorted(present):
+        if not any(addr in addrs for _, addrs in _SEESAW_ADDR_RANGES):
+            continue
+        if not _seesaw_present(addr):
+            continue
+        t = _SEESAW_PRODUCT_IDS.get(_seesaw_product(addr))
+        if t not in _ENCODER_PROFILES:
+            # Unrecognized (or unreadable) product ID: guess from the address.
+            t = None
+            for name, addrs in _SEESAW_ADDR_RANGES:
+                if addr in addrs:
+                    t = name
+                    break
+        if t is not None:
+            found.setdefault(t, []).append(addr)
+    for t, _addrs in _SEESAW_ADDR_RANGES:
+        for addr in found.get(t, []):
+            devices.append((t, addr))
     return devices
 
 
@@ -1271,8 +1396,14 @@ class Encoder:
 
     Build via amyboard.encoder() (autodetects all attached devices and flattens
     them into one index space), or force a single device with type=
-    ("adafruit_single", "adafruit_quad", "m5stack") and/or addr= (its I2C
-    address, for boards moved off the default by address jumpers).
+    ("adafruit_single", "adafruit_quad", "adafruit_ano", "m5stack") and/or addr=
+    (its I2C address, for boards moved off the default by address jumpers), or
+    skip specific addresses during autodetect with exclude=(0x49,).
+
+    Most devices have one push button per encoder, so button(i) matches read(i).
+    The ANO navigation encoder is the exception: one encoder, five switches, which
+    appear as buttons 0..4 of that device (amyboard.ANO_SELECT/UP/LEFT/DOWN/RIGHT).
+    enc.buttons is the total button count, which is >= enc.encoders.
 
     Encoder positions returned by read() are zeroed at construction time, so the
     first read() of an untouched encoder is 0 no matter what its raw hardware
@@ -1281,9 +1412,9 @@ class Encoder:
     invert=True (or invert=(False, True, ...) per encoder) flips the direction
     read() counts, for encoder hardware that increments counterclockwise."""
 
-    def __init__(self, type=None, addr=None, invert=False):
+    def __init__(self, type=None, addr=None, invert=False, exclude=()):
         if type is None:
-            found = _detect_encoder_devices()
+            found = _detect_encoder_devices(exclude=exclude)
             if addr is not None:
                 # Bind only the device at this address.
                 found = [(t, a) for (t, a) in found if a == addr]
@@ -1300,28 +1431,38 @@ class Encoder:
         self.devices = []  # public: [(type, i2c_addr or None), ...]
         for t, a in found:
             if t in ("web", "vcv"):
-                d = {"type": t, "addr": None, "n": 1, "leds": 0}
+                d = {"type": t, "addr": None, "n": 1, "leds": 0, "buttons": 1,
+                     "seesaw": False}
             else:
                 p = _ENCODER_PROFILES[t]
                 d = {"type": t, "addr": a, "n": p["encoders"], "leds": p["leds"],
+                     "seesaw": p.get("seesaw", False),
                      "button_pins": p.get("button_pins"),
                      "neopixel_pin": p.get("neopixel_pin")}
-                if t in ("adafruit_single", "adafruit_quad"):
+                # One button per encoder unless the profile lists its own pins.
+                d["buttons"] = len(d["button_pins"]) if d["button_pins"] else d["n"]
+                if d["seesaw"]:
                     init_buttons(pins=d["button_pins"], seesaw_dev=a)
-                    init_neopixels(num=d["leds"], pin=d["neopixel_pin"], seesaw_dev=a)
+                    # Only touch the NeoPixel registers on boards that have them:
+                    # the ANO doesn't, and its seesaw uses that pin for something
+                    # else.
+                    if d["leds"]:
+                        init_neopixels(num=d["leds"], pin=d["neopixel_pin"], seesaw_dev=a)
             self._devs.append(d)
             self.devices.append((t, a))
 
         self.encoders = sum(d["n"] for d in self._devs)
-        self.button_held_steps = [0] * self.encoders
+        self.buttons = sum(d["buttons"] for d in self._devs)
+        self.button_held_steps = [0] * self.buttons
         self.button_events_queue = []
         self.leds = sum(d["leds"] for d in self._devs)
         types = set(t for t, _ in self.devices)
         # type stays a plain string for single-type setups; "multi" when mixed.
         self.type = self.devices[0][0] if len(types) == 1 else ("multi" if types else None)
 
-        # Flatten per-device encoder/LED indices into one global index space.
+        # Flatten per-device encoder/button/LED indices into one global index space.
         self._map = [(d, j) for d in self._devs for j in range(d["n"])]
+        self._button_map = [(d, j) for d in self._devs for j in range(d["buttons"])]
         self._led_map = [(d, j) for d in self._devs for j in range(d["leds"])]
 
         if isinstance(invert, (tuple, list)):
@@ -1342,7 +1483,7 @@ class Encoder:
             return _web_encoder_pos
         if t == "vcv":
             return tulip.vcv_encoder(j)
-        if t in ("adafruit_single", "adafruit_quad"):
+        if d["seesaw"]:
             return read_encoder(j, seesaw_dev=d["addr"])
         if t == "m5stack":
             try:
@@ -1373,16 +1514,19 @@ class Encoder:
             self._invert[i] = bool(invert)
 
     def button(self, i=0):
-        """True while encoder i's push button is held down."""
-        if not (0 <= i < self.encoders):
+        """True while button i is held down.
+
+        Button i is encoder i's push button on devices with one button per
+        encoder; see the class docstring for the ANO's five switches."""
+        if not (0 <= i < self.buttons):
             return False
-        d, j = self._map[i]
+        d, j = self._button_map[i]
         t = d["type"]
         if t == "web":
             return _web_encoder_button
         if t == "vcv":
             return tulip.vcv_encoder_button(j)
-        if t in ("adafruit_single", "adafruit_quad"):
+        if d["seesaw"]:
             return read_buttons(pins=(d["button_pins"][j],), seesaw_dev=d["addr"])[0]
         if t == "m5stack":
             try:
@@ -1395,7 +1539,7 @@ class Encoder:
 
     def poll_button_events(self):
         """Stateful layer that returns a list of button events (button, PRESS/HOLD)."""
-        for i in range(self.encoders):
+        for i in range(self.buttons):
             button_down = self.button(i)
             if button_down:
                 if self.button_held_steps[i] < _BUTTON_HOLD_STEPS:
@@ -1426,7 +1570,7 @@ class Encoder:
             return
         d, j = self._led_map[i]
         t = d["type"]
-        if t in ("adafruit_single", "adafruit_quad"):
+        if d["seesaw"]:
             set_neopixel(j, r, g, b, seesaw_dev=d["addr"])
             show_neopixels(seesaw_dev=d["addr"])
         elif t == "m5stack":
@@ -1455,18 +1599,69 @@ class Encoder:
         return False
 
 
-def encoder(type=None, addr=None, invert=False):
+def encoder(type=None, addr=None, invert=False, exclude=()):
     """Autodetect the connected rotary-encoder accessories and return an Encoder.
 
-    Finds EVERY attached device — the Adafruit single (0x36-0x3D) and quad
-    (0x49-0x50) seesaw breakouts (multiple boards via their address jumpers) and
-    the M5Stack 8Encoder unit (0x41) — or the web simulator's emulated encoder,
-    and presents them as one Encoder with a flat index space. Pass type=
-    ("adafruit_single", "adafruit_quad", "m5stack") and/or addr= to bind one
-    specific device instead. invert=True flips the counting direction for
-    hardware that increments counterclockwise (per-encoder: enc.invert(True, i)).
-    See the Encoder class for the unified read()/button()/led()/reset() API."""
-    return Encoder(type=type, addr=addr, invert=invert)
+    Finds EVERY attached device — the Adafruit single (0x36-0x3D), quad
+    (0x49-0x50) and ANO navigation (0x49-0x58) seesaw breakouts (multiple boards
+    via their address jumpers) and the M5Stack 8Encoder unit (0x41) — or the web
+    simulator's emulated encoder, and presents them as one Encoder with a flat
+    index space. Pass type= ("adafruit_single", "adafruit_quad", "adafruit_ano",
+    "m5stack") and/or addr= to bind one specific device instead, or exclude= a
+    list of I2C addresses to leave out of the scan. invert=True flips the counting
+    direction for hardware that increments counterclockwise (per-encoder:
+    enc.invert(True, i)). See the Encoder class for the unified
+    read()/button()/led()/reset() API, and register_seesaw_device() to add a
+    seesaw board this firmware doesn't know about."""
+    return Encoder(type=type, addr=addr, invert=invert, exclude=exclude)
+
+
+def scan_i2c(verbose=True):
+    """Report every device on the I2C bus and how autodetection reads it.
+
+    Run this when an accessory isn't picked up, or is picked up as the wrong
+    board. For each address it prints the device we can identify, and for seesaw
+    accessories the firmware product ID the chip reports plus the encoder type
+    amyboard.encoder() would bind it to -- the quad breakout and the ANO
+    navigation encoder both ship at 0x49, so the address alone proves nothing.
+
+        >>> amyboard.scan_i2c()
+        0x3c  -                OLED display
+        0x49  adafruit_ano     seesaw board, firmware product 5740
+        0x58  -                GP8413 CV output DAC (on-board, not probed)
+
+    Returns [(addr, encoder_type or None, description), ...]."""
+    try:
+        present = sorted(get_i2c().scan())
+    except Exception as e:
+        if verbose:
+            print("I2C bus unavailable: %s" % e)
+        return []
+    detected = {}
+    for t, a in _detect_encoder_devices():
+        detected[a] = t
+    rows = []
+    for addr in present:
+        t = detected.get(addr)
+        desc = _KNOWN_I2C_ADDRS.get(addr, "")
+        if addr in _ONBOARD_I2C_ADDRS:
+            desc = (desc or "on-board device") + " (on-board, not probed)"
+        else:
+            candidate = False
+            for _name, addrs in _SEESAW_ADDR_RANGES:
+                if addr in addrs:
+                    candidate = True
+                    break
+            if candidate and _seesaw_present(addr):
+                product = _seesaw_product(addr)
+                desc = "seesaw board, firmware product %s" % (
+                    product if product else "unknown")
+        if not desc:
+            desc = "unidentified device"
+        rows.append((addr, t, desc))
+        if verbose:
+            print("0x%02x  %-16s %s" % (addr, t if t else "-", desc))
+    return rows
 
 
 def monitor_encoders():
