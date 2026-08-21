@@ -310,7 +310,7 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 
 | Wire code   | C `amy_event` | Python / JS   | Type-range  | Notes                                 |
 | ------ | -------- | ---------- | ----------  | ------------------------------------- |
-| `v`    | `osc` | `osc` | uint 0 to OSCS-1 | Which oscillator to control |
+| `v`    | `osc` | `osc` | uint 0 to OSCS-1 | Which oscillator to control. In a command addressed to a synth this is relative to the voice, as are `chained_osc`, `mod_source` and `algo_source`; a number outside the voice is refused (see [synth.md](synth.md)) |
 | `w`    | `wave` | `wave` | uint 0-21 | Waveform: [0=SINE, PULSE, SAW_DOWN, SAW_UP, TRIANGLE, NOISE, KS, PCM, ALGO, PARTIAL, BYO_PARTIALS, INTERP_PARTIALS, AUDIO_IN0, AUDIO_IN1, AUDIO_EXT0, AUDIO_EXT1, AMY_MIDI, PCM_LEFT, PCM_RIGHT, WAVETABLE, CUSTOM, OFF]. default: 0/SINE |
 | `ww`   | `mode` | `mode` | uint | Wave-specific modes.  For PCM, we have `PCM_PLAY` (plays through to end), `PCM_PLAY_STOP` (stops immediately on note-off, default), `PCM_LOOP` (observes loop marks in wave, plays through release on note-off), `PCM_LOOP_STOP` (plays loop, stops immediately on note-off), `PCM_LOOP_FOREVER` (loops, and ignores note-offs, expected to be used with an EG). |
 | `S`    | `reset_osc`| `reset`  | uint | Resets given oscillator. set to RESET_ALL_OSCS to reset all oscillators, gain and EQ. RESET_TIMEBASE resets the clock and sequencer tick count to zero. It is an ordinary event, so it works from `amy_add_event()` as well as the wire, and can be scheduled with `ticks=` (or `amy_event.time` from the C API) like any other event; the counters restart at the next audio block boundary, so the reset cannot race the render thread, and events already queued for a future time keep their relative timing across it. (RESET_AMY and RESET_EVENTS are the exceptions: they act the moment the message is parsed, since neither restarting AMY nor emptying the event queue can be carried in a queued event.) RESET_SYNTHS is a deprecated alias for RESET_ALL_OSCS; prefer RESET_ALL_OSCS. RESET_AMY restarts AMY. RESET_SEQUENCER clears the sequencer.|
@@ -354,6 +354,54 @@ These per-oscillator parameters use [CtrlCoefs](synth.md) notation
 | `zF`   | **TODO**| `disk_sample` | uint,string,uint | Set a PCM preset to play live from a WAV filename on AMY host disk. Params: preset number, filename, midinote. See `hooks` for reading files on host disk. **Only one file sample can be played at once per preset number. Use multiple presets if you want polyphony from a single sample.** |
 | `zS`   | **TODO**| `start_sample` | uint x 6 | Start sampling to a stereo PCM preset from source. Params: preset number, source, max length in frames, midinote, loopstart, loopend. source = 1 is AMY mixed output. source = 2 is AUDIO_IN0 + 1.  Will sample until max length is reached, `stop_sample` is issued, or a new `start_sample` is issued. | 
 | `zO`   | **TODO**| `stop_sample` | uint | Stop sampling. Does nothing if no sampling active. param ignored. | 
+
+### Sampler timing and time-stretch (experimental)
+
+These hang off the `p` (preset) prefix rather than taking top-level codes of
+their own: 44 of the 52 single letters are already allocated, and the sampler
+corner is still growing. `p<n>` still selects PCM preset `n` as before; a
+sub-letter after `p` addresses a PCM parameter instead.
+
+| code | AMY parameter | Python/JS keyword | type | description |
+| ---- | ------------- | ----------------- | ---- | ----------- |
+| `po`   | `sample_offset` | `sample_offset` | uint 0 to BLOCK_SIZE-1 | PCM only. Start this note-on at a sample offset *within* the render block it fires in, leaving the head of the block silent. Events fire on block (256-sample) boundaries; `sample_offset` supplies the sub-block remainder, so slices of arbitrary length can be scheduled to butt-join sample-accurately (e.g. reconstructing a chopped break with no gaps). Sticky per osc like other params; set 0 to clear. |
+| `pF`   | `fit_ticks` | `fit` | float | PCM only, in-memory presets. Engage the granular time/pitch engine at the next note-on. `fit=N` (N>0): play the sample in exactly N sequencer ticks with a pitch-invariant time stretch; `note` still transposes without changing duration. Because the target is in ticks, it tracks `tempo` *while the note is sounding*, not just at note-on: change the tempo mid-note and the stretch rate follows, so the note still ends N ticks after it started. `fit=0`: time-invariant pitch shift — `note` transposes but the sample keeps its original duration. `fit=-1`: turn the engine off. Non-destructive and real-time (~2.5x the render cost of plain PCM). |
+
+Two parameters turn AMY's PCM oscillators into a "real" sampler (see
+`experiments/sampler/` for worked examples):
+
+- **`sample_offset` (`po`)** gives note-ons sub-block placement. AMY events
+  execute on block boundaries (256 samples, ~5.8 ms); a PCM note-on with
+  `sample_offset=k` starts at sample `k` of its block. Schedule a slice of
+  length `L` starting at absolute sample `S`, then its successor at
+  `S + L` (block `(S+L)//256`, offset `(S+L)%256`), and the two butt-join
+  with no gap — a chopped break plays back bit-exact against the original.
+  Untransposed playback (no `note`, no freq mods) is drift-free: AMY uses
+  the preset's native rate exactly in that case.
+
+- **`fit` (`pF`)** decouples duration from pitch, non-destructively, at
+  note-on time. `fit=N` plays the sample over exactly N sequencer ticks
+  (so it tracks `tempo`, including tempo changes that land part-way
+  through a note -- the timeline rate is rescaled in the render loop, so
+  a sounding note re-aims at the same tick rather than finishing at the
+  tempo it started under) without changing pitch; `fit=0` changes pitch
+  (via `note`) without changing duration. The engine is a fixed-point
+  granular overlap-add (two 1024-sample Hann grains, 50% overlap) with a
+  WSOLA-style correlation search aligning each new grain's phase against
+  the one still playing — no FFT, no float in the render path, so it
+  targets every AMY platform. Looping modes (`ww`) work: the input
+  timeline wraps at the loop marks. Streamed `disk_sample` presets can't
+  `fit` (no random access).
+
+`fit` composes with `phase` to start a sample part-way through, which is what
+a "drop the playhead into the middle of a loop" transport needs. `phase` sets
+the note-on's start frame (`start_frame / 2^23`) and the stretcher picks the
+input up from there — but it stretches *whatever input is left* over
+*whatever `fit` it is given*, so `fit` has to be the REMAINING ticks, not the
+clip's full length; pass the full value and the tail plays at half speed.
+Entering a 16-beat loop at its midpoint is `phase = (frames/2) / 2^23` with
+`fit` set to 8 beats of ticks, and it ends on the same grid line the
+uninterrupted loop would have.
 
 ### WAVETABLE wave type
 
