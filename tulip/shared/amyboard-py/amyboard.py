@@ -839,7 +839,8 @@ def display_refresh():
 
 def display_startup():
     display.text("AMYboard!!!!", 0, 0, 255)
-    display.text(tulip.version(), 0, 24, 255)
+    display.text("TLP " + tulip.version(), 0, 12, 255)
+    display.text("AMY " + amy.version, 0, 24, 255)
     display.show()
 
 def init_display(rotate=None):
