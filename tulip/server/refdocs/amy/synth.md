@@ -98,6 +98,10 @@ amy.send(synth=1, note=60, vel=1)
 ```
 .. will sound two sine tones a fifth apart, even though the two oscs are not chained and we only issued a single note-one.
 
+Note 3: an `osc` number in a command addressed to a synth is **relative to the voice**, not absolute -- `osc=1` means the second osc of each of that synth's voices, wherever those oscs happen to live. The same goes for a parameter that names another osc: `mod_source`, `chained_osc` and `algo_source` are voice-relative too, so `amy.send(synth=1, osc=0, mod_source=1)` means "modulate osc 0 from osc 1 *of the same voice*".
+
+An osc number that lands outside the voice is refused: AMY prints a message naming the parameter and ignores it, and the rest of the command still applies. There is no useful reading of a reference past the end of a voice -- the oscs beyond it belong to the synth's other voices, or to another synth entirely -- so a synth with one osc per voice cannot modulate itself from a neighbour's oscillator by asking for `mod_source=1`. Commands sent without a `synth` address oscs absolutely and are not bounded this way.
+
 ### Changing a synth's voice count
 
 You can change `num_voices` on a synth that is already running. The synth keeps the sound it has at that moment, including any changes you made since loading its patch:
