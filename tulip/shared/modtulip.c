@@ -103,20 +103,20 @@ extern mp_obj_t tulip_win_http_fetch(size_t n_args, const mp_obj_t *args);
 extern const mp_obj_fun_builtin_var_t tulip_win_http_fetch_obj;
 #endif
 
-mp_obj_t midi_callback = NULL;
+MP_REGISTER_ROOT_POINTER(mp_obj_t midi_callback);
 
 STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
-    midi_callback = args[0];
+    MP_STATE_PORT(midi_callback) = args[0];
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_midi_callback);
 
 // Called (via mp_sched_schedule from the AMY render task) when AMY's CPU
 // overload failsafe trips, with the render load percent as a small int.
-mp_obj_t amy_overload_callback = NULL;
+MP_REGISTER_ROOT_POINTER(mp_obj_t amy_overload_callback);
 
 STATIC mp_obj_t tulip_amy_overload_callback(size_t n_args, const mp_obj_t *args) {
-    amy_overload_callback = (args[0] == mp_const_none) ? NULL : args[0];
+    MP_STATE_PORT(amy_overload_callback) = (args[0] == mp_const_none) ? NULL : args[0];
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_overload_callback_obj, 1, 1, tulip_amy_overload_callback);
@@ -175,13 +175,13 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_cv_synth_obj, 2, 2, tulip_s
 STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
     int8_t index = -1;
     for(uint8_t slot=0;slot<DEFER_SLOTS;slot++) {
-        if(defer_callbacks[slot]==NULL) {
+        if(MP_STATE_PORT(defer_callbacks)[slot]==NULL) {
             index = slot; slot = DEFER_SLOTS+1;
         }
     }
     if(index>=0) {
-        defer_callbacks[index] = args[0];
-        defer_args[index] = args[1];
+        MP_STATE_PORT(defer_callbacks)[index] = args[0];
+        MP_STATE_PORT(defer_args)[index] = args[1];
         defer_sysclock[index] = get_time_ms() + mp_obj_get_int(args[2]);
 
     } else {
@@ -196,12 +196,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_defer_obj, 3, 3, tulip_defer);
 STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
     int8_t index = -1;
     for(uint8_t slot=0;slot<SEQUENCER_SLOTS;slot++) {
-        if(sequencer_callbacks[slot]==NULL) {
+        if(MP_STATE_PORT(sequencer_callbacks)[slot]==NULL) {
             index = slot; slot = SEQUENCER_SLOTS+1;
         }
     }
     if(index>=0) {
-        sequencer_callbacks[index] = args[0];
+        MP_STATE_PORT(sequencer_callbacks)[index] = args[0];
         sequencer_tick[index] = mp_obj_get_int(args[1]);
         sequencer_period[index] = mp_obj_get_int(args[2]);
     } else {
@@ -214,7 +214,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_add_callback_obj, 3, 3, tul
 STATIC mp_obj_t tulip_seq_remove_callback(size_t n_args, const mp_obj_t *args) {
     int8_t index = mp_obj_get_int(args[0]);
     if(index>=0 && index <SEQUENCER_SLOTS) {
-        sequencer_callbacks[index] = NULL;
+        MP_STATE_PORT(sequencer_callbacks)[index] = NULL;
         sequencer_period[index] = 0;
         sequencer_tick[index] = 0;
     }
@@ -225,7 +225,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callback_obj, 1, 1, 
 
 STATIC mp_obj_t tulip_seq_remove_callbacks(size_t n_args, const mp_obj_t *args) {
     for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
-        sequencer_callbacks[i] = NULL;
+        MP_STATE_PORT(sequencer_callbacks)[i] = NULL;
         sequencer_period[i] = 0;
         sequencer_tick[i] = 0;
     }
@@ -1136,12 +1136,12 @@ STATIC mp_obj_t tulip_screen_size(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screen_size_obj, 0, 0, tulip_screen_size);
 
 
-mp_obj_t frame_callback = NULL; 
-mp_obj_t frame_arg = NULL; 
-mp_obj_t touch_callback = NULL; 
-mp_obj_t keyboard_callback = NULL;
-mp_obj_t ui_quit_callback = NULL;
-mp_obj_t ui_switch_callback = NULL;
+MP_REGISTER_ROOT_POINTER(mp_obj_t frame_callback);
+MP_REGISTER_ROOT_POINTER(mp_obj_t frame_arg);
+MP_REGISTER_ROOT_POINTER(mp_obj_t touch_callback);
+MP_REGISTER_ROOT_POINTER(mp_obj_t keyboard_callback);
+MP_REGISTER_ROOT_POINTER(mp_obj_t ui_quit_callback);
+MP_REGISTER_ROOT_POINTER(mp_obj_t ui_switch_callback);
 
 
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
@@ -1163,10 +1163,10 @@ void mp_schedule_lv() {
 
 void tulip_frame_isr() {
     mp_schedule_lv();
-    if(frame_callback != NULL) {
+    if(MP_STATE_PORT(frame_callback) != NULL) {
         // Schedule the python callback given to run asap
-        //fprintf(stderr, "calling function %p with arg %p at frame %d\n", frame_callback, frame_arg, vsync_count);
-        mp_sched_schedule(frame_callback, frame_arg);
+        //fprintf(stderr, "calling function %p with arg %p at frame %d\n", MP_STATE_PORT(frame_callback), MP_STATE_PORT(frame_arg), vsync_count);
+        mp_sched_schedule(MP_STATE_PORT(frame_callback), MP_STATE_PORT(frame_arg));
 #ifdef ESP_PLATFORM
         //mp_hal_wake_main_task_from_isr();
 #endif
@@ -1175,8 +1175,8 @@ void tulip_frame_isr() {
 
 
 void tulip_touch_isr(uint8_t up) {
-    if(touch_callback != NULL) {
-        mp_sched_schedule(touch_callback, mp_obj_new_int(up)); 
+    if(MP_STATE_PORT(touch_callback) != NULL) {
+        mp_sched_schedule(MP_STATE_PORT(touch_callback), mp_obj_new_int(up)); 
     }
 }
 
@@ -1187,12 +1187,12 @@ void tulip_touch_isr(uint8_t up) {
 // tulip.frame_callback() -- stops 
 STATIC mp_obj_t tulip_frame_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        frame_callback = NULL;
+        MP_STATE_PORT(frame_callback) = NULL;
     } else {
-        frame_callback = args[0];
+        MP_STATE_PORT(frame_callback) = args[0];
     }
     if(n_args > 1) {
-        frame_arg = args[1];
+        MP_STATE_PORT(frame_arg) = args[1];
     }
     return mp_const_none;
 }
@@ -1203,9 +1203,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_frame_callback_obj, 0, 2, tulip
 
 STATIC mp_obj_t tulip_touch_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        touch_callback = NULL;
+        MP_STATE_PORT(touch_callback) = NULL;
     } else {
-        touch_callback = args[0];
+        MP_STATE_PORT(touch_callback) = args[0];
     }
     return mp_const_none;
 }
@@ -1213,9 +1213,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_callback_obj, 0, 1, tulip
 
 STATIC mp_obj_t tulip_keyboard_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        keyboard_callback = NULL;
+        MP_STATE_PORT(keyboard_callback) = NULL;
     } else {
-        keyboard_callback = args[0];
+        MP_STATE_PORT(keyboard_callback) = args[0];
     }
     return mp_const_none;
 }
@@ -1225,9 +1225,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_keyboard_callback_obj, 0, 1, tu
 
 STATIC mp_obj_t tulip_ui_quit_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        ui_quit_callback = NULL;
+        MP_STATE_PORT(ui_quit_callback) = NULL;
     } else {
-        ui_quit_callback = args[0];
+        MP_STATE_PORT(ui_quit_callback) = args[0];
     }
     return mp_const_none;
 }
@@ -1235,9 +1235,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_quit_callback_obj, 0, 1, tul
 
 STATIC mp_obj_t tulip_ui_switch_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        ui_switch_callback = NULL;
+        MP_STATE_PORT(ui_switch_callback) = NULL;
     } else {
-        ui_switch_callback = args[0];
+        MP_STATE_PORT(ui_switch_callback) = args[0];
     }
     return mp_const_none;
 }
