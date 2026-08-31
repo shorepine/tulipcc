@@ -68,14 +68,58 @@ esp_err_t i2c_follower_init() {
 
 uint8_t i2c_buffer[MAX_MESSAGE_LEN];
 
+// AMY message framing for the I2C follower. The ESP-IDF slave driver hands us
+// a byte ring with no transaction boundaries: an AMY message longer than one
+// host write arrives split across reads, and back-to-back short messages can
+// arrive coalesced in one read. So accumulate bytes and dispatch only complete
+// messages. A message ends at 'Z' -- except a message carrying 'u' (patch
+// string), which is itself a concatenation of Z-terminated messages and so
+// ends at the doubled 'ZZ' (last inner terminator + the message's own; a host
+// must always end a u-message with ZZ). Each complete message is dispatched
+// on its own, so a leading 'H' (ticks scheduling) stays the first byte and a
+// 'u' can't swallow a following message.
+//
+// Known limits of a byte scan (fine for real wire traffic, documented so
+// nobody rediscovers them): a 'u' byte inside any argument triggers the ZZ
+// rule, and a patch string with interior ZZs (mapping commands stored inside
+// a patch, like the firmware drum kits in amy's patches.h -- those load by
+// K number, they don't travel over the wire) ends at its first ZZ.
+static uint8_t i2c_msg[MAX_MESSAGE_LEN];
+static size_t i2c_msg_len = 0;
+static uint8_t i2c_msg_has_u = 0;
+static uint8_t i2c_msg_resync = 0;
+
+static void i2c_accumulate_byte(uint8_t b) {
+    if(i2c_msg_resync) {
+        // Recovering from an oversized message: discard up to and including
+        // the next 'Z', then start clean.
+        if(b == 'Z') i2c_msg_resync = 0;
+        return;
+    }
+    if(i2c_msg_len >= MAX_MESSAGE_LEN - 1) {
+        // Longer than AMY's own message limit, so it could never parse (or a
+        // terminator was lost to a dropped byte). Drop it and resync at the
+        // next 'Z' rather than wedging the stream waiting for a terminator.
+        fprintf(stderr, "amyboard i2c: message exceeds %d bytes, dropping\n", MAX_MESSAGE_LEN - 1);
+        i2c_msg_len = 0;
+        i2c_msg_has_u = 0;
+        i2c_msg_resync = 1;
+        return;
+    }
+    i2c_msg[i2c_msg_len++] = b;
+    if(b == 'u') i2c_msg_has_u = 1;
+    if(b == 'Z' && (!i2c_msg_has_u || (i2c_msg_len >= 2 && i2c_msg[i2c_msg_len - 2] == 'Z'))) {
+        i2c_msg[i2c_msg_len] = 0;
+        amy_add_message((char*)i2c_msg);
+        i2c_msg_len = 0;
+        i2c_msg_has_u = 0;
+    }
+}
+
 void i2c_check_for_data() {
     while(1) {
         size_t size = i2c_slave_read_buffer(I2C_FOLLOWER_NUM, i2c_buffer, MAX_MESSAGE_LEN, 10 / portTICK_PERIOD_MS);
-        if(size>0) {
-            i2c_buffer[size] = 0;
-            //fprintf(stderr, "%s\n", i2c_buffer);
-            amy_add_message((char*)i2c_buffer);
-        }
+        for(size_t i = 0; i < size; i++) i2c_accumulate_byte(i2c_buffer[i]);
     }
 }
 
