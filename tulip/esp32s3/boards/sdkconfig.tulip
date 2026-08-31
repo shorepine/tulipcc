@@ -18,6 +18,16 @@ CONFIG_SPIRAM_IGNORE_NOTFOUND=y
 CONFIG_SPIRAM_USE_CAPS_ALLOC=y
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 
+# Make the hardware AES accelerator busy-wait instead of allocating its own
+# interrupt. The RGB LCD (GDMA bounce buffers), I2S audio, USB host (LEVEL1) and
+# the Wi-Fi/BT MAC already consume the few free low-priority interrupt slots on
+# the S3, so when Wi-Fi's WPA2 handshake triggers the first hardware-AES op,
+# esp_aes_intr_alloc() fails with "No free interrupt inputs for AES interrupt"
+# and calls abort() (IDF default CONFIG_MBEDTLS_AES_USE_INTERRUPT=y). Polling
+# removes that interrupt dependency; the only cost is the CPU busy-waiting during
+# long AES operations (TLS), which is acceptable here.
+CONFIG_MBEDTLS_AES_USE_INTERRUPT=n
+
 CONFIG_FREERTOS_USE_TRACE_FACILITY=n
 CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
 CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
