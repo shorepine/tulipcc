@@ -19,7 +19,7 @@
 #include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "esp_err.h"
-#include "esp_rom_sys.h"   // esp_rom_delay_us for the sub-tick ADC spin remainder
+#include "esp_rom_sys.h"   // esp_rom_delay_us for the sub-tick ADC conversion wait
 #include "esp_timer.h"     // esp_timer_get_time for the CV pair skew measurement
 #include "driver/i2s_std.h"
 
@@ -268,9 +268,9 @@ static esp_err_t ads1015_read_register(uint8_t reg, uint8_t* data, uint8_t len) 
 }
 
 // One conversion at 3300 SPS takes 1/3300 = 303us, so this is the conversion
-// time plus a little margin. Only used as the spin quantum for the rare early
-// wake in ads1015_wait_ready_yielding() -- the normal path waits on the RTOS
-// tick and confirms completion with the OS bit rather than by timing.
+// time plus a little margin. Spun out directly for ch0 (inside the skew window)
+// and used as the spin quantum for the rare early wake in
+// ads1015_wait_ready_yielding(), which handles ch1.
 #define ADS1015_CONVERSION_US (320)
 
 static esp_err_t ads1015_start_conversion(uint8_t channel) {
@@ -310,11 +310,17 @@ static esp_err_t ads1015_check_idle(void) {
 // hand back the *previous* channel's sample. So confirm with the OS bit and
 // spin out only the remainder on the rare early wake.
 //
-// Used for both channels. Spinning out ch0's conversion instead would buy a
-// tighter skew (~0.7ms rather than ~1.25ms) at the cost of 320us of busy-wait
-// in every 6ms period -- 5% of core 0 -- which is not worth it here: the skew
-// that matters is the ~5ms the old speculative-start scheme had, and either
-// number is well clear of it.
+// Used for ch1 only, whose wait falls after the last timestamp feeding the skew
+// measurement. ch0's wait is inside the skew window and must spin.
+//
+// vTaskDelay() returns when this task is next *scheduled*, not at the tick edge:
+// at PRIO_MIN+2 on core 0 that means waiting out AMY's render task
+// (PRIO_MAX-1, same core, every 5.8ms). Measured on an AMYboard with an 8-voice
+// piano playing and Python scanning the bus, yielding both waits gave a median
+// skew of 4922us (p90 5506us) -- no better than the ~5ms of the speculative
+// scheme this replaced. Spinning ch0's wait alone brings the median to 735us
+// (p90 4780us, the tail being render preemption landing between the two
+// conversions) for 320us of busy-wait per 6ms period, ~5% of core 0.
 static esp_err_t ads1015_wait_ready_yielding(void) {
     vTaskDelay(1);
     for(int i = 0; i < 5; i++) {
@@ -350,11 +356,9 @@ static volatile uint32_t cv_pair_skew_max_us = 0;
 // started explicitly with its result checked, so there is no cached notion of
 // which channel the mux is on that can drift out of step with the hardware.
 //
-// Both conversions are waited out by yielding, so the task burns no CPU
-// spinning. That puts the skew at ~1.25ms rather than the ~0.7ms a busy-wait
-// would give: the task wakes from xTaskDelayUntil on a tick edge and reaches
-// the first yield a deterministic ~350us in, so the tick-quantized wait is
-// repeatable rather than free-running. Measured live as cv_pair_skew_us.
+// Measured on an AMYboard: median skew 721us idle, 735us under load (8-voice
+// piano + Python bus scans), p90 4780us under load. Reported live as
+// cv_pair_skew_us / cv_pair_skew_max_us via tulip.cv_stats().
 static esp_err_t ads1015_read_pair(uint16_t *raw) {
     esp_err_t ret = ads1015_check_idle();
     if(ret != ESP_OK) return ret;
@@ -362,8 +366,10 @@ static esp_err_t ads1015_read_pair(uint16_t *raw) {
     int64_t t0 = esp_timer_get_time();
     ret = ads1015_start_conversion(0);
     if(ret != ESP_OK) return ret;
-    ret = ads1015_wait_ready_yielding();
-    if(ret != ESP_OK) return ret;
+    // Spin, don't yield: this wait is inside the skew window. Measured on an
+    // AMYboard, yielding here costs a median skew of 4922us under load vs
+    // 735us spinning -- see ads1015_wait_ready_yielding().
+    esp_rom_delay_us(ADS1015_CONVERSION_US);
     ret = ads1015_read_convert(&raw[0]);
     if(ret != ESP_OK) return ret;
 
