@@ -750,6 +750,26 @@ STATIC mp_obj_t tulip_i2c_bg_errors(void) {
     return mp_obj_new_int(amyboard_i2c_bg_errors());
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_i2c_bg_errors_obj, tulip_i2c_bg_errors);
+
+// CV input diagnostics (amyboard_support.c). tulip.cv_stats() -> (errors,
+// last_skew_us, max_skew_us): count of failed ADS1015 pair reads since boot,
+// and the measured interval between the two channels' conversion starts. Pass
+// any argument to reset the count and the max. Use this to tell a genuinely
+// misbehaving ADC (errors climbing) from scheduling jitter (skew outliers).
+extern uint32_t amyboard_cv_errors(void);
+extern uint32_t amyboard_cv_skew_us(void);
+extern uint32_t amyboard_cv_skew_max_us(void);
+extern void amyboard_cv_stats_reset(void);
+
+STATIC mp_obj_t tulip_cv_stats(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t tuple[3];
+    tuple[0] = mp_obj_new_int(amyboard_cv_errors());
+    tuple[1] = mp_obj_new_int(amyboard_cv_skew_us());
+    tuple[2] = mp_obj_new_int(amyboard_cv_skew_max_us());
+    if(n_args > 0) amyboard_cv_stats_reset();
+    return mp_obj_new_tuple(3, tuple);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cv_stats_obj, 0, 1, tulip_cv_stats);
 #endif // ESP_PLATFORM
 
 
@@ -1850,6 +1870,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_i2c_bg_write), MP_ROM_PTR(&tulip_i2c_bg_write_obj) },
     { MP_ROM_QSTR(MP_QSTR_i2c_bg_pending), MP_ROM_PTR(&tulip_i2c_bg_pending_obj) },
     { MP_ROM_QSTR(MP_QSTR_i2c_bg_errors), MP_ROM_PTR(&tulip_i2c_bg_errors_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cv_stats), MP_ROM_PTR(&tulip_cv_stats_obj) },
 #endif
 #else
     #if !defined(AMYBOARD_WEB) && !defined(AMYBOARD_VCV)

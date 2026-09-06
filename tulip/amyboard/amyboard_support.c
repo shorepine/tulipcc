@@ -19,6 +19,8 @@
 #include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "esp_rom_sys.h"   // esp_rom_delay_us for the sub-tick ADC spin remainder
+#include "esp_timer.h"     // esp_timer_get_time for the CV pair skew measurement
 #include "driver/i2s_std.h"
 
 
@@ -236,65 +238,160 @@ static esp_err_t ads1015_write_register(uint8_t reg, uint16_t data) {
 }
 
 static esp_err_t ads1015_read_register(uint8_t reg, uint8_t* data, uint8_t len) {
-    i2c_cmd_handle_t cmd;
-    esp_err_t ret;
-
-    cmd = i2c_cmd_link_create();
+    // Standard I2C register read: write the register pointer, then a *repeated*
+    // START to turn the bus around and read, all in one transaction.
+    //
+    // This used to be two separate transactions with a STOP between them, which
+    // cost two acquisitions of the driver's per-port mutex (held for the whole
+    // of i2c_master_cmd_begin, i2c.c:1554-1642) plus an extra address byte on
+    // the wire, and gave any other user of I2C_NUM_0 -- the audio thread's CV
+    // DAC writes, the OLED flush task, machine.I2C -- a window to slip in
+    // between the pointer write and the read. It also meant the pointer write
+    // could succeed while the read failed (or vice versa), which is how a read
+    // could come back holding the wrong register's contents.
+    //
+    // The last byte of a master read is NACKed (I2C_MASTER_LAST_NACK) rather
+    // than ACKed as before. ACKing it tells the device to put another byte on
+    // the bus, so it can still be driving SDA when the STOP is issued -- a
+    // classic source of intermittent corruption on the next transaction.
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_WRITE,1);
-    i2c_master_write_byte(cmd,reg,1);
+    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_WRITE,1); // address + write
+    i2c_master_write_byte(cmd,reg,1);                                  // register pointer
+    i2c_master_start(cmd);                                             // repeated START
+    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_READ,1);  // address + read
+    i2c_master_read(cmd, data, len, I2C_MASTER_LAST_NACK);
     i2c_master_stop(cmd);
-    i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10));
-    i2c_cmd_link_delete(cmd);
-
-    cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd); // generate start command
-    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_READ,1); // specify address and read command
-    i2c_master_read(cmd, data, len, 0); // read all wanted data
-    i2c_master_stop(cmd); // generate stop command
-    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
+    esp_err_t ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10));
     i2c_cmd_link_delete(cmd);
     return ret;
 }
 
-static int ads1015_pending_channel = -1;
+// One conversion at 3300 SPS takes 1/3300 = 303us, so this is the conversion
+// time plus a little margin. Only used as the spin quantum for the rare early
+// wake in ads1015_wait_ready_yielding() -- the normal path waits on the RTOS
+// tick and confirms completion with the OS bit rather than by timing.
+#define ADS1015_CONVERSION_US (320)
 
-void ads1015_start_conversion(uint8_t channel) {
+static esp_err_t ads1015_start_conversion(uint8_t channel) {
     uint16_t channel_mux = ADS1015_MUX_SINGLE_0 + (channel << ADS1015_MUX_CHAN_SHIFTL);
     uint16_t data = (ADS1015_CQUE_DISABLE | ADS1015_CLAT_NONLAT |
                      ADS1015_CPOL_ACTVLOW | ADS1015_CMODE_TRAD | ADS1015_DR_3300SPS |
                      ADS1015_MODE_SINGLE | ADS1015_OS_SINGLE | ADS1015_PGA_2_048V |
                      channel_mux);
-    ads1015_write_register(ADS1015_REGISTER_CONFIG, data);
-    ads1015_pending_channel = channel;
+    return ads1015_write_register(ADS1015_REGISTER_CONFIG, data);
 }
 
-uint16_t ads1015_get_result(void) {
-    // Wait for the single-shot conversion on the last-selected mux channel to
-    // finish before reading the result. The OS bit reads 0 while converting and
-    // 1 when done; at 3300 SPS each conversion takes ~0.3ms. Without this wait the
-    // CONVERT register still holds the *previous* conversion (the other channel),
-    // which made cv_in(0) and cv_in(1) return the same input. Bound the poll so a
-    // missing/unresponsive ADC can't stall the cv_read_task forever.
+static esp_err_t ads1015_read_convert(uint16_t *out) {
     uint8_t buffer[2];
-    for(int i = 0; i < 20; i++) {
-        if(ads1015_read_register(ADS1015_REGISTER_CONFIG, buffer, 2) != ESP_OK) break;
-        if((((uint16_t)buffer[0] << 8) | buffer[1]) & ADS1015_OS_READY) break; // conversion done
-        vTaskDelay(pdMS_TO_TICKS(1));
+    esp_err_t ret = ads1015_read_register(ADS1015_REGISTER_CONVERT, buffer, 2);
+    if(ret != ESP_OK) return ret;
+    *out = ((uint16_t)buffer[0] << 8) | (uint16_t)buffer[1];
+    return ESP_OK;
+}
+
+// Confirm the ADC is present, responding, and idle (OS reads 1 when no
+// conversion is running) before committing to the sequence below. This lives
+// here, ahead of the pair, rather than between the two conversions: a CONFIG
+// read is ~115us on the wire plus driver overhead, and inline it would be pure
+// added skew.
+static esp_err_t ads1015_check_idle(void) {
+    uint8_t buffer[2];
+    esp_err_t ret = ads1015_read_register(ADS1015_REGISTER_CONFIG, buffer, 2);
+    if(ret != ESP_OK) return ret;
+    if(!((((uint16_t)buffer[0] << 8) | buffer[1]) & ADS1015_OS_READY)) return ESP_ERR_INVALID_STATE;
+    return ESP_OK;
+}
+
+// Wait out a conversion by yielding instead of spinning. vTaskDelay(1) wakes on
+// the next tick boundary, so it returns anywhere between ~0 and one full tick
+// depending on where in the tick period we started -- on its own it is NOT a
+// guarantee that the 303us conversion finished, and reading CONVERT early would
+// hand back the *previous* channel's sample. So confirm with the OS bit and
+// spin out only the remainder on the rare early wake.
+//
+// Used for both channels. Spinning out ch0's conversion instead would buy a
+// tighter skew (~0.7ms rather than ~1.25ms) at the cost of 320us of busy-wait
+// in every 6ms period -- 5% of core 0 -- which is not worth it here: the skew
+// that matters is the ~5ms the old speculative-start scheme had, and either
+// number is well clear of it.
+static esp_err_t ads1015_wait_ready_yielding(void) {
+    vTaskDelay(1);
+    for(int i = 0; i < 5; i++) {
+        esp_err_t ret = ads1015_check_idle();
+        if(ret != ESP_ERR_INVALID_STATE) return ret;  // ESP_OK, or a real I2C failure
+        esp_rom_delay_us(ADS1015_CONVERSION_US / 4);
     }
-    ads1015_read_register(ADS1015_REGISTER_CONVERT, buffer, 2);
-    return ((uint16_t)buffer[0] << 8) | (uint16_t)buffer[1];
+    return ESP_ERR_TIMEOUT;
 }
 
-uint16_t read_ads1015_raw(uint8_t channel) {
-    if (channel != ads1015_pending_channel)
-        ads1015_start_conversion(channel);
-    uint16_t result = ads1015_get_result();
-    // Speculatively start conversion on the other channel.  Assumes we're just using channels 0 and 1.
-    ads1015_start_conversion((channel + 1) % 2);
-    return result;
+// CV read diagnostics, readable from Python as tulip.cv_stats().
+static volatile uint32_t cv_read_errors_count = 0;
+static volatile uint32_t cv_pair_skew_us = 0;
+static volatile uint32_t cv_pair_skew_max_us = 0;
+
+// Read both CV channels as a tightly-spaced pair.
+//
+// The ADS1015 has one mux and one delta-sigma modulator, so the two channels
+// can never be sampled at the same instant -- and because it is delta-sigma,
+// each reading integrates over its own ~303us conversion window, so
+// "simultaneous" isn't meaningful below that scale anyway. What this buys is
+// two *adjacent* conversion windows: the gap between the two conversion starts
+// is one conversion plus one CONVERT read plus one CONFIG write, roughly
+// 0.6-0.8ms.
+//
+// The scheme this replaces started ch0's conversion at the *end* of the
+// previous iteration ("speculatively", to save a wait) and then let the result
+// sit in the CONVERT register across the whole 6ms task delay, so ch0's sample
+// was ~6ms old while ch1's was fresh -- about 5ms of skew, structural rather
+// than jitter, and the worst arrangement available for reading a CV pair.
+//
+// It also drops the cached ads1015_pending_channel: every conversion is now
+// started explicitly with its result checked, so there is no cached notion of
+// which channel the mux is on that can drift out of step with the hardware.
+//
+// Both conversions are waited out by yielding, so the task burns no CPU
+// spinning. That puts the skew at ~1.25ms rather than the ~0.7ms a busy-wait
+// would give: the task wakes from xTaskDelayUntil on a tick edge and reaches
+// the first yield a deterministic ~350us in, so the tick-quantized wait is
+// repeatable rather than free-running. Measured live as cv_pair_skew_us.
+static esp_err_t ads1015_read_pair(uint16_t *raw) {
+    esp_err_t ret = ads1015_check_idle();
+    if(ret != ESP_OK) return ret;
+
+    int64_t t0 = esp_timer_get_time();
+    ret = ads1015_start_conversion(0);
+    if(ret != ESP_OK) return ret;
+    ret = ads1015_wait_ready_yielding();
+    if(ret != ESP_OK) return ret;
+    ret = ads1015_read_convert(&raw[0]);
+    if(ret != ESP_OK) return ret;
+
+    int64_t t1 = esp_timer_get_time();
+    ret = ads1015_start_conversion(1);
+    if(ret != ESP_OK) return ret;
+    ret = ads1015_wait_ready_yielding();
+    if(ret != ESP_OK) return ret;
+    ret = ads1015_read_convert(&raw[1]);
+    if(ret != ESP_OK) return ret;
+
+    // Interval between the two conversion starts. Nothing pins this task to the
+    // CPU across the pair, so preemption (the I2C follower task runs at
+    // priority 20 on this core) shows up here as outliers well above the
+    // ~0.6-0.8ms floor.
+    uint32_t skew = (uint32_t)(t1 - t0);
+    cv_pair_skew_us = skew;
+    if(skew > cv_pair_skew_max_us) cv_pair_skew_max_us = skew;
+    return ESP_OK;
 }
 
+uint32_t amyboard_cv_errors(void) { return cv_read_errors_count; }
+uint32_t amyboard_cv_skew_us(void) { return cv_pair_skew_us; }
+uint32_t amyboard_cv_skew_max_us(void) { return cv_pair_skew_max_us; }
+void amyboard_cv_stats_reset(void) {
+    cv_read_errors_count = 0;
+    cv_pair_skew_max_us = 0;
+}
 
 #endif // ESP_PLATFORM
 
@@ -302,26 +399,37 @@ extern uint8_t * external_map;
 float cv_local_value[2];
 uint8_t cv_local_override[2];
 
-// Cached CV input values — updated by a dedicated FreeRTOS task so the
-// audio render thread never blocks on I2C.
-float cv_cached_value[2] = {0, 0};
+// Cached CV input values -- updated by a dedicated FreeRTOS task so the audio
+// render thread never blocks on I2C.
+//
+// Double-buffered: the task fills the back buffer and publishes it with a
+// single index store, so any one read sees a coherent snapshot of both
+// channels rather than a pair torn across an update. (Two separate reads can
+// still straddle a publish, but they are microseconds apart within one audio
+// block against a 6ms update period.)
+static float cv_pair_buf[2][2] = {{0, 0}, {0, 0}};
+static volatile uint8_t cv_pair_index = 0;
 
-// Called from the coef hook on the audio thread — just returns the cached value.
+// Called from AMY's coef hook on the audio thread and from tulip.cv_in() on the
+// MicroPython task. Both are pure reads of the published snapshot -- neither
+// touches I2C, so they cannot contend with each other or with cv_read_task.
 float cv_input_hook(uint16_t channel) {
+    if(channel > 1) return 0;
     if(cv_local_override[channel]) {
         return cv_local_value[channel];
     }
-    return cv_cached_value[channel];
+    return cv_pair_buf[cv_pair_index][channel];
 }
 
 #ifdef ESP_PLATFORM
-// FreeRTOS task: reads both ADS1015 channels in a loop, updates cv_cached_value.
+// FreeRTOS task: reads both ADS1015 channels as a tightly-spaced pair and
+// publishes them together, once per cv_period.
 void cv_read_task(void *pvParameter) {
     // Bench-calibrated (loopback vs multimeter, 2026-08-07): raw = 20080 + 2003*V.
     // The ADC saturates at raw 32752 / raw 0, so the readable window is about
     // -10V to +6.3V -- inputs above +6.3V clip (the jack itself is fine to ±10V).
-    int32_t min = 10064; // -5V
-    int32_t max = 30096; // +5V
+    const int32_t min = 10064; // -5V
+    const int32_t max = 30096; // +5V
     // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
     // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
     // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
@@ -332,15 +440,28 @@ void cv_read_task(void *pvParameter) {
     // conversions take, unlike vTaskDelay which would add the read time on top.
     TickType_t last_wake = xTaskGetTickCount();
     for(;;) {
-        for(uint8_t ch = 0; ch < 2; ch++) {
-            if(!cv_local_override[ch]) {
-                int32_t raw = read_ads1015_raw(ch);  // Put uint16_t into int32_t.
-                // Map [min, max] -> [-5v, +5v]
-                cv_cached_value[ch] = (
-                    (((float)(raw - min))
-                     / ((float)(max - min)))
-                    * 10.0
-                ) - 5.0;
+        // Overriding both channels from Python (tulip.cv_local) takes the ADC
+        // out of the loop entirely -- hwci's no_cv A/B run depends on this to
+        // remove all CV I2C traffic while the task itself keeps running.
+        if(!(cv_local_override[0] && cv_local_override[1])) {
+            uint16_t raw[2];
+            if(ads1015_read_pair(raw) == ESP_OK) {
+                uint8_t back = 1 - cv_pair_index;
+                for(uint8_t ch = 0; ch < 2; ch++) {
+                    // Map [min, max] -> [-5v, +5v]
+                    cv_pair_buf[back][ch] = (
+                        (((float)((int32_t)raw[ch] - min))
+                         / ((float)(max - min)))
+                        * 10.0f
+                    ) - 5.0f;
+                }
+                cv_pair_index = back;  // publish both channels at once
+            } else {
+                // Hold the last good pair rather than publishing a bogus one.
+                // The old read path returned a bare uint16_t with no way to
+                // report failure, so a timed-out or misdirected read published
+                // whatever bytes happened to be in the buffer.
+                cv_read_errors_count++;
             }
         }
         xTaskDelayUntil(&last_wake, cv_period);
