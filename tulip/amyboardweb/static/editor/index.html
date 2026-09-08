@@ -975,6 +975,9 @@
   </head>
 
   <body>
+    <!-- Global alert box: must live outside the tab panes, since Bootstrap
+         sets inactive .tab-pane to display:none and would hide it. -->
+    <div class="alert fixed-top d-none" style="z-index: 10000;" id="alert_box"></div>
     <nav id="navScroll" class="navbar navbar-expand-lg navbar-dark fixed-top scrolled" tabindex="0">
       <div class="container">
         <a class="navbar-brand pe-4 fs-4" href="/editor/">
@@ -1678,7 +1681,6 @@
               </div>
             </div>
             <div class="tab-pane fade" id="environment-pane" role="tabpanel" aria-labelledby="environment-tab">
-              <div class="alert fixed-top d-none" id="alert_box"></div>
               <!-- Terminal REPL — hidden by default under disclosure triangle -->
               <details class="mb-3" id="repl-disclosure">
                 <summary class="repl-summary">Terminal REPL</summary>
@@ -1851,7 +1853,7 @@
                         <div class="form-text">1-20 chars: A-Z, a-z, 0-9.</div>
                       </div>
                       <div class="col-12 col-md-4">
-                        <label for="editor_filename" class="form-label mb-1">Sketch name (no spaces!)</label>
+                        <label for="editor_filename" class="form-label mb-1">Sketch name (no spaces or dots)</label>
                         <input type="text" id="editor_filename" class="small form-control" maxlength="20" placeholder="my_sketch" />
                         <div class="form-text">1-20 chars: A-Z, a-z, 0-9, -, _.</div>
                       </div>
