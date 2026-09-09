@@ -230,8 +230,13 @@ class DrumRow(UIElement):
 
     def update_switches(self):
         """For each on switch in the row, we have to update the sequencer with the new midi base_note."""
-        for switch in self.objs:
-            switch.update_sequencer()
+        # The whole pattern lives under one AMY sequencer tag, and AMY can only
+        # erase a tag whole -- so each switch's update() re-sends every step.
+        # Batching collapses a row's worth of those into one rebuild at the end
+        # rather than one per switch.
+        with app.drum_seq.batch():
+            for switch in self.objs:
+                switch.update_sequencer()
 
     def vel_cb(self, e):
         self.vel = e.get_target_obj().get_value() / 100.0
