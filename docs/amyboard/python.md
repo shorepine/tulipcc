@@ -296,8 +296,37 @@ import amy
 amy.send(osc=0, wave=amy.AMY_MIDI)                    # osc 0 now sends MIDI instead of audio
 
 # Play a MIDI note on channel 1 every quarter note (48 ticks), held for an eighth note.
-amy.send(osc=0, note=60, vel=1, ticks="0,48,1")    # note on  at tick 0  of each period
-amy.send(osc=0, note=60, vel=0, ticks="24,48,2")   # note off at tick 24 of each period
+amy.send(osc=0, note=60, vel=1, ticks="0,48,7")    # note on  at tick 0  of each period
+amy.send(osc=0, note=60, vel=0, ticks="24,48,7")   # note off at tick 24 of each period
+```
+
+`ticks="tick,period,tag"` schedules an event on AMY's sequencer, and events sent
+to the same `tag` **accumulate** -- the second send above adds to tag 7 rather
+than replacing the first -- so one tag can hold a whole pattern. Both events
+above are on tag 7, and clearing tag 7 takes the pattern down as a unit:
+
+```python
+amy.send(ticks="0,0,7")     # neither tick nor period: drop everything on tag 7
+```
+
+There's no way to remove one event from a tag while leaving the others, so
+changing a pattern means clearing the tag and re-sending the events that
+survive. `ticks=` claims the rest of its message, so the clear has to be its own
+`amy.send()`. Events that land on the same tick play in ascending tag order, and
+within one tag in the order you added them. See ["AMY's sequencer and
+ticks"](https://github.com/shorepine/amy/blob/main/docs/synth.md#amys-sequencer-and-ticks)
+for the full picture, including the untagged one-off form (`ticks=<tick>`) used
+elsewhere in these docs.
+
+If you'd rather not manage tags by hand, `sequencer.AMYSequence` wraps all of
+this -- it takes a tag of its own and handles the clear-and-rebuild for you:
+
+```python
+import sequencer
+seq = sequencer.AMYSequence(length=16, divider=8)   # 16 steps of an eighth note
+seq.add(0, amy.send, osc=0, note=60, vel=1)         # step 0
+seq.add(4, amy.send, osc=0, note=67, vel=1)         # step 4
+# seq.clear()   # ...and take the whole pattern down
 ```
 
 `amy.AMY_MIDI` always sends on MIDI channel 1, and notes that arrived over MIDI in are not echoed back out. See the [AMY MIDI docs](https://github.com/shorepine/amy/blob/main/docs/midi.md#sending-midi-out) for the full details.
