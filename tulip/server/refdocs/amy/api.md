@@ -206,7 +206,7 @@ amy_start(amy_config);
 | `max_sequencer_tags` | Int | 256 | How many sequencer items to handle |
 | `max_voices` | Int | 64 | How many voices |
 | `max_synths` | Int | 64 | How many synths |
-| `max_memory_patches` | Int | 32 | How many in memory patches to supprot |
+| `max_memory_patches` | Int | 32 | How many in memory patches to support |
 | `i2s_lrc`, `i2s_dout`, `i2s_din`, `i2s_bclk`, `i2s_mclk` | Int | -1 | Pin numbers for the I2S interface |
 | `midi_out`, `midi_in` | Int | -1 | Pin number for the MIDI UART pins |
 | `midi_uart` | 0,1,[2] | -1 | UART device index for MCU. Default 1 (`UART1`) on Pi Pico and ESP. Teensy is always `8` |
