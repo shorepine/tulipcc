@@ -28,28 +28,67 @@ def stop():
     amy.send(sequencer_run=0)
 
 class AMYSequenceEvent:
-    SEQUENCE_TAG = 0
+    """One scheduled step of an AMYSequence.
+
+    An event does not own an AMY sequencer tag; its Sequence does, and every
+    event in that Sequence is scheduled under it. AMY accumulates events on a
+    tag -- each ticks= adds another entry rather than replacing what was there
+    -- which is what lets a whole pattern live on one tag. The cost is that
+    there is no way to replace or drop ONE entry: editing or removing a step
+    means clearing the tag (ticks="0,0,<tag>", which now takes the whole tag)
+    and re-sending the events that remain. That is what Sequence.rebuild()
+    does, and why an edit costs a message per surviving step. Use
+    `with seq.batch():` to coalesce a run of edits into one rebuild.
+    """
     def __init__(self, sequence):
         self.sequence = sequence
-        self.tag = None
+
+    @property
+    def tag(self):
+        # Events used to carry their own tag, one AMY tag per step, which ran
+        # the 256-tag space out after a few minutes of editing. Kept readable
+        # here for anything that still looks at it.
+        return self.sequence.tag
 
     def amy_sequence_string(self):
-        return "%d,%d,%d" % (self.tick, self.sequence.period, self.tag)
+        return "%d,%d,%d" % (self.tick, self.sequence.period, self.sequence.tag)
 
-    def remove(self):
-        amy.send(ticks=",,%d" % (self.tag))
-        self.sequence.events.remove(self)
-
-    def update(self, position, func, args=[], amy_sequenceable=False, **kwargs):
+    def store(self, position, func, args=[], amy_sequenceable=False, **kwargs):
+        """Record what this step plays and when, without telling AMY."""
         self.tick = self.sequence.event_length_ticks * position
         self.func = func
         self.g_args = args
         self.g_kwargs = kwargs
-        if self.tag is None:
-            self.tag = AMYSequenceEvent.SEQUENCE_TAG
-            AMYSequenceEvent.SEQUENCE_TAG = AMYSequenceEvent.SEQUENCE_TAG + 1
-        sequence = self.amy_sequence_string()
-        self.func(*self.g_args, **self.g_kwargs, ticks=sequence)
+
+    def schedule(self):
+        """Add this step to AMY under the Sequence's tag."""
+        self.func(*self.g_args, **self.g_kwargs, ticks=self.amy_sequence_string())
+
+    def remove(self):
+        self.sequence.events.remove(self)
+        self.sequence.rebuild()  # the tag is shared: put back what's left
+
+    def update(self, position, func, args=[], amy_sequenceable=False, **kwargs):
+        self.store(position, func, args=args, amy_sequenceable=amy_sequenceable, **kwargs)
+        self.sequence.rebuild()  # ditto -- one entry can't be edited in place
+
+
+class _Batch:
+    """Context manager returned by AMYSequence.batch(); see there."""
+    def __init__(self, sequence):
+        self.sequence = sequence
+
+    def __enter__(self):
+        self.sequence.deferred = self.sequence.deferred + 1
+        return self.sequence
+
+    def __exit__(self, *exc):
+        seq = self.sequence
+        seq.deferred = seq.deferred - 1
+        if seq.deferred == 0 and seq.dirty:
+            seq.dirty = False
+            seq.rebuild()
+        return False
 
 
 class Sequence:
@@ -75,13 +114,59 @@ class TulipSequence(Sequence):
         tulip.seq_remove_callback(self.tag)
 
 class AMYSequence(Sequence):
+    # One AMY sequencer tag per Sequence, taken at construction and held for
+    # the Sequence's life. AMY's tag space is max_sequencer_tags (256 by
+    # default) and this counter doesn't recycle, so a session that builds
+    # hundreds of Sequences will eventually run out -- but a Sequence is an
+    # app-sized object, where the old one-tag-per-step scheme burned a tag on
+    # every step edit and ran out during ordinary use.
+    SEQUENCE_TAG = 0
+
     def __init__(self, length=1, divider=8):
         super().__init__(length, divider)
-    
+        self.tag = AMYSequence.SEQUENCE_TAG
+        AMYSequence.SEQUENCE_TAG = AMYSequence.SEQUENCE_TAG + 1
+        self.deferred = 0   # depth of open batch() blocks
+        self.dirty = False  # a rebuild was asked for while batching
+
     def add(self, position, func, args=[], amy_sequenceable=False, **kwargs):
         e = AMYSequenceEvent(self)
-        e.update(position, func=func, args=args, amy_sequenceable=amy_sequenceable, **kwargs)
+        e.store(position, func, args=args, amy_sequenceable=amy_sequenceable, **kwargs)
         self.events = self.events + [e]
+        if self.deferred:
+            self.dirty = True
+        else:
+            e.schedule()  # adding accumulates, so this needs no rebuild
         return e
 
+    def rebuild(self):
+        """Re-send every event, replacing what AMY holds under our tag.
 
+        Editing or removing a step needs this because AMY can only erase a
+        whole tag, never one entry in it. Inside a batch() it just marks the
+        Sequence dirty and the rebuild happens once, on the way out.
+        """
+        if self.deferred:
+            self.dirty = True
+            return
+        amy.send(ticks=",,%d" % (self.tag))  # neither tick nor period: clear the tag
+        for e in self.events:
+            e.schedule()
+
+    def batch(self):
+        """Coalesce the rebuilds from a run of edits into a single one:
+
+            with seq.batch():
+                for switch in row:
+                    switch.sequencer_event.update(...)
+
+        Without it each edit rebuilds the whole tag, so N edits to a sequence
+        of N steps cost N**2 messages. Nests, and rebuilds only if something
+        inside actually changed.
+        """
+        return _Batch(self)
+
+    def clear(self):
+        # One message, whatever the sequence holds -- the tag is ours alone.
+        amy.send(ticks=",,%d" % (self.tag))
+        self.events = []
