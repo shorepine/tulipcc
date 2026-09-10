@@ -519,6 +519,41 @@ def _discord_notify(channel_id: str, content: str) -> None:
         return
 
 
+def _tags_for_new_version(
+    conn: sqlite3.Connection,
+    table: str,
+    username: str,
+    filename: str,
+    tags: list[str] | None,
+) -> list[str]:
+    """Tags a newly uploaded version of (username, filename) should carry.
+
+    Tags belong to the sketch, not to one upload of it: a new version inherits
+    every tag of the previous live version, so re-saving a #featured sketch (or
+    a migration re-uploading a rewritten one) never silently drops the tag —
+    which is what left the #featured chip serving pre-migration `def loop():`
+    sources in Sep 2026. When the caller supplies tags (the generator passes
+    freshly detected hardware tags), its hardware tags *replace* the inherited
+    ones and its other tags are added.
+    """
+    row = conn.execute(
+        f"""
+        SELECT tags_json FROM {table}
+        WHERE deleted_at_ms IS NULL AND lower(username) = ? AND lower(filename) = ?
+        ORDER BY created_at_ms DESC, id DESC
+        LIMIT 1
+        """,
+        (username.lower(), filename.lower()),
+    ).fetchone()
+    inherited = _parse_tags(row["tags_json"]) if row else []
+    if tags is None:
+        return inherited
+    explicit = _parse_tags(tags)
+    merged = _merge_hardware_tags(inherited, [t for t in explicit if t in HARDWARE_TAGS])
+    merged.extend(t for t in explicit if t not in HARDWARE_TAGS and t not in merged)
+    return merged
+
+
 def _insert_file_row(
     table: str,
     files_dir: Path,
@@ -534,8 +569,8 @@ def _insert_file_row(
 ) -> int:
     ts_ms = _normalize_created_at_ms(created_at_ms)
     digest = hashlib.sha256(contents).hexdigest()
-    tags_json = json.dumps(_parse_tags(tags or []))
     with _open_db() as conn:
+        tags_json = json.dumps(_tags_for_new_version(conn, table, username, filename, tags))
         # Use item_type column only for the environments table.
         if table == "environments":
             cur = conn.execute(
@@ -621,40 +656,46 @@ def _list_file_rows(
     extra_cols = ", item_type" if table == "environments" else ""
     if include_ip:
         extra_cols += ", client_ip"
+    select_cols = f"id, username, filename, description, tags_json, created_at_ms, size_bytes{extra_cols}"
 
-    with _open_db() as conn:
-        rows = conn.execute(
-            f"""
-            SELECT id, username, filename, description, tags_json, created_at_ms, size_bytes{extra_cols}
+    if latest_per_user_env:
+        # Resolve "the latest version of each (username, filename)" over ALL
+        # live rows *before* applying the q/tag/username filters, so a filter
+        # can only ever match the current version of a sketch. Filtering
+        # first and deduping the survivors let a tag that only an older
+        # version carried surface that stale row: after the loop(tick)
+        # migration re-uploaded every sketch, ?tag=featured served the
+        # pre-migration `def loop():` bodies while the plain listing served
+        # the new ones (Sep 2026). Ties on created_at_ms (Discord importer,
+        # backup restores) break toward the highest id, else the *oldest*
+        # duplicate wins — which hid 78 Tulip World sketches behind dead rows
+        # whose blobs were lost in the Feb 2026 Modal->Railway migration.
+        sql = f"""
+            WITH ranked AS (
+                SELECT {select_cols}, deleted_at_ms,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY lower(username), lower(filename)
+                           ORDER BY created_at_ms DESC, id DESC
+                       ) AS version_rank
+                FROM {table}
+                WHERE deleted_at_ms IS NULL
+            )
+            SELECT {select_cols} FROM ranked
+            WHERE version_rank = 1 AND {where_sql}
+            ORDER BY created_at_ms DESC, id DESC
+            LIMIT ?
+        """
+    else:
+        sql = f"""
+            SELECT {select_cols}
             FROM {table}
             WHERE {where_sql}
             ORDER BY created_at_ms DESC, id DESC
             LIMIT ?
-            """,
-            [*params, max(limit * 4, limit)],
-        ).fetchall()
+        """
 
-    if latest_per_user_env:
-        # Keeps the first row per (username, filename), so it depends on the
-        # `id DESC` tie-break above. Uploads that carry an explicit
-        # created_at_ms (the Discord importer, backup restores) can tie
-        # exactly; without the tie-break SQLite resolves the tie by rowid
-        # ascending and the *oldest* duplicate wins. That's what hid 78 Tulip
-        # World sketches behind dead rows whose blobs were lost in the
-        # Feb 2026 Modal->Railway migration.
-        deduped: list[sqlite3.Row] = []
-        seen: set[tuple[str, str]] = set()
-        for row in rows:
-            key = (str(row["username"]).lower(), str(row["filename"]).lower())
-            if key in seen:
-                continue
-            seen.add(key)
-            deduped.append(row)
-            if len(deduped) >= limit:
-                break
-        rows = deduped
-    else:
-        rows = rows[:limit]
+    with _open_db() as conn:
+        rows = conn.execute(sql, [*params, limit]).fetchall()
 
     return {"items": [_file_row_to_public(row, scope) for row in rows]}
 
