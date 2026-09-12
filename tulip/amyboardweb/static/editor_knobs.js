@@ -7,6 +7,17 @@ function make_change_code(synth, value, knob, no_instrument) {
   } else {
     var valueStr = value.toFixed(3);
   }
+  // A selection knob may carry a wire fragment per option (option_codes,
+  // indexed like option_values) instead of a numeric %v — e.g. the bus
+  // distortion "type" selector, whose choices are stage sets (GC1GF0GH0,0).
+  if (Array.isArray(knob.option_codes)) {
+    const values = Array.isArray(knob.option_values) ? knob.option_values : null;
+    let idx = values ? values.findIndex(function(v) { return Number(v) === Number(value); }) : Math.round(value);
+    if (idx < 0 || idx >= knob.option_codes.length) {
+      return;
+    }
+    valueStr = String(knob.option_codes[idx]);
+  }
   let updated = knob.change_code.replace(/%v/g, valueStr);
   if (no_instrument) {
     updated = updated.replace(/i%i/g, "");
@@ -522,7 +533,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
     }
 
     function attachCcEditor(labelEl, knobConfig) {
-      if (!labelEl) {
+      if (!labelEl || (knobConfig && knobConfig.no_cc)) {
         return;
       }
       labelEl.style.cursor = "pointer";

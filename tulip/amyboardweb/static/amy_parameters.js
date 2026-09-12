@@ -17,6 +17,7 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "Chorus", bg_color: "rgba(180, 225, 225, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Echo", bg_color: "rgba(176, 208, 232, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Distortion", bg_color: "rgba(232, 184, 160, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
   // "Global" sections are really per-BUS now (AMY #686): each of the
   // AMY_NUM_BUSES mix buses has its own independent EQ/Chorus/Reverb/Echo (and
@@ -24,7 +25,35 @@ window.addEventListener("DOMContentLoaded", function() {
   // routes the command to the sending channel's bus (and so device-side MIDI-CC
   // templates keep working when a channel is moved to another bus). The knob
   // log records them bus-prefixed instead (y<bus>...) — see record_knob_value.
-  const GLOBAL_SECTION_NAMES = ["Bus", "EQ", "Chorus", "Reverb", "Echo"];
+  const GLOBAL_SECTION_NAMES = ["Bus", "EQ", "Chorus", "Reverb", "Echo", "Distortion"];
+  // Bus distortion (amy docs/distortions.md): the stage runs first in the bus
+  // FX chain, ahead of EQ/chorus/echo/reverb. AMY exposes three independent
+  // stages (GC clip, GF fold, GH<bits>,<rate> bitcrush) that stack in that
+  // order, plus a shared drive (GD) and wet/dry mix (GM). The "type" selector
+  // folds the stage toggles into one wire line per bus, so the knob log keeps
+  // a single last-wins slot (structural key y<bus>GC#GF#GH#,#) and a replayed
+  // sketch can't end up with two competing stage lines. The bitcrusher always
+  // rides the same fixed bits/rate (the doc's demo setting); GH0,0 is "off".
+  const DIST_CRUSH_BITS = 6;
+  const DIST_CRUSH_RATE = 5;
+  const DIST_CRUSH_ON = "GH" + DIST_CRUSH_BITS + "," + DIST_CRUSH_RATE;
+  const DIST_TYPE_OPTIONS = ["off", "clip", "fold", "clip+fold", "crush", "all"];
+  const DIST_TYPE_VALUES = [0, 1, 2, 3, 4, 5];
+  const DIST_TYPE_CODES = [
+    "GC0GF0GH0,0",              // off
+    "GC1GF0GH0,0",              // clip
+    "GC0GF1GH0,0",              // fold
+    "GC1GF1GH0,0",              // clip + fold
+    "GC0GF0" + DIST_CRUSH_ON,   // crush
+    "GC1GF1" + DIST_CRUSH_ON,   // clip + fold + crush
+  ];
+  // Map a (clip, fold, crush) stage set read back from AMY onto the nearest
+  // "type" option. clip+crush / fold+crush aren't offered; they read as "all".
+  function distTypeIndexForStages(clip, fold, crush) {
+    if (crush) return (clip || fold) ? 5 : 4;
+    return (clip ? 1 : 0) + (fold ? 2 : 0);
+  }
+  window.dist_type_index_for_stages = distTypeIndexForStages;
   const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE", "ALGO"];
   const WAVE_OPTION_VALUES = [AMY.SINE, 1, 3, 2, 4, 5, 7, 19, 8];
 
@@ -480,6 +509,40 @@ window.addEventListener("DOMContentLoaded", function() {
       default_value: 0,
       amy_default: 0,
     },
+    {
+      section: "Distortion",
+      cc: "",
+      no_cc: true,              // the wire line is a stage set, not a %v value
+      knob_type: "selection",
+      display_name: "type",
+      change_code: "i%i%v",     // %v is replaced by the option's code (option_codes)
+      options: DIST_TYPE_OPTIONS,
+      option_values: DIST_TYPE_VALUES,
+      option_codes: DIST_TYPE_CODES,
+      default_value: 0,
+      amy_default: 0,           // all stages off
+    },
+    {
+      section: "Distortion",
+      cc: "",
+      knob_type: "log",
+      display_name: "drive",
+      change_code: "i%iGD%v",
+      min_value: 0.0625,        // AMY clamps drive to 2^-4 .. 2^4
+      max_value: 16,
+      default_value: 1,
+      amy_default: 1,           // unity drive
+    },
+    {
+      section: "Distortion",
+      cc: "",
+      display_name: "mix",
+      change_code: "i%iGM%v",
+      min_value: 0,
+      max_value: 1,
+      default_value: 1,
+      amy_default: 1,           // full wet
+    },
 
   ];
 
@@ -917,6 +980,13 @@ function set_knobs_from_events(events, synth, opts) {
         chorus: [knobDefault("Chorus","level"), knobDefault("Chorus","freq"), knobDefault("Chorus","depth")],
         reverb: [knobDefault("Reverb","level"), knobDefault("Reverb","live"), knobDefault("Reverb","damp")],
         echo: [knobDefault("Echo","level"), knobDefault("Echo","delay"), knobDefault("Echo","feedback")],
+        // Distortion stage toggles accumulate separately (each G sub-command
+        // touches only its own stage) and collapse to a "type" index below.
+        dist_clip: false,
+        dist_fold: false,
+        dist_crush: false,
+        dist_drive: knobDefault("Distortion","drive"),
+        dist_mix: knobDefault("Distortion","mix"),
         volume: null,   // null = leave the mirror untouched
       });
     }
@@ -933,6 +1003,25 @@ function set_knobs_from_events(events, synth, opts) {
       const fxBus = Number.isFinite(event.bus) ? Math.min(Math.max(event.bus, 0), numBuses - 1) : 0;
       if (event.eq || event.chorus || event.reverb || event.echo) {
         fx[fxBus].dirty = true;
+      }
+      // Distortion G sub-commands serve both scopes: with an osc named they
+      // shape that osc (patch data), without one they shape the bus.
+      if (!Number.isFinite(event.osc)) {
+        const hasDist = ("dist_clip" in event) || ("dist_fold" in event) || ("dist_crush" in event)
+          || ("dist_drive" in event) || ("dist_mix" in event);
+        if (hasDist) fx[fxBus].dirty = true;
+        if (Number.isFinite(event.dist_clip)) fx[fxBus].dist_clip = event.dist_clip !== 0;
+        if (Number.isFinite(event.dist_fold)) fx[fxBus].dist_fold = event.dist_fold !== 0;
+        if (Array.isArray(event.dist_crush)) {
+          // GH<bits>[,<rate>]: bits 0 turns the crusher off.
+          fx[fxBus].dist_crush = Number.isFinite(event.dist_crush[0]) && event.dist_crush[0] !== 0;
+        }
+        if (Array.isArray(event.dist_drive) && Number.isFinite(event.dist_drive[0])) {
+          fx[fxBus].dist_drive = event.dist_drive[0];   // only the CONST coef reaches a bus
+        }
+        if (Array.isArray(event.dist_mix) && Number.isFinite(event.dist_mix[0])) {
+          fx[fxBus].dist_mix = event.dist_mix[0];
+        }
       }
       if (event.eq) {
         if (Number.isFinite(event.eq[0]))  { fx[fxBus].eq[0] = event.eq[0]; }
@@ -1116,6 +1205,11 @@ function set_knobs_from_events(events, synth, opts) {
       set_bus_knob_value(b, "Echo", "level", fx[b].echo[0]);
       set_bus_knob_value(b, "Echo", "delay", fx[b].echo[1]);
       set_bus_knob_value(b, "Echo", "feedback", fx[b].echo[2]);
+
+      set_bus_knob_value(b, "Distortion", "type",
+        window.dist_type_index_for_stages(fx[b].dist_clip, fx[b].dist_fold, fx[b].dist_crush));
+      set_bus_knob_value(b, "Distortion", "drive", fx[b].dist_drive);
+      set_bus_knob_value(b, "Distortion", "mix", fx[b].dist_mix);
 
       if (Number.isFinite(fx[b].volume) && typeof window.setBusVolumeFromAmy === "function") {
         window.setBusVolumeFromAmy(b, fx[b].volume);
