@@ -1,4 +1,59 @@
 {
+  "//": [
+    "tulip.computer. The site itself is stage/ (site/index.html + the shared",
+    "marketing assets); /run is the Tulip 1 web app; /2 is TULIP 5, which",
+    "lives in a repo and a Vercel project of its own and is PROXIED here.",
+    "",
+    "WHY A PROXY RATHER THAN A COPY. Tulip 5's web build is content-stamped",
+    "and deployed by its own repo on every push (tulip5-web.vercel.app). A",
+    "path on this domain that served a COPY would be a second deploy anybody",
+    "has to remember, which is the exact way a stale wasm shipped once",
+    "already. A rewrite means tulip.computer/2 is whatever that project last",
+    "deployed, with no step in between. Vercel does not do path-based domain",
+    "assignment, so a rewrite is also the only way to put two projects on one",
+    "hostname."
+  ],
+  "redirects": [
+    {
+      "//": [
+        "THE TRAILING SLASH IS LOAD-BEARING. Tulip 5's index.html asks for",
+        "its loader and its wasm by RELATIVE name (`./micropython-<hash>.mjs`,",
+        "`micropython-<hash>.wasm`), so at /2 those resolve against the",
+        "DOMAIN ROOT and 404; at /2/ they resolve to /2/... and proxy",
+        "through. 307 rather than 308: a permanent redirect is cached by the",
+        "browser for ever and this is one of the few things here that might",
+        "still move."
+      ],
+      "source": "/2",
+      "destination": "/2/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "//": [
+        "THE ADMIN COMES FIRST, because /2/:path* would otherwise swallow it.",
+        "Vercel takes the first matching rewrite. It is the world service",
+        "that serves it: one page, one HTTP Basic gate, and the friend half",
+        "proxied server-side (see server/world_api.py) so the whole panel is",
+        "ONE origin and one password."
+      ],
+      "source": "/2/admin",
+      "destination": "https://tulip-world-production.up.railway.app/admin"
+    },
+    {
+      "source": "/2/admin/:path*",
+      "destination": "https://tulip-world-production.up.railway.app/admin/:path*"
+    },
+    {
+      "source": "/2",
+      "destination": "https://tulip5-web.vercel.app/"
+    },
+    {
+      "source": "/2/:path*",
+      "destination": "https://tulip5-web.vercel.app/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/run",
@@ -23,7 +78,16 @@
       ]
     },
     {
-      "source": "/((?!run/amy-|run/tulipcc-).*)",
+      "//": [
+        "The catch-all no-cache, and /2 IS EXCLUDED FROM IT. Tulip 5's own",
+        "vercel.json already answers this question for its files — index.html",
+        "no-store, the content-stamped micropython-<hash>.{mjs,wasm}",
+        "immutable for a year — and those headers come through the proxy. A",
+        "no-cache stamped over the top would make every visit revalidate 8 MB",
+        "that is guaranteed by its own NAME never to change, which is the",
+        "whole point of stamping it."
+      ],
+      "source": "/((?!run/amy-|run/tulipcc-|2$|2/).*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache" }
       ]
