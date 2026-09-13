@@ -56,6 +56,46 @@ cp -Rf ../../assets/css ../../assets/fonts ../../assets/img ../../assets/js stag
 # `vercel deploy stage`, so a vercel.json left in tulip/web/ is ignored. Copy it
 # in so its headers (COOP/COEP cross-origin isolation for /run, plus cache rules)
 # actually get served. (amyboardweb's dev.py does the equivalent copy.)
+#
+# WHAT IS IN IT, since JSON cannot say so itself -- and that is not a
+# figure of speech: Vercel VALIDATES vercel.json against a strict schema
+# and refuses an unknown property, so the usual "//" comment key fails
+# the deploy outright ("should NOT have additional property `//`"). The
+# explanation lives here.
+#
+#   /run          Tulip 1, this repo's own web build, in stage/run.
+#   /2            TULIP 5, which is a different repo and a different
+#                 Vercel project (tulip5-web), REWRITTEN onto this
+#                 domain. Vercel does not do path-based domain
+#                 assignment, so a proxy is the only way to put two
+#                 projects on one hostname -- and it is the right one
+#                 anyway: a path serving a COPY would be a second deploy
+#                 somebody has to remember, which is how a stale wasm
+#                 has shipped before. This way /2 is whatever that
+#                 project last built, with no step in between.
+#   /2/admin      the Tulip 5 admin panel, on its world service.
+#
+# Four things in there are load-bearing and each was a way to get it
+# wrong:
+#
+#   * /2 REDIRECTS to /2/ first. Tulip 5's index.html asks for its
+#     loader and its wasm by RELATIVE name, so without the trailing
+#     slash they resolve against this domain's root and 404. 307 and not
+#     308, because a permanent redirect is cached by the browser for
+#     ever.
+#   * the rewrites use `:path(.*)` and NOT `:path*`. The starred form
+#     does not match an EMPTY segment, so with it `/2/` and `/2/admin/`
+#     fell through to a Vercel 404 while `/2/index.html` worked --
+#     which is the shape of this that looks like the origin is broken.
+#   * the /2/admin rules come BEFORE /2/:path(.*), which would otherwise
+#     swallow them: Vercel takes the first matching rewrite.
+#   * /2 is excluded from the catch-all no-cache header below. Tulip 5's
+#     own vercel.json already answers that for its files (index.html
+#     no-store, the content-stamped micropython-<hash>.{mjs,wasm}
+#     immutable for a year) and those headers come through the proxy
+#     intact. A no-cache stamped over the top would make every visit
+#     revalidate 8 MB that is guaranteed by its own NAME never to
+#     change, which is the whole point of stamping it.
 cp vercel.json stage/
 
 cp ../../amy/build/amy.js stage/run/amy-$timestamp.js
