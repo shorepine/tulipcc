@@ -353,6 +353,8 @@ void app_main(void) {
 
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
+    // ISRs wake the MP task through mp_main_task_handle; unset, the first Pin.irq edge resets the board (#32)
+    mp_main_task_handle = tulip_mp_handle;
     fflush(stderr);
     delay_ms(100);
     tsequencer_init();
