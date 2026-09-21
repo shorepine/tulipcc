@@ -1008,7 +1008,7 @@ def _web_encoder_press(state):
 
 _seesaw_missing = set()  # addresses we've already probed and confirmed absent
 
-def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
+def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.002):
     """Read the cumulated value of encoder 0..3.
 
     Returns 0 if the seesaw device isn't present on the I2C bus (see
@@ -1056,7 +1056,7 @@ def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
     except OSError:
         _seesaw_missing.add(seesaw_dev)
 
-def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
+def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.002):
     """Read the 4 seesaw encoder push buttons.
 
     Returns [False, False, ...] (one entry per pin) if the seesaw device
