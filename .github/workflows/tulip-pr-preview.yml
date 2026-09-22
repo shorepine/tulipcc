@@ -69,10 +69,14 @@ jobs:
       # (Empty for the AMY-PR dispatch paths → actions/checkout's default ref.)
       # persist-credentials: false so the PR's build scripts can't read the
       # write-scoped GITHUB_TOKEN out of .git/config; every submodule is public.
+      # allow-unsafe-pr-checkout: actions/checkout refuses fork code under
+      # pull_request_target unless told the risk is understood — it is: the
+      # job-level `hwci-ok` gate above is the maintainer's review step.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          allow-unsafe-pr-checkout: true
       - uses: ./.github/actions/init-submodules
 
       - uses: actions/setup-python@v5
