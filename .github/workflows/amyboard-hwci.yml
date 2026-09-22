@@ -21,8 +21,11 @@ name: HW CI (AMYboard + Tulip)
 # firmwares, so by the time this runs they're ready (AMYboard on Vercel, Tulip as
 # a GitHub artifact downloaded below).
 #
-# SECURITY: shorepine/tulipcc is PUBLIC and this runs on a self-hosted runner,
-# so it is gated to SAME-REPO PRs only — fork PR code never executes on the Pi.
+# SECURITY: shorepine/tulipcc is PUBLIC and this runs on a self-hosted runner.
+# Same-repo PRs run automatically. A FORK PR reaches the Pi only after a
+# maintainer adds the `hwci-ok` label (the preview workflow's job gate, re-checked
+# below against the live PR): the label is the human-review step, since the PR's
+# own hwci/ harness and firmware run on the bench with the WiFi secrets in env.
 
 on:
   workflow_run:
@@ -46,18 +49,19 @@ concurrency:
 
 jobs:
   hwci:
-    # workflow_dispatch (manual), or a preview that succeeded in THIS repo's
-    # context. head_repository == this repo means the preview ran AS tulipcc (not
-    # a fork) — true for a Tulip PR (pull_request) and for an AMY PR (repository_
-    # dispatch / workflow_dispatch, already same-repo-gated on the amy side). Fork
-    # code never runs on the self-hosted Pi.
+    # workflow_dispatch (manual), or a preview that SUCCEEDED. A Tulip-PR preview
+    # runs on pull_request_target, whose job gate only lets a fork PR build when it
+    # carries `hwci-ok` — a gated-out preview is 'skipped', never 'success', so
+    # success here implies the gate passed (and the ctx step re-checks the live
+    # PR below). An AMY PR (repository_dispatch / workflow_dispatch) must have run
+    # as tulipcc itself; it is already same-repo-gated on the amy side.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository &&
-       (github.event.workflow_run.event == 'pull_request' ||
-        github.event.workflow_run.event == 'repository_dispatch' ||
-        github.event.workflow_run.event == 'workflow_dispatch'))
+       (github.event.workflow_run.event == 'pull_request_target' ||
+        (github.event.workflow_run.head_repository.full_name == github.repository &&
+         (github.event.workflow_run.event == 'repository_dispatch' ||
+          github.event.workflow_run.event == 'workflow_dispatch'))))
     runs-on: [self-hosted, amyboard-hwci]
     timeout-minutes: 30
     steps:
@@ -88,10 +92,30 @@ jobs:
               const run = context.payload.workflow_run;
               sha = run.head_sha;
               previewRunId = run.id;
-              if (run.event === 'pull_request') {           // Tulip PR
-                const assoc = run.pull_requests && run.pull_requests[0];
-                if (!assoc) { core.setFailed('workflow_run has no associated same-repo PR; skipping.'); return; }
+              if (run.event === 'pull_request_target') {    // Tulip PR
+                // workflow_run.pull_requests is EMPTY for pull_request_target runs
+                // (even same-repo ones), so find the PR by its head owner:branch.
+                const headOwner = run.head_repository && run.head_repository.owner && run.head_repository.owner.login;
+                const { data: prs } = await github.rest.pulls.list({
+                  owner, repo, state: 'open', head: `${headOwner}:${run.head_branch}`, per_page: 5,
+                });
+                const assoc = prs.find(p => p.head.sha === sha) || prs[0];
+                if (!assoc) { core.setFailed(`no open PR found for ${headOwner}:${run.head_branch} @ ${sha}; skipping.`); return; }
                 pr = assoc.number;
+                // Re-check the gate against the LIVE PR: fork code reaches the
+                // bench only with the hwci-ok label (it may have been removed
+                // since the preview built).
+                const { data: full } = await github.rest.pulls.get({ owner, repo, pull_number: pr });
+                const sameRepo = !!full.head.repo && full.head.repo.full_name === `${owner}/${repo}`;
+                const labeled = full.labels.some(l => l.name === 'hwci-ok');
+                if (!sameRepo && !labeled) {
+                  core.setFailed(`PR #${pr} is from a fork and has no 'hwci-ok' label — refusing to run its code on the bench.`);
+                  return;
+                }
+                if (full.head.sha !== sha) {
+                  core.setFailed(`PR #${pr} head moved (${full.head.sha} != preview ${sha}); the newer push will re-run HW CI.`);
+                  return;
+                }
               } else {                                       // AMY PR (dispatch/manual)
                 isAmy = true;   // PR number + repo + firmware URL come from the amy-ctx artifact
               }
@@ -175,7 +199,8 @@ jobs:
         continue-on-error: true
         working-directory: hwci
         # WiFi creds via env (not CLI args, which show in `ps`). The repo is public
-        # but this job is gated to same-repo PRs, so secrets never reach forks. The
+        # but this job only runs same-repo PRs or forks a maintainer labelled
+        # `hwci-ok` after review, so unvetted fork code never sees these. The
         # harness redacts these values from the serial log it uploads.
         env:
           TULIP_WIFI_SSID: ${{ secrets.TULIP_WIFI_SSID }}

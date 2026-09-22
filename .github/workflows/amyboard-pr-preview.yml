@@ -7,10 +7,21 @@ name: AMYboard PR preview
 #
 # Requires repo secret VERCEL_TOKEN (scope: bwhitmans-projects). The amyboard-pr
 # Vercel project is deployed to as preview deployments and aliased per PR.
+#
+# SECURITY / FORK PRs: this runs on pull_request_target (not pull_request) so it
+# has the Vercel secret — a plain pull_request run from a fork gets no secrets
+# and dies at the token check. pull_request_target always executes MAIN's copy
+# of this file (a PR can't edit its own gate), but the PR HEAD is what gets
+# checked out and built, and HW CI chains off this run onto the self-hosted Pi.
+# So the job is gated: same-repo branches run automatically; a fork PR runs
+# ONLY once a maintainer adds the `hwci-ok` label, after reading the diff
+# (build scripts, .github/actions/init-submodules, tulip/amyboard/hwci all come
+# from the PR head). Only maintainers can apply labels, so the label IS the
+# human-review gate. Same pattern shorepine/amy used (f176503).
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'amy'
       - 'tulip/amyboard/**'
@@ -54,9 +65,21 @@ concurrency:
 
 jobs:
   preview:
+    # Run for: a same-repo branch (maintainers — no label needed), OR a fork PR a
+    # maintainer has tagged `hwci-ok`. The `action == 'labeled'` arm fires the
+    # moment the label is added; the other arm re-runs on each push to an
+    # already-labeled fork PR. Adding an unrelated label does NOT re-trigger
+    # (avoids a duplicate build + bench run). Forks can't get secrets or reach
+    # the Pi without the label.
+    if: >-
+      github.event_name != 'pull_request_target' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'hwci-ok') ||
+      (github.event.action != 'labeled' &&
+       (github.event.pull_request.head.repo.full_name == github.repository ||
+        contains(github.event.pull_request.labels.*.name, 'hwci-ok')))
     runs-on: ubuntu-latest
     steps:
-      # Normalize the trigger: a Tulip PR (pull_request) vs an AMY PR (dispatched
+      # Normalize the trigger: a Tulip PR (pull_request_target) vs an AMY PR (dispatched
       # from shorepine/amy, or manual for a fork). Everything downstream keys off
       # these outputs instead of github.event.pull_request.* directly.
       - name: Resolve PR context (Tulip PR vs AMY PR)
@@ -66,7 +89,7 @@ jobs:
           script: |
             const ev = context.eventName;
             let isAmy = false, num, amySha = '', amyRepo = 'shorepine/amy';
-            if (ev === 'pull_request') {
+            if (ev === 'pull_request_target') {
               num = context.payload.pull_request.number;            // Tulip PR
             } else if (ev === 'repository_dispatch') {               // AMY PR (auto)
               isAmy = true;
@@ -98,7 +121,14 @@ jobs:
           fi
           echo "Vercel token OK for bwhitmans-projects."
 
+      # pull_request_target checks out the BASE by default; build the PR head.
+      # (Empty for the AMY-PR dispatch paths → actions/checkout's default ref.)
+      # persist-credentials: false so the PR's build scripts can't read the
+      # write-scoped GITHUB_TOKEN out of .git/config; every submodule is public.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       - uses: ./.github/actions/init-submodules
 
       # For an AMY PR, point the `amy` submodule at the PR's commit so the firmware
@@ -312,7 +342,7 @@ jobs:
       # Tulip PRs only. AMY-PR runs get a single result comment posted on the AMY
       # PR by the HW CI workflow instead (this run has no Tulip PR to comment on).
       - name: Comment preview URL
-        if: success() && github.event_name == 'pull_request'
+        if: success() && github.event_name == 'pull_request_target'
         uses: actions/github-script@v7
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
