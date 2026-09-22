@@ -30,6 +30,7 @@ EXTMOD_SRC_C += $(addprefix $(TOP)/../amy/src/, \
 	instrument.c \
 	api.c \
 	midi_mappings.c \
+	note_output.c \
 	cv_trigger.c \
 )
 

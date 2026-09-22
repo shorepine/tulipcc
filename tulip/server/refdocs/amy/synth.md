@@ -11,6 +11,7 @@
     + [The sequencer](#the-sequencer)
   * [Core oscillators](#core-oscillators)
   * [LFOs & modulators](#lfos---modulators)
+  * [Distortion](#distortion)
   * [Filters](#filters)
   * [EQ & Volume](#eq---volume)
   * [Envelope Generators](#envelope-generators)
@@ -280,6 +281,10 @@ Oscillators will not become audible until a `velocity` over 0 is set for the osc
 ## LFOs & modulators
 
 Any oscillator can modulate any other oscillator. For example, a LFO can be specified by setting oscillator 0 to 0.25Hz sine, with oscillator 1 being a 440Hz sine. Using the 6th parameter of **ControlCoefficient** lists, you can have oscillator 0 modulate frequency, amplitude, filter frequency, or pan of oscillator 1. You can also add targets together, for example amplitude+frequency. Set the `mod_target` and `mod_source` on the audible oscillator (in this case, oscillator 1.) The source mod oscillator will not be audible once it is referred to as a `mod_source` by another oscillator. The amplitude of the modulating oscillator indicates how strong the modulation is (aka "LFO depth.")
+
+## Distortion
+
+Each oscillator has a distortion stage with three waveshapers: a soft clipper (`dist_clip`), a wavefolder (`dist_fold`) and a bitcrusher (`dist_crush`); enabled stages stack in that order. It runs after the amplitude envelope and before the filter, so note dynamics drive it. `dist_drive` is the pre-gain into the shaper and `dist_mix` the wet/dry amount; both are ControlCoefficient lists, so an envelope, LFO or velocity can modulate them. The same stage also runs per bus, ahead of the bus effects. `amy.send(osc=0, wave=amy.SAW_DOWN, freq=110, dist_clip=1, dist_drive=4, vel=1)` gives a driven saw. See [Distortion in AMY](distortions.md) for the wire commands, what each shaper does, and how shaping one osc, a voice's summed chain, or a whole bus differ.
 
 ## Filters
 
