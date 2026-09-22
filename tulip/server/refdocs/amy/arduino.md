@@ -108,6 +108,8 @@ Tested: Arduino IDE 2.3.6 (mac)
 
 The `i2s_lrc` pin has to be `i2s_bclk` + 1.
 
+To have the Pico show up on your computer as a USB MIDI device, set `amy_config.midi` to include `AMY_MIDI_IS_USB_GADGET` and choose **Tools > USB Stack > Adafruit TinyUSB** before building. With the default "Pico SDK" USB stack, the Pico is only a USB serial port. `Serial` still works with the Adafruit TinyUSB stack.
+
 
 ### Electro-Smith Daisy Seed
 
