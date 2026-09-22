@@ -135,7 +135,8 @@ AMY_DIR = ../../amy
 EXTMOD_SRC_C += $(addprefix $(AMY_DIR)/src/, \
 	algorithms.c amy.c amy_midi.c api.c custom.c cv_trigger.c delay.c \
 	envelope.c examples.c filters.c instrument.c interp_partials.c \
-	log2_exp2.c midi_mappings.c oscillators.c parse.c patches.c pcm.c \
+	log2_exp2.c midi_mappings.c note_output.c oscillators.c parse.c \
+	patches.c pcm.c \
 	sequencer.c transfer.c )
 EXTMOD_SRC_C += $(AMY_DIR)/build/drums_bin.c
 CFLAGS += -DAMY_NO_MINIAUDIO

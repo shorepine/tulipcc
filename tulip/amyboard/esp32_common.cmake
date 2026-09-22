@@ -197,6 +197,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/interp_partials.c
     ${AMY_DIR}/src/midi_mappings.c
     ${AMY_DIR}/src/cv_trigger.c
+    ${AMY_DIR}/src/note_output.c
     ${ULAB_DIR}/scipy/integrate/integrate.c
     ${ULAB_DIR}/scipy/linalg/linalg.c
     ${ULAB_DIR}/scipy/optimize/optimize.c
