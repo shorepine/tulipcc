@@ -7,10 +7,16 @@ name: Tulip web PR preview
 # the PR closes by amyboard-pr-preview-cleanup.yml (extend that to tulip-pr if desired).
 #
 # Requires repo secret VERCEL_TOKEN (scope: bwhitmans-projects).
+#
+# SECURITY / FORK PRs: pull_request_target (not pull_request) so the run has
+# the Vercel secret; main's copy of this file always executes, but the PR head
+# is checked out and built. Gated below exactly like amyboard-pr-preview.yml:
+# same-repo branches run automatically, a fork PR runs only once a maintainer
+# adds the `hwci-ok` label after reading the diff.
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'amy'
       - 'tulip/web/**'
@@ -32,6 +38,18 @@ concurrency:
 
 jobs:
   preview:
+    # Run for: a same-repo branch (maintainers — no label needed), OR a fork PR a
+    # maintainer has tagged `hwci-ok`. The `action == 'labeled'` arm fires the
+    # moment the label is added; the other arm re-runs on each push to an
+    # already-labeled fork PR. Adding an unrelated label does NOT re-trigger
+    # (avoids a duplicate build + bench run). Forks can't get secrets or reach
+    # the Pi without the label.
+    if: >-
+      github.event_name != 'pull_request_target' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'hwci-ok') ||
+      (github.event.action != 'labeled' &&
+       (github.event.pull_request.head.repo.full_name == github.repository ||
+        contains(github.event.pull_request.labels.*.name, 'hwci-ok')))
     runs-on: ubuntu-latest
     steps:
       - name: Verify Vercel token can access the team
@@ -47,7 +65,14 @@ jobs:
           fi
           echo "Vercel token OK for bwhitmans-projects."
 
+      # pull_request_target checks out the BASE by default; build the PR head.
+      # (Empty for the AMY-PR dispatch paths → actions/checkout's default ref.)
+      # persist-credentials: false so the PR's build scripts can't read the
+      # write-scoped GITHUB_TOKEN out of .git/config; every submodule is public.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       - uses: ./.github/actions/init-submodules
 
       - uses: actions/setup-python@v5

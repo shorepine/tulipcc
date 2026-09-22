@@ -3,8 +3,11 @@ name: AMYboard PR preview cleanup
 # Removes the per-PR preview alias (amyboard-pr-<N>.vercel.app) when the PR is
 # merged or closed. The underlying preview deployments age out on Vercel.
 
+# pull_request_target so a FORK PR's alias is torn down too (a plain
+# pull_request run from a fork has no VERCEL_TOKEN). Safe: nothing from the PR
+# is checked out or executed here — only the PR number is read.
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
 
 permissions:

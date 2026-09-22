@@ -248,8 +248,11 @@ board's recording + serial log + run log + the Tulip screenshot as the
 `hwci-pr<N>` artifact, and upserts one combined PASS/FAIL comment. The Tulip step
 needs repo secrets `TULIP_WIFI_SSID` / `TULIP_WIFI_PASSWORD` (+ optional
 `WORLD_ADMIN_TOKEN` to delete each run's uploaded screenshot from Tulip World).
-Gated to same-repo
-PRs (the runner is on a public repo). Stable `/dev` names come from
+Same-repo PRs run automatically; a **fork PR** (the runner is on a public repo)
+gets the previews + bench only after a maintainer adds the **`hwci-ok`** label,
+having read the diff — the previews run on `pull_request_target` so they have
+the Vercel secret, and that label is the human-review gate before fork code
+reaches the Pi (see the SECURITY notes in both preview workflows). Stable `/dev` names come from
 [`99-amyboard.rules`](99-amyboard.rules); install it on the Pi (needs sudo) after
 adding a board.
 
