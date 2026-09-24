@@ -426,20 +426,19 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
 }
 
 extern int16_t lvgl_is_repl;
-extern mp_obj_t keyboard_callback, ui_quit_callback, ui_switch_callback;
 
 void send_key_to_micropython(uint16_t c) {
     // handle the global system hotkeys before anything else. we have two, ctrl-tab and ctrl-q 
     if(c==17) {
-        if(ui_quit_callback != NULL) 
-            mp_sched_schedule(ui_quit_callback, NULL);
+        if(MP_STATE_PORT(ui_quit_callback) != NULL) 
+            mp_sched_schedule(MP_STATE_PORT(ui_quit_callback), NULL);
     } else if (c==263) {
-        if(ui_switch_callback != NULL) 
-            mp_sched_schedule(ui_switch_callback, NULL);
+        if(MP_STATE_PORT(ui_switch_callback) != NULL) 
+            mp_sched_schedule(MP_STATE_PORT(ui_switch_callback), NULL);
     } else {
         // Call the callback if set
-        if(keyboard_callback != NULL)  {
-            mp_sched_schedule(keyboard_callback, mp_obj_new_int(c));
+        if(MP_STATE_PORT(keyboard_callback) != NULL)  {
+            mp_sched_schedule(MP_STATE_PORT(keyboard_callback), mp_obj_new_int(c));
         }
 
         // If something is taking in chars from LVGL (text area etc), don't send the char to MP
