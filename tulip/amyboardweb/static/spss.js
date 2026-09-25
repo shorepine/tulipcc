@@ -6495,6 +6495,10 @@ async function start_amyboard() {
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);
 
+  // Wait for AMY WASM first: amy_c_api is only set once it has loaded,
+  // and the install below is skipped while it is null.
+  if (_amy_wasm_ready) await _amy_wasm_ready;
+
   if (amy_c_api) {
     await mp.registerJsModule('amy_c_api_js', amy_c_api);
     // Set up the micropython context for AMY.
@@ -6516,9 +6520,6 @@ async function start_amyboard() {
   await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');
   ensure_current_environment_layout(true);
-
-  // Wait for AMY WASM to be ready (so we can read sketch.py and eventually send messages).
-  if (_amy_wasm_ready) await _amy_wasm_ready;
 
   // Load sketch.py into the editor so the user can see/edit it before clicking to start audio.
   // The actual run_sketch() (applying knobs + starting loop) is deferred to start_audio().
