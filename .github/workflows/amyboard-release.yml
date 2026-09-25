@@ -108,6 +108,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amyboard-firmware
+          retention-days: 2
           if-no-files-found: error
           path: |
             tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin
@@ -210,6 +211,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amyboard-vcvplugin-lin-win
+          retention-days: 2
           if-no-files-found: error
           path: |
             tulip/vcvrack/dist-lin/*.vcvplugin
@@ -280,6 +282,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amyboard-vcvplugin-mac
+          retention-days: 2
           if-no-files-found: error
           path: tulip/vcvrack/dist/*.vcvplugin
 

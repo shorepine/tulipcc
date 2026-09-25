@@ -229,6 +229,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: hwci-${{ steps.ctx.outputs.is_amy == 'true' && 'amy' || 'tulip' }}-pr${{ env.PR }}
+          retention-days: 7
           if-no-files-found: warn
           path: |
             hwci/hwci_basic-recording.wav
