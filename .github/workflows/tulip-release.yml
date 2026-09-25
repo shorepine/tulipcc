@@ -100,6 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tulip-firmware
+          retention-days: 2
           if-no-files-found: error
           path: |
             tulip/esp32s3/dist/tulip-firmware-TULIP4_R11.bin
@@ -265,6 +266,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tulip-desktop-macos
+          retention-days: 2
           if-no-files-found: error
           path: tulip/macos/dist/Tulip_Desktop.zip
 
@@ -321,6 +323,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tulip-desktop-windows
+          retention-days: 2
           if-no-files-found: error
           path: ${{ runner.temp }}/Tulip_Desktop_Windows.zip
 

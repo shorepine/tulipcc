@@ -239,6 +239,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amyboard-firmware
+          retention-days: 7
           if-no-files-found: error
           path: |
             tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin
@@ -251,6 +252,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tulip-firmware
+          retention-days: 7
           if-no-files-found: error
           path: |
             tulip/esp32s3/dist/tulip-firmware-TULIP4_R11.bin
@@ -339,6 +341,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amy-ctx
+          retention-days: 7
           path: amy-ctx/ctx.json
           if-no-files-found: error
 
