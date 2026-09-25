@@ -65,7 +65,7 @@ cp -Rf ../../assets/css ../../assets/fonts ../../assets/img ../../assets/js stag
 #
 #   /run          Tulip 1, this repo's own web build, in stage/run.
 #   /2            TULIP 5, which is a different repo and a different
-#                 Vercel project (tulip5-web), REWRITTEN onto this
+#                 Vercel project (tulip2-web), REWRITTEN onto this
 #                 domain. Vercel does not do path-based domain
 #                 assignment, so a proxy is the only way to put two
 #                 projects on one hostname -- and it is the right one

@@ -17,11 +17,11 @@
     },
     {
       "source": "/2",
-      "destination": "https://tulip5-web.vercel.app/"
+      "destination": "https://tulip2-web.vercel.app/"
     },
     {
       "source": "/2/:path(.*)",
-      "destination": "https://tulip5-web.vercel.app/:path"
+      "destination": "https://tulip2-web.vercel.app/:path"
     }
   ],
   "headers": [
