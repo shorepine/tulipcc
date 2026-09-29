@@ -163,7 +163,7 @@ the same final synth as above with these commands:
 
 ## Control Coefficients
 
-On many synths (like this SH-101), you'll see a row of sliders that impact which control signal(s) can modify a parameter. Here the SH-101 lets you control the VCF (filter) by a constant frequency (FREQ), ADSR envelope (ENV), LFO or mod wheel (MOD), and keyboard velocity (KYBD). These slider values impact the ratio of each source's strength in the output filter frequency. 
+On many synths (like this SH-101), you'll see a row of sliders that impact which control signal(s) can modify a parameter. Here the SH-101 lets you control the VCF (filter) by a constant frequency (FREQ), ADSR envelope (ENV), LFO or mod wheel (MOD), and keyboard note (KYBD). These slider values impact the ratio of each source's strength in the output filter frequency. 
 
 <img src="./sh101.png" width="400"/>
 
