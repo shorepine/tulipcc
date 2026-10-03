@@ -19,6 +19,7 @@
   * [FM & ALGO type](#fm---algo-type)
   * [Build-your-own Partials](#build-your-own-partials)
   * [Interpolated partials](#interpolated-partials)
+  * [How groups of oscs are controlled together](#how-groups-of-oscs-are-controlled-together)
   * [PCM and Sampler](#pcm-and-sampler)
 
 
@@ -163,7 +164,7 @@ the same final synth as above with these commands:
 
 ## Control Coefficients
 
-On many synths (like this SH-101), you'll see a row of sliders that impact which control signal(s) can modify a parameter. Here the SH-101 lets you control the VCF (filter) by a constant frequency (FREQ), ADSR envelope (ENV), LFO or mod wheel (MOD), and keyboard velocity (KYBD). These slider values impact the ratio of each source's strength in the output filter frequency. 
+On many synths (like this SH-101), you'll see a row of sliders that impact which control signal(s) can modify a parameter. Here the SH-101 lets you control the VCF (filter) by a constant frequency (FREQ), ADSR envelope (ENV), LFO or mod wheel (MOD), and keyboard note (KYBD). These slider values impact the ratio of each source's strength in the output filter frequency. 
 
 <img src="./sh101.png" width="400"/>
 
@@ -344,7 +345,7 @@ The `patch` lets you set which preset is used (0 to 127 are the Juno 106 analog 
 
 ![DX7 Algorithms](https://raw.githubusercontent.com/shorepine/alles/main/pics/dx7_algorithms.jpg)
 
-When building your own algorithm sets, assign a separate oscillator as wave=`ALGO`, but the source oscillators as `SINE`. The algorithm #s are borrowed from the DX7. You don't have to use all 6 operators. Note that the `algo_source` parameter counts backwards from operator 6. When building operators, they can have their frequencies specified directly with `freq` or as a ratio of the root `ALGO` oscillator via `ratio`.
+When building your own algorithm sets, assign a separate oscillator as wave=`ALGO`, but the source oscillators as `SINE`. The algorithm #s are borrowed from the DX7. You don't have to use all 6 operators. Note that the `algo_source` parameter counts backwards from operator 6. When building operators, they can have their frequencies specified directly with `freq` or as a ratio of the root `ALGO` oscillator via `ratio`.  See [How groups of oscs are controlled together](#how-groups-of-oscs-are-controlled-together) for how note-on, velocity and pitch reach the operators.
 
 [**Please see our interactive AMY tutorial for more on setting up ALGO tones**](https://shorepine.github.io/amy/tutorial.html#fm-tones)
 
@@ -371,12 +372,80 @@ amy.send(osc=0, filter=amy.FILTER_HPF, resonance=4, filter_freq={'const': 200, '
 amy.send(osc=0, note=60, vel=1)
 # etc.
 ```
+The parent osc keeps steering its partials' pitch and amplitude for the whole note; see [How groups of oscs are controlled together](#how-groups-of-oscs-are-controlled-together).
+
 Note that the default `bp0` amplitude envelope of the `BYO_PARTIALS` osc is a gate, so if you want to have a nonzero release on your partials, you'll need to add a slower release to the `BYO_PARTIALS` osc to avoid it cutting them off.
 
 
 ## Interpolated partials
 
 Please see our [piano voice documentation](https://shorepine.github.io/amy/piano.html) for more on the `INTERP_PARTIALS` type. 
+
+
+## How groups of oscs are controlled together
+
+Most sounds use several oscs per note, and AMY has three different ways for one note-on to control a group of them: **chains** (`chained_osc`, often headed by a `SILENT` osc), **partials** (`BYO_PARTIALS` and `INTERP_PARTIALS`) and **FM** (`ALGO`). They look alike from the outside -- you send `note` and `vel` to one osc and several oscs sound -- but they differ in what the addressed osc passes on to the others, and when. A chain copies the note-on to each member once, and from then on each member runs by itself. A partials or `ALGO` parent keeps steering its group on every block for as long as the note lasts.
+
+| | Chain (`chained_osc`) | Partials (`BYO_PARTIALS`, `INTERP_PARTIALS`) | FM (`ALGO`) |
+|---|---|---|---|
+| Group members | Oscs linked one to the next by `chained_osc`, any osc numbers | The oscs right after the parent: `num_partials` of them for `BYO_PARTIALS`, as many as the preset needs for `INTERP_PARTIALS` | The oscs listed in `algo_source`, up to 6 |
+| What note-on passes to members | A copy of `note` and `vel`, once | Starts the partials' envelopes. `INTERP_PARTIALS` also rewrites each partial's frequency and envelope for this note and velocity | Starts the operators' envelopes. No note, no velocity |
+| After note-on | Nothing. Each member computes its own pitch and amp from its own ControlCoefficients | Every block, each partial's `note` input is set to the parent's current pitch and its `vel` input to the parent's current amplitude | Every block, an operator with `ratio` runs at the `ALGO` osc's current frequency times `ratio` |
+| Where velocity acts | On every member (through each one's `amp` `vel` coefficient), and on a `SILENT` head as well | On the parent's amplitude, which scales every partial. `INTERP_PARTIALS` also picks the partials' spectrum from it | Only on the `ALGO` osc's amplitude, which scales the carriers' output |
+| Pitch changes during the note (bend, EGs, LFOs) | Each member follows only its own controls | Partials follow the parent | Operators with `ratio` follow the `ALGO` osc. Operators without `ratio` stay at a fixed `freq` |
+| Filter, distortion, pan | An osc's filter and distortion process itself plus the rest of the chain below it, so the head's process the whole chain. A `SILENT` head also applies its amplitude envelope to the whole chain. The whole chain uses the head's `pan` and `bus` | The parent's filter and distortion process the summed partials | The `ALGO` osc's filter and distortion process the FM output |
+| Note-off | Passed down the chain | Releases the partials' envelopes | Releases the operators' envelopes |
+
+### Chains: note and velocity are copied once, at note-on
+
+When a note-on reaches the head of a chain, AMY walks the `chained_osc` links and gives every member the same `note` and `vel`, as if you had sent the note-on to each of them yourself. Each member then turns those values into pitch and amplitude through its **own** ControlCoefficients and starts its **own** envelopes. After that the head has no further control over the members: an EG or LFO on the head's `freq` bends the head alone, and a member keeps playing at the pitch it computed. The note-off is copied down the chain the same way.
+
+The chain's outputs are added into one buffer, rendered from the end of the chain back to the head. Each osc adds its own waveform to what the oscs below it have already written, then runs its filter and distortion on that sum. So a filter on the head (the osc you send notes to, which no other osc names as its `chained_osc`) affects the whole chain, a filter on a middle osc affects that osc and everything below it, and a filter on the end of the chain affects only that osc. An osc's amplitude envelope, by contrast, scales only its own waveform. The exception is a `SILENT` head: it has no waveform, and it applies its amplitude envelope, distortion and filter to the summed chain, once for the whole voice. This is how the Juno patches work (see [Juno patches](juno_patches.md)).
+
+Because the note-on is copied, velocity is applied at every osc whose `amp` has a `vel` term. That includes the `SILENT` head, and it defaults to `'vel': 1` on every osc. Left as it is, a `SILENT`-headed chain applies velocity twice: once in each member and again at the head. To get velocity and the envelope to act once, on the sum, turn them off on the members as the Juno patches do:
+
+```python
+amy.send(osc=0, wave=amy.SILENT, chained_osc=1, filter_type=amy.FILTER_LPF24,
+         filter_freq={'const': 300, 'eg1': 3}, bp1='0,1,500,0,200,0')   # VCF + VCA for the voice
+amy.send(osc=1, wave=amy.SAW_DOWN, chained_osc=2, amp={'vel': 0, 'eg0': 0})
+amy.send(osc=2, wave=amy.SAW_DOWN, freq=220 * 1.005, amp={'vel': 0, 'eg0': 0})  # slightly detuned
+amy.send(osc=0, note=48, vel=1)   # Always send notes to the head
+```
+
+Two practical rules follow from this:
+* Send notes to the head. Sending note-ons directly to other members of the chain is not supported.
+* Give the head a lower osc number than its members. AMY renders oscs in ascending order, so a member numbered below its head gets rendered on its own before the head can collect it, and misses the head's envelope and filter.
+
+### Partials: the parent steers its partials every block
+
+A `BYO_PARTIALS` or `INTERP_PARTIALS` osc owns the oscs that follow it by position; nothing links them explicitly. Those `PARTIAL` oscs ignore note-ons sent to them directly. On a note-on to the parent, the partials' envelopes start. After that, on every block, the parent writes into each partial:
+* its current pitch as the partial's `note` input, including pitch bend, EG and LFO modulation and portamento, and
+* its current amplitude as the partial's `vel` input, including the parent's velocity and its `bp0` envelope.
+
+A partial combines those with its own `const`, `note`, `vel` and `eg0` coefficients. It does not use `eg1`, `mod0`/`mod1` or `bend` of its own, so all modulation comes from the parent. `freq=440 * i` on a partial therefore means "the `i`-th harmonic of whatever the parent is playing right now", and modulating the parent moves every partial with it. For example, using the 8-partial tone from [Build-your-own Partials](#build-your-own-partials):
+
+```python
+amy.send(osc=20, wave=amy.SINE, freq=5, amp=1)                           # 5 Hz LFO
+amy.send(osc=0, freq={'const': 440, 'note': 1, 'mod0': 0.05}, mod_source=20)  # vibrato on the parent...
+amy.send(osc=0, note=60, vel=1)                                          # ...applies to all 8 partials
+```
+
+In a chain, the same `mod0` on the head would give vibrato to the head only.
+
+`INTERP_PARTIALS` does one more thing at note-on. The parent looks up its preset tables at the note's pitch and velocity, interpolates between them, and writes a frequency and a `bp0` envelope into each partial osc, replacing whatever was there. So velocity changes the *spectrum*, not just the level, and the piano patches set the parent's `amp` `vel` coefficient to 0 so that velocity is not applied a second time. After note-on the parent steers the partials every block, as above.
+
+### FM (`ALGO`): operators follow the carrier's pitch, but not its velocity
+
+An `ALGO` osc controls the operators named in `algo_source`, which can be any oscs. As with partials, operators ignore note-ons sent to them directly. A note-on to the `ALGO` osc starts its own envelopes and restarts each operator's envelopes (and `trigger_phase`), but it does **not** pass the note or velocity to the operators:
+* **Pitch.** On every block, an operator with `ratio` set runs at the `ALGO` osc's current frequency times `ratio`, so bends, EGs and LFOs on the `ALGO` osc carry through to every operator, as with partials. An operator without `ratio` stays at its own fixed `freq`.
+* **Amplitude.** An operator's level comes from its own `amp` coefficients and envelope. Its velocity input is never set and stays at 0, so operators need `'vel': 0` in their `amp`. With the default `'vel': 1` they are silent. The carriers' output is then scaled by the `ALGO` osc's amplitude, which does include velocity and the `ALGO` osc's `bp0`. The modulators' levels are not scaled by it, so on a hand-built `ALGO` patch velocity changes loudness but not brightness (the modulation index).
+
+```python
+amy.send(osc=2, wave=amy.SINE, ratio=0.2, amp={'const': 1, 'vel': 0, 'eg0': 2}, bp0='0,0,5000,1,0,0')  # Op 2, modulator
+amy.send(osc=1, wave=amy.SINE, ratio=1, amp={'const': 1, 'vel': 0, 'eg0': 0})  # Op 1, carrier
+amy.send(osc=0, wave=amy.ALGO, algorithm=1, algo_source=',,,,2,1')
+amy.send(osc=0, note=60, vel=1)   # Note and velocity go to the ALGO osc only
+```
 
 
 ## PCM and Sampler
