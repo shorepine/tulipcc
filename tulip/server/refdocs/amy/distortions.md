@@ -2,13 +2,16 @@
 
 AMY has a per-oscillator distortion stage with three waveshapers: a soft
 clipper, a wavefolder, and a bitcrusher. The stage runs inside each osc's
-signal chain, after the amplitude envelope and before the filter, so note
+signal path, after the amplitude envelope and before the filter, so note
 dynamics drive the shaper: a hard hit pushes further into the nonlinearity
-than a soft one, and a decaying tail cleans up on its own. On a `SILENT`
-chained-osc head the same stage shapes the voice's summed chain instead, which
-is a musically different effect - see [Per-osc versus the voice's
-sum](#per-osc-versus-the-voices-sum) below. The same chain also runs per bus,
-as a mixbus stage ahead of the bus FX - see [Per-bus
+than a soft one, and a decaying tail cleans up on its own. On an osc that is
+not chained (and on the last osc of a `chained_osc` chain) it shapes just that
+osc. On an osc that has a `chained_osc`, it shapes that osc's waveform summed
+with the rest of the chain below it, like the osc's filter does. A `SILENT`
+head, which has no waveform of its own, therefore shapes the voice's whole
+summed chain. Shaping a sum is a musically different effect - see [Per-osc
+versus the voice's sum](#per-osc-versus-the-voices-sum) below. The same stage
+also runs per bus, as a mixbus stage ahead of the bus FX - see [Per-bus
 distortion](#per-bus-distortion).
 
 All the clips on this page are rendered offline through the Python module and
@@ -31,7 +34,7 @@ Stages are independent: each command toggles only its own stage, and enabled
 stages stack in a fixed clip -> fold -> crush order (shaping before lo-fi;
 the reverse order per voice is reachable by putting the crusher on a chain
 member and the clipper on its `SILENT` head). Drive and mix are shared
-across the chain, and each stage applies drive as its own pre-gain, so
+across the three stages, and each stage applies drive as its own pre-gain, so
 stacking re-amplifies per pass. One riff with the stage set changing on each
 downbeat - dry, clip, clip+fold, all three, crusher alone:
 
@@ -235,7 +238,9 @@ independently keeps sparse, separate harmonic stacks per note:
 https://github.com/user-attachments/assets/ebcb7caf-71f1-43fc-9904-179aa017250a
 
 Chaining the three oscs into a `SILENT` head that carries the distortion
-shapes the sum once: the gaps fill with sum/difference intermodulation and a
+shapes the sum once (a distortion on any osc of a chain covers the oscs
+below it, so a `SILENT` head is the way to put all of them in one shaper
+under one envelope): the gaps fill with sum/difference intermodulation and a
 low difference-tone band - the power-chord growl.
 
 https://github.com/user-attachments/assets/0e2ea972-e957-4928-8228-4224cd815b0f
@@ -249,9 +254,12 @@ amy.send(osc=3, wave=amy.SINE, freq=329.63)
 amy.send(osc=0, note=60, vel=0.6)   # note/vel at the head drive the chain
 ```
 
-Both scopes compose - for example crush per osc for grit, clip on the head as
-glue. Per-osc scope is also what makes the stage usable as a drum-kit effect:
-each drum is shaped against its own level, not a bus mix. A two-bar 808
+Both scopes compose - for example crush on one chain member for grit, then
+clip on the `SILENT` head as glue. Keep in mind that a stage on a chain member
+also shapes every osc below it in the chain, so only the last osc of a chain
+is shaped entirely on its own. Per-osc scope is also what makes the stage
+usable as a drum-kit effect: each drum is shaped against its own level, not a
+bus mix. A two-bar 808
 pattern with 6-bit crush on every drum osc:
 
 https://github.com/user-attachments/assets/cce8013c-0a24-4cb2-9763-407a63362010
