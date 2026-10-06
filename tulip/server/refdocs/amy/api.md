@@ -349,7 +349,7 @@ These per-oscillator parameters use [CtrlCoefs](synth.md) notation
 | ------ | -------- | ---------- | ----------  | ------------------------------------- |
 | `Q`    | `pan_coefs[]` | `pan`   | float[,float...] | Panning index ControlCoefficients (for stereo output), 0.0=left, 1.0=right. default 0.5. |
 | `a`    | `amp_coefs[]` | `amp`    | float[,float...]  | Control the amplitude of a note; a set of ControlCoefficients. Default is 1,0,1,1  (i.e. an overall gain of 1, scaled by the note velocity and Envelope Generator 0.) The first (`const`) coefficient is an overall gain: setting it to 0 mutes the oscillator entirely. Coefficients are combined in the log (dB) domain — see [synth.md](synth.md#control-coefficients). |
-| `d`    | `duty_coefs[]` | `duty`   |  float[,float...] | Duty cycle for pulse wave, ControlCoefficients, defaults to 0.5 |
+| `d`    | `duty_coefs[]` | `duty`   |  float[,float...] | Duty cycle for pulse wave, ControlCoefficients, defaults to 0.5. For KS, the pluck position: `abs(duty - 0.5)` is where the string is plucked, as a fraction of its length, read from the constant coefficient at note-on. 0.5 is the plain noise burst; 0.4 or 0.6 plucks near the bridge, 0 or 1 at mid-string (hollow). |
 | `f`    | `freq_coefs[]` | `freq`   |  float[,float...]      | Frequency of oscillator, set of ControlCoefficients.  Default is 0,1,0,0,0,0,1 (from `note` pitch plus `pitch_bend`) |
 | `F`    | `filter_freq_coefs[]` | `filter_freq` | float[,float...]  | Center/break frequency for variable filter, set of ControlCoefficients |
 
