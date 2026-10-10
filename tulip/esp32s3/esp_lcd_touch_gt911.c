@@ -313,7 +313,11 @@ static esp_err_t esp_lcd_touch_gt911_read_data(esp_lcd_touch_handle_t tp)
 
     /* Any touch data? */
     if ((buf[0] & 0x80) == 0x00) {
-        touch_gt911_i2c_write(tp, ESP_LCD_TOUCH_GT911_READ_XY_REG, clear);
+        /* The GT911 hasn't finished a new scan since we last cleared the status.
+         * That is NOT "no touch" -- the finger may still be down -- so tell the
+         * caller there's nothing new rather than letting it read an empty point
+         * list and report a phantom release. */
+        return ESP_ERR_NOT_FINISHED;
 #if (CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS > 0)
     } else if ((buf[0] & 0x10) == 0x10) {
         /* Read all keys */
