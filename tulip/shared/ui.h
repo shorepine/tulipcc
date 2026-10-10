@@ -9,6 +9,7 @@
 
 void tulip_ui_isr(uint8_t ui_id);
 void tulip_touch_isr(uint8_t up);
+void tulip_touch_hold_isr();
 
 void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up);
 

@@ -1164,43 +1164,85 @@ MP_REGISTER_ROOT_POINTER(mp_obj_t ui_quit_callback);
 MP_REGISTER_ROOT_POINTER(mp_obj_t ui_switch_callback);
 
 
+// The display ISR asks for an LVGL pass and the frame callback every frame, and the
+// touch task reports held-finger samples ~100x/sec. When the MicroPython task is slower
+// than that (a busy LVGL screen can take longer than a frame to render) those requests
+// used to pile up until MicroPython's scheduler queue was full, and then everything --
+// including touch down/up events -- was silently dropped. So each of these keeps at
+// most one request in the queue at a time; a pending one already covers the next.
+//
+// Each "pending" is the get_ticks_ms() it was queued at (0 = none). A queued request can
+// be thrown away without running -- the display starts before MicroPython, and mp_init()
+// (boot, soft reset) empties the scheduler queue -- so one that's been pending too long
+// is assumed lost and queued again, rather than blocking that callback forever.
+#define SCHED_PENDING_STALE_MS 500
+volatile uint32_t lv_sched_pending = 0;
+volatile uint32_t frame_sched_pending = 0;
+volatile uint32_t touch_hold_sched_pending = 0;
+
+static bool sched_claim(volatile uint32_t *pending) {
+    uint32_t now = get_ticks_ms() | 1;
+    uint32_t p = *pending;
+    if(p != 0 && (now - p) < SCHED_PENDING_STALE_MS) return false;
+    *pending = now;
+    return true;
+}
+
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 {  
+    lv_sched_pending = 0;
     lv_task_handler();
-    //lv_timer_handler_brian();
-    //if(lv_tick_counter++ % 100 == 0) {
-    //    fprintf(stderr, "%d ticks, brian %d %2.4f bs/tick\n", lv_tick_counter, brian_counter, (float)(brian_counter)/(float)(lv_tick_counter));
-   // }
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_lv_task_handler_obj, mp_lv_task_handler);
 
+STATIC mp_obj_t mp_frame_callback_trampoline(mp_obj_t arg)
+{
+    frame_sched_pending = 0;
+    if(MP_STATE_PORT(frame_callback) != NULL) {
+        mp_call_function_1(MP_STATE_PORT(frame_callback), MP_STATE_PORT(frame_arg));
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_frame_callback_trampoline_obj, mp_frame_callback_trampoline);
+
+STATIC mp_obj_t mp_touch_hold_trampoline(mp_obj_t arg)
+{
+    touch_hold_sched_pending = 0;
+    if(MP_STATE_PORT(touch_callback) != NULL) {
+        mp_call_function_1(MP_STATE_PORT(touch_callback), MP_OBJ_NEW_SMALL_INT(0));
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_touch_hold_trampoline_obj, mp_touch_hold_trampoline);
 
 void mp_schedule_lv() {
     // schedule lvgl task
-    mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
+    if(!sched_claim(&lv_sched_pending)) return;
+    if(!mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none)) lv_sched_pending = 0;
 }
 
 void tulip_frame_isr() {
     mp_schedule_lv();
-    if(MP_STATE_PORT(frame_callback) != NULL) {
+    if(MP_STATE_PORT(frame_callback) != NULL && sched_claim(&frame_sched_pending)) {
         // Schedule the python callback given to run asap
-        //fprintf(stderr, "calling function %p with arg %p at frame %d\n", MP_STATE_PORT(frame_callback), MP_STATE_PORT(frame_arg), vsync_count);
-        mp_sched_schedule(MP_STATE_PORT(frame_callback), MP_STATE_PORT(frame_arg));
-#ifdef ESP_PLATFORM
-        //mp_hal_wake_main_task_from_isr();
-#endif
+        if(!mp_sched_schedule((mp_obj_t)&mp_frame_callback_trampoline_obj, mp_const_none)) frame_sched_pending = 0;
     }
 }
 
-
+// Finger down (up=0) or up (up=1): always queued, these must never be dropped
 void tulip_touch_isr(uint8_t up) {
     if(MP_STATE_PORT(touch_callback) != NULL) {
-        mp_sched_schedule(MP_STATE_PORT(touch_callback), mp_obj_new_int(up)); 
+        mp_sched_schedule(MP_STATE_PORT(touch_callback), MP_OBJ_NEW_SMALL_INT(up));
     }
 }
 
-
+// Finger still down (calls the callback with 0, like a down): only one in the queue at a time
+void tulip_touch_hold_isr() {
+    if(MP_STATE_PORT(touch_callback) != NULL && sched_claim(&touch_hold_sched_pending)) {
+        if(!mp_sched_schedule((mp_obj_t)&mp_touch_hold_trampoline_obj, mp_const_none)) touch_hold_sched_pending = 0;
+    }
+}
 
 
 // tulip.frame_callback(cb, arg)

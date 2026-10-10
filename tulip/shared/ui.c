@@ -22,7 +22,7 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
 
 
     } else if(touch_held && !up) { // this is a continuous hold -- update sliders, etc 
-        tulip_touch_isr(up);
+        tulip_touch_hold_isr();
     } else if(!touch_held && !up) { // this is a new touch down 
         touch_down_x = touch_x;
         touch_down_y = touch_y;
