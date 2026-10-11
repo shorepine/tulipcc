@@ -1040,13 +1040,26 @@ void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
     lvgl_keyboard_read(indev, data);
 }
 
+extern volatile uint8_t touch_down_pending;
+extern volatile int16_t touch_down_x;
+extern volatile int16_t touch_down_y;
+
 void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
-    if(touch_held) {
+    if(touch_down_pending || touch_held) {
         // Clamp to the screen instead of dropping the point -- touch calibration can
         // map edge touches slightly out of range, and dropping them makes the
         // launcher / app switcher buttons at the screen corners miss taps
         int16_t x = last_touch_x[0];
         int16_t y = last_touch_y[0];
+        if(touch_down_pending) {
+            // A touch down LVGL hasn't seen yet (see ui.c). Report it where it
+            // started, and if the finger already lifted, have LVGL read again
+            // right away so it gets the release (and the click) in this same pass.
+            touch_down_pending = 0;
+            x = touch_down_x;
+            y = touch_down_y;
+            data->continue_reading = !touch_held;
+        }
         if(x < 0) x = 0;
         if(x >= H_RES) x = H_RES-1;
         if(y < 0) y = 0;
@@ -1112,6 +1125,9 @@ void setup_lvgl() {
     indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);   
     lv_indev_set_read_cb(indev, lvgl_input_read_cb);  
+    // Read touch on every lv_task_handler pass (each frame, plus right after a touch
+    // down/up) instead of LVGL's default of every 33ms
+    lv_timer_set_period(lv_indev_get_read_timer(indev), 5);
 
     // Also create a keyboard input device 
     indev_kb = lv_indev_create();

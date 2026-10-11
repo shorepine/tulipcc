@@ -131,9 +131,25 @@ void run_gt911(void *param) {
         touchscreen_ok = 1;
     }
   
+    // While a finger is down the GT911 reports a fresh sample every scan (~10ms).
+    // If none arrive for this long while we think it's held, treat it as lifted
+    // so a lost release report can't leave the touch stuck down.
+    const uint32_t held_timeout_ms = 150;
+    uint32_t last_sample_ms = 0;
+
     while(1) {
         if (touchscreen_ok) {
-            esp_lcd_touch_read_data(tp);
+            esp_err_t err = esp_lcd_touch_read_data(tp);
+            if(err != ESP_OK) {
+                // No new scan yet (or an I2C glitch): keep the current state
+                if(gt911_held && (get_ticks_ms() - last_sample_ms) > held_timeout_ms) {
+                    send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
+                    gt911_held = 0;
+                }
+                vTaskDelay(10/portTICK_PERIOD_MS);
+                continue;
+            }
+            last_sample_ms = get_ticks_ms();
             if(esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 3)) {
                 //fprintf(stderr, "TP pressed %d,%d str %d count %d\n", touch_x[0], touch_y[0], touch_strength[0], touch_cnt);
                 for(uint8_t i=0;i<touch_cnt;i++) {
@@ -168,6 +184,6 @@ void run_gt911(void *param) {
                 }
             }
         }
-        vTaskDelay(20/portTICK_PERIOD_MS);
+        vTaskDelay(10/portTICK_PERIOD_MS);
     }
 }
