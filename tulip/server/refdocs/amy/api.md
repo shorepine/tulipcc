@@ -483,7 +483,7 @@ Default AMY has 4 buses, 0..3.  Set `max_buses` in `amy_config_t` before `amy_st
 | `h`    | `reverb_level, reverb_liveness, reverb_damping, reverb_xover_hz` | `reverb` | float[,float,float,float] | Reverb parameters -- level, liveness, damping, xover: Level is for output mix;
 | `k`    | `chorus_level, chorus_max_delay, chorus_lfo_freq, chorus_depth` | `chorus` | float[,float,float,float] | Chorus parameters -- level, delay, freq, depth: Level is for output mix (0 to turn off); delay is max in samples (512); freq is LFO rate in Hz (0.5); depth is proportion of max delay (0.5). |
 | `M`    | `echo_level, echo_delay_ms, echo_max_delay_ms, echo_feedback, echo_filter_coef` | `echo` | float[,int,int,float,float] | Echo parameters --  level, delay_ms, max_delay_ms, feedback, filter_coef (-1 is HPF, 0 is flat, +1 is LPF). |
-| `x`    | `eq_l, eq_m, eq_h` |`eq` | float,float,float | Equalization in dB low (~800Hz) / med (~2500Hz) / high (~7500Hz) -15 to 15. 0 is off. default 0. |
+| `x`    | `eq_l, eq_m, eq_h` |`eq` | float,float,float | Equalization in dB, -15 to 15: a low shelf at 800 Hz, a peak at 2500 Hz (Q 1) and a high shelf at 7000 Hz, each frequency the band's half-gain point. Shelves are first order (6 dB/octave). 0 leaves a band out. default 0. |
 
 Distortion (`GC`/`GF`/`GH`/`GD`/`GM`) runs per bus too, first in the bus FX chain -- before EQ, chorus, echo and reverb.  It has no bus-specific commands: the `G` commands above address a bus whenever the event that carries them names no oscillator.
 
