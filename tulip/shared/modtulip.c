@@ -139,6 +139,27 @@ STATIC mp_obj_t tulip_amy_set_external_input_buffer(size_t n_args, const mp_obj_
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_input_buffer_obj, 1, 1, tulip_amy_set_external_input_buffer);
 
+// tulip.amy_pcm_buffer(preset) -> (samples, channels, samplerate, midinote) for
+// an in-memory PCM preset (load_sample / start_sample), or None otherwise.
+// samples is an int16 memoryview straight over AMY's sample RAM (no copy),
+// frames * channels interleaved. It dangles once the preset is unloaded or
+// reloaded -- use it and drop it.
+STATIC mp_obj_t tulip_amy_pcm_buffer(size_t n_args, const mp_obj_t *args) {
+    uint32_t frames = 0, samplerate = 0;
+    uint8_t channels = 0;
+    float midinote = 0;
+    const int16_t *ram = pcm_get_memory_preset(mp_obj_get_int(args[0]), &frames, &channels, &samplerate, &midinote);
+    if (ram == NULL || frames == 0) { return mp_const_none; }
+    mp_obj_t items[4] = {
+        mp_obj_new_memoryview('h', frames * channels, (void *)ram),
+        mp_obj_new_int(channels),
+        mp_obj_new_int(samplerate),
+        mp_obj_new_float(midinote),
+    };
+    return mp_obj_new_tuple(4, items);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_pcm_buffer_obj, 1, 1, tulip_amy_pcm_buffer);
+
 STATIC mp_obj_t tulip_sequencer_start(void) {
     extern void sequencer_midi_start(void);
     sequencer_midi_start();
@@ -1849,6 +1870,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     // `make c-api`.
 #include "amy_c_api_mp_table.inc"
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_pcm_buffer), MP_ROM_PTR(&tulip_amy_pcm_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_sequencer_start), MP_ROM_PTR(&tulip_sequencer_start_obj) },
 #endif
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },

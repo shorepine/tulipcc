@@ -373,6 +373,39 @@ def exists(fn):
     return True
 
 
+def store_sample(preset, filename, frames=None, chunk_frames=2048):
+    """Write an in-memory PCM preset -- an amy.start_sample() recording or a
+    load_sample() preset -- to a 16-bit WAV file, at the preset's own channel
+    count and sample rate. frames trims the file (start_sample allocates
+    max_frames, and stop_sample() doesn't shorten it). Returns frames written.
+
+    Writes chunk_frames at a time straight from AMY's sample RAM; pending
+    MicroPython callbacks (sequencer, MIDI) get to run between chunks. Save to
+    /sd rather than the internal flash filesystem: flash writes stall the cache
+    AMY renders from. Not available on web, where AMY lives in a separate WASM
+    module."""
+    import struct
+    p = amy_pcm_buffer(preset)
+    if p is None:
+        raise ValueError("preset %d is not an in-memory sample" % preset)
+    buf, channels, sr = p[0], p[1], p[2]
+    total = len(buf) // channels
+    if frames is None or frames > total:
+        frames = total
+    n = frames * channels
+    data_bytes = n * 2
+    f = open(filename, "wb")
+    try:
+        f.write(b"RIFF" + struct.pack("<I", 36 + data_bytes) + b"WAVEfmt " +
+                struct.pack("<IHHIIHH", 16, 1, channels, sr, sr * channels * 2, channels * 2, 16) +
+                b"data" + struct.pack("<I", data_bytes))
+        step = chunk_frames * channels
+        for i in range(0, n, step):
+            f.write(buf[i:min(i + step, n)])
+    finally:
+        f.close()
+    return frames
+
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     if(board()=="WEB"):
         import world_web, js
