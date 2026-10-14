@@ -139,6 +139,22 @@ STATIC mp_obj_t tulip_amy_set_external_input_buffer(size_t n_args, const mp_obj_
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_input_buffer_obj, 1, 1, tulip_amy_set_external_input_buffer);
 
+// tulip.amy_pcm_buffer(preset, channels) -> int16 memoryview straight over a
+// PCM preset's sample RAM (no copy). AMY only exposes the frame count, not the
+// channel count or sample rate, so the caller says it: 2 for start_sample()
+// recordings, 1 for load_sample() presets. An unknown preset number resolves
+// to a ROM preset (AMY's fallback), so None only means a zero-length preset.
+// The view dangles if the preset is unloaded or reloaded -- use it and drop it.
+STATIC mp_obj_t tulip_amy_pcm_buffer(size_t n_args, const mp_obj_t *args) {
+    uint32_t frames = 0;
+    const int16_t *ram = pcm_get_sample_ram_for_preset(mp_obj_get_int(args[0]), &frames);
+    mp_int_t channels = mp_obj_get_int(args[1]);
+    if (channels < 1 || channels > 2) { mp_raise_ValueError(MP_ERROR_TEXT("channels must be 1 or 2")); }
+    if (ram == NULL || frames == 0) { return mp_const_none; }
+    return mp_obj_new_memoryview('h', frames * channels, (void *)ram);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_pcm_buffer_obj, 2, 2, tulip_amy_pcm_buffer);
+
 STATIC mp_obj_t tulip_sequencer_start(void) {
     extern void sequencer_midi_start(void);
     sequencer_midi_start();
@@ -1849,6 +1865,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     // `make c-api`.
 #include "amy_c_api_mp_table.inc"
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_pcm_buffer), MP_ROM_PTR(&tulip_amy_pcm_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_sequencer_start), MP_ROM_PTR(&tulip_sequencer_start_obj) },
 #endif
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
