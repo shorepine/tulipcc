@@ -373,23 +373,22 @@ def exists(fn):
     return True
 
 
-def store_sample(preset, filename, channels=2, frames=None, sr=None, chunk_frames=2048):
-    """Write an in-memory PCM preset (e.g. an amy.start_sample() recording) to a
-    16-bit WAV file. channels=2 for start_sample() recordings, 1 for presets from
-    load_sample(). sr defaults to AMY's rate, which is right for recordings; for
-    a load_sample() preset pass the source WAV's rate (AMY doesn't expose it).
-    frames trims the file (start_sample allocates max_frames, and stop_sample()
-    doesn't shorten it). Returns frames written.
+def store_sample(preset, filename, frames=None, chunk_frames=2048):
+    """Write an in-memory PCM preset -- an amy.start_sample() recording or a
+    load_sample() preset -- to a 16-bit WAV file, at the preset's own channel
+    count and sample rate. frames trims the file (start_sample allocates
+    max_frames, and stop_sample() doesn't shorten it). Returns frames written.
 
     Writes chunk_frames at a time straight from AMY's sample RAM; pending
-    MicroPython callbacks (sequencer, MIDI) get to run between chunks. Not
-    available on web, where AMY lives in a separate WASM module."""
+    MicroPython callbacks (sequencer, MIDI) get to run between chunks. Save to
+    /sd rather than the internal flash filesystem: flash writes stall the cache
+    AMY renders from. Not available on web, where AMY lives in a separate WASM
+    module."""
     import struct
-    if sr is None:
-        sr = amy.AMY_SAMPLE_RATE
-    buf = amy_pcm_buffer(preset, channels)
-    if buf is None:
-        raise ValueError("preset %d has no sample data" % preset)
+    p = amy_pcm_buffer(preset)
+    if p is None:
+        raise ValueError("preset %d is not an in-memory sample" % preset)
+    buf, channels, sr = p[0], p[1], p[2]
     total = len(buf) // channels
     if frames is None or frames > total:
         frames = total
