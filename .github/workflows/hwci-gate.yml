@@ -4,8 +4,9 @@ name: HW CI gate
 # push to a PR:
 #   * PR touches firmware (the same paths that trigger "AMYboard PR preview", which
 #     chains to HW CI) → pending, until amyboard-hwci.yml reports success/failure.
-#   * PR doesn't touch firmware → success right away, since HW CI will never run
-#     for it and the required status would otherwise block the merge forever.
+#   * PR doesn't touch firmware, or comes from a fork → success right away, since
+#     HW CI will never run for it and the required status would otherwise block
+#     the merge forever.
 # Keep FIRMWARE_PATHS in sync with the `paths:` filter in amyboard-pr-preview.yml.
 #
 # pull_request_target so it can write statuses on fork PRs too. SAFE: it never
@@ -42,11 +43,15 @@ jobs:
             const touched = files.some(f =>
               [f.filename, f.previous_filename].filter(Boolean)
                 .some(p => FIRMWARE_PATHS.some(re => re.test(p))));
+            // HW CI never runs on fork PRs (no secrets for the preview build, and
+            // fork code is kept off the self-hosted Pi), so don't make them wait.
+            const fork = pr.head.repo.full_name !== `${owner}/${repo}`;
+            const willRun = touched && !fork;
             await github.rest.repos.createCommitStatus({
               owner, repo, sha: pr.head.sha, context: 'HW CI',
-              state: touched ? 'pending' : 'success',
-              description: touched
-                ? 'Waiting for the hardware bench'
+              state: willRun ? 'pending' : 'success',
+              description: willRun ? 'Waiting for the hardware bench'
+                : fork ? 'Not run: fork PR'
                 : 'Not needed: no firmware changes',
             });
-            core.info(`PR #${pr.number} @ ${pr.head.sha}: firmware touched=${touched}`);
+            core.info(`PR #${pr.number} @ ${pr.head.sha}: firmware touched=${touched} fork=${fork}`);
