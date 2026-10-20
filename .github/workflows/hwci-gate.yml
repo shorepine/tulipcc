@@ -1,0 +1,52 @@
+name: HW CI gate
+
+# Seeds the "HW CI" commit status that branch protection on main requires, on every
+# push to a PR:
+#   * PR touches firmware (the same paths that trigger "AMYboard PR preview", which
+#     chains to HW CI) → pending, until amyboard-hwci.yml reports success/failure.
+#   * PR doesn't touch firmware → success right away, since HW CI will never run
+#     for it and the required status would otherwise block the merge forever.
+# Keep FIRMWARE_PATHS in sync with the `paths:` filter in amyboard-pr-preview.yml.
+#
+# pull_request_target so it can write statuses on fork PRs too. SAFE: it never
+# checks out or runs PR code; it only reads the PR's changed-file list from the API.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  statuses: write
+  pull-requests: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const FIRMWARE_PATHS = [
+              /^amy$/,
+              /^tulip\/amyboard\//,
+              /^tulip\/esp32s3\//,
+              /^tulip\/amyboardweb\//,
+              /^tulip\/shared\//,
+              /^\.github\/workflows\/amyboard-pr-preview\.yml$/,
+              /^\.github\/actions\/init-submodules\/action\.yml$/,
+            ];
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+            const files = await github.paginate(github.rest.pulls.listFiles,
+              { owner, repo, pull_number: pr.number, per_page: 100 });
+            const touched = files.some(f =>
+              [f.filename, f.previous_filename].filter(Boolean)
+                .some(p => FIRMWARE_PATHS.some(re => re.test(p))));
+            await github.rest.repos.createCommitStatus({
+              owner, repo, sha: pr.head.sha, context: 'HW CI',
+              state: touched ? 'pending' : 'success',
+              description: touched
+                ? 'Waiting for the hardware bench'
+                : 'Not needed: no firmware changes',
+            });
+            core.info(`PR #${pr.number} @ ${pr.head.sha}: firmware touched=${touched}`);
