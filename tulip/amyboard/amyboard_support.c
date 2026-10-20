@@ -468,6 +468,13 @@ void cv_read_task(void *pvParameter) {
                 // report failure, so a timed-out or misdirected read published
                 // whatever bytes happened to be in the buffer.
                 cv_read_errors_count++;
+                // Back off. This task starts in app_main, before Python opens
+                // I2C(0) in amyboard.start_amy(), so until then every read fails
+                // and the IDF logs "i2c driver not installed" on the console.
+                // At a short cv_period (BLOCK_SIZE_BITS=6 is 1 tick) that flood
+                // outruns the 115200-baud console and starves the boot.
+                vTaskDelay(pdMS_TO_TICKS(100));
+                last_wake = xTaskGetTickCount();
             }
         }
         xTaskDelayUntil(&last_wake, cv_period);
