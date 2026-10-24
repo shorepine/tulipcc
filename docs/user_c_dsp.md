@@ -85,7 +85,10 @@ void process(int *buf, int frames, int chans)
 ```
 
 `buf` is the live bus buffer **after** AMY's own FX chain (EQ, chorus, echo,
-reverb) — you are the last thing before the speaker. It holds `chans`
+reverb). On bus 0 a built-in output soft clip runs after your effect (it
+leaves anything below about 0.7 of full scale untouched and rounds louder
+peaks off toward full scale), so a hot effect saturates instead of
+crackling; on other buses you are the last thing before the mixdown. It holds `chans`
 sequential channel blocks of `frames` samples each (not interleaved): left
 is `buf[0] .. buf[frames-1]`, right starts at `buf[frames]`. Modify it in
 place. Enable on buses with `tulip.c_process(name, True, bus)`.

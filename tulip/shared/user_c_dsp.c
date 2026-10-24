@@ -189,7 +189,8 @@ static const udsp_export_t udsp_exports[] = {
 // ----------------------------------------------------------------------------
 
 // Runs on the AMY render task, once per bus per block. buf is the bus'
-// S8.23 buffer, passed to user effects directly.
+// S8.23 buffer, passed to user effects directly. Bus 0 then goes through the
+// built-in output soft clip, so it also catches peaks from user effects.
 void tulip_bus_postprocess_hook(uint16_t bus, int32_t *buf, uint16_t len) {
     if (bus >= USER_C_DSP_MAX_BUSES) return;  // no bit for it in bus_mask
     for (int i = 0; i < USER_C_DSP_SLOTS; i++) {
@@ -198,6 +199,10 @@ void tulip_bus_postprocess_hook(uint16_t bus, int32_t *buf, uint16_t len) {
             fn(buf, len, AMY_NCHANS);
             slots[i].calls++;
         }
+    }
+    if (bus == 0) {
+        extern void tulip_output_soft_clip(SAMPLE *buf, uint16_t len);
+        tulip_output_soft_clip(buf, len);
     }
 }
 

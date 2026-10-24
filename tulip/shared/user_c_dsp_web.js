@@ -138,22 +138,49 @@
       }
     };
 
+    // Built-in output soft clip for bus 0, mirroring tulip_output_soft_clip in
+    // amy_connector.c. The worklet can't read AMY's bus volume, so this
+    // assumes the default volume of 1, where full scale is a bus level of 10.
+    const CLIP_FULL = 10 * (1 << 23);
+    const CLIP_KNEE = 0.7 * CLIP_FULL;
+    const CLIP_RANGE = CLIP_FULL - CLIP_KNEE;
+    const softClip = (mod, buf, len, nchans) => {
+      const m = views(mod);
+      const end = (buf >> 2) + len * nchans;
+      for (let i = buf >> 2; i < end; i++) {
+        const s = m[i];
+        if (s > CLIP_KNEE) {
+          const u = s - CLIP_KNEE;
+          m[i] = CLIP_KNEE + CLIP_RANGE * u / (CLIP_RANGE + u);
+        } else if (s < -CLIP_KNEE) {
+          const u = -s - CLIP_KNEE;
+          m[i] = -(CLIP_KNEE + CLIP_RANGE * u / (CLIP_RANGE + u));
+        }
+      }
+    };
+
     // End of a bus' FX chain, every block (see docs/api.md in AMY). buf is
     // nchans sequential channel blocks of len S8.23 samples, processed in
-    // place by every enabled effect slot.
+    // place by every enabled effect slot, then bus 0 by the output soft clip.
     globalThis.amy_bus_postprocess_js_hook = (bus, buf, len, nchans, mod) => {
       try {
         if (bus === 0) poll(mod);
-        if (!ctx) return;
-        const m = views(mod);
-        const c = ctx >> 2;
-        for (let s = 0; s < TU_SLOTS; s++) {
-          const slot = live[s];
-          if (slot === null || slot.kind !== 0) continue;
-          if (!(m[c + TU_ST(s)] & (1 << bus))) continue;
-          slot.fn(buf, len, nchans);
-          m[c + TU_ST(s) + 1]++;
+        if (ctx) {
+          const m = views(mod);
+          const c = ctx >> 2;
+          for (let s = 0; s < TU_SLOTS; s++) {
+            const slot = live[s];
+            if (slot === null || slot.kind !== 0) continue;
+            if (!(m[c + TU_ST(s)] & (1 << bus))) continue;
+            slot.fn(buf, len, nchans);
+            m[c + TU_ST(s) + 1]++;
+          }
         }
+      } catch (e) {
+        record(mod, e);
+      }
+      try {
+        if (bus === 0) softClip(mod, buf, len, nchans);
       } catch (e) {
         record(mod, e);
       }

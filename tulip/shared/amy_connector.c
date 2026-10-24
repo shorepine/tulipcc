@@ -473,6 +473,42 @@ static void mount_gamma9001_drums(void) {
 
 #endif  // hooks: AMYBOARD || TULIP || AMYBOARD_VCV
 
+// Soft knee for bus 0 at the end of its FX chain. AMY's own output clipper is
+// linear to 0.9 of full scale and hard-clips just past 1.05, so dense chords
+// pushed over by bus EQ and chorus crackle. Below the knee the signal is
+// untouched; above it, it bends smoothly toward (never reaching) full scale.
+// Mirrored in JS by softClip in user_c_dsp_web.js.
+#define OUTPUT_CLIP_KNEE 0.7f
+
+void tulip_output_soft_clip(SAMPLE *buf, uint16_t len) {
+    float volume = amy_global.volume[0];
+    if (!(volume > 0.0f)) return;
+    // AMY's mixdown scales bus 0 by 0.1 * volume, so full scale at the output
+    // is a bus level of 10 / volume.
+    float full = 10.0f / volume;
+    float knee = OUTPUT_CLIP_KNEE * full;
+    if (knee >= 255.0f) return;  // past the S8.23 range; no sample can reach it
+    float range = full - knee;
+    SAMPLE knee_s = F2S(knee);
+    for (int i = 0; i < len * AMY_NCHANS; ++i) {
+        SAMPLE s = buf[i];
+        if (s > knee_s) {
+            float u = S2F(s) - knee;
+            buf[i] = F2S(knee + range * u / (range + u));
+        } else if (s < -knee_s) {
+            float u = -S2F(s) - knee;
+            buf[i] = F2S(-(knee + range * u / (range + u)));
+        }
+    }
+}
+
+#if !defined(TULIP_USER_C_DSP) && !defined(AMYBOARD_VCV)
+// Without user C DSP, the bus hook only needs the output clipper.
+static void tulip_output_clip_hook(uint16_t bus, SAMPLE *buf, uint16_t len) {
+    if (bus == 0) tulip_output_soft_clip(buf, len);
+}
+#endif
+
 #if (defined AMYBOARD) || (defined TULIP)
 
 void run_amy(uint8_t midi_out_pin) {
@@ -497,6 +533,8 @@ void run_amy(uint8_t midi_out_pin) {
 #ifdef TULIP_USER_C_DSP
     extern void tulip_bus_postprocess_hook(uint16_t bus, SAMPLE *buf, uint16_t len);
     amy_config.amy_external_bus_postprocess_hook = tulip_bus_postprocess_hook;
+#else
+    amy_config.amy_external_bus_postprocess_hook = tulip_output_clip_hook;
 #endif
     amy_config.audio = AMY_AUDIO_IS_I2S;
 #if defined(AMYBOARD) || defined(AMYBOARD_WEB)
@@ -566,6 +604,8 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config.amy_external_bus_postprocess_hook = tulip_bus_postprocess_hook;
     extern uint8_t tulip_user_render_hook(uint16_t osc, SAMPLE *buf, uint16_t len);
     amy_config.amy_external_render_hook = tulip_user_render_hook;
+#else
+    amy_config.amy_external_bus_postprocess_hook = tulip_output_clip_hook;
 #endif
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.capture_device_id = capture_device_id;
