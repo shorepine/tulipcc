@@ -356,9 +356,30 @@ def run_wifi_screenshot(repl, ssid, pw, username, wifi_timeout=25):
     # password from the echoed tulip.wifi(...) line, and (b) be non-deterministic
     # (boot banner + varying transcript). tfb_stop() leaves only the rgb332 palette.
     repl.send("tulip.tfb_stop()", 0.7)
-    repl.send("tulip.screenshot()", 4.0)  # encodes PNG + POSTs to /api/tulipworld/upload
+    wait_for_upload(repl, "tulip.screenshot()")  # encodes PNG + POSTs to /api/tulipworld/upload
     repl.send("tulip.tfb_start()", 0.3)   # restore the REPL console
     return True
+
+
+def wait_for_upload(repl, line, timeout=45.0):
+    """Send `line` and wait for world.upload()'s own result line instead of a fixed
+    sleep: PNG encode + TLS handshake + POST is several seconds and varies with the
+    network, and the next step's Ctrl-C would otherwise cut a slow upload off
+    mid-connect. Prints how long it took so a slow/stuck upload shows in the log."""
+    start_len = len(repl.text())
+    t0 = time.monotonic()
+    repl.send(line, 0.0)
+    while time.monotonic() - t0 < timeout:
+        out = repl.text()[start_len:]
+        if "Uploaded screenshot.png" in out:
+            print(f"[shot] upload confirmed after {time.monotonic() - t0:.1f}s")
+            return True
+        if "Upload failed" in out or "Traceback" in out:
+            print(f"[shot] upload FAILED after {time.monotonic() - t0:.1f}s")
+            return False
+        time.sleep(0.2)
+    print(f"[shot] upload still not done after {timeout:.0f}s — giving up")
+    return False
 
 
 def latest_screenshot_id(username, base=WORLD_BASE):
