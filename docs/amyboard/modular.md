@@ -14,6 +14,8 @@ Your AMYboard ships with a plexiglass "front panel" with cutouts for the jacks a
 
 You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the front panel [DXF file](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf), [EPS Vector File](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.eps) or [SVG vector file](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.svg).
 
+For a ready-to-print panel, we recommend the [community faceplate by Voltryx](https://github.com/voltryx-music/amyboard/tree/main/hardware/faceplate) -- grab the [STL file here](https://github.com/voltryx-music/amyboard/blob/main/hardware/faceplate/amyboard.stl) and open it in your slicer. Thanks to [Voltryx](https://voltryx.com/) for designing and sharing it! As with any print, check the dimensions and fit for your setup before printing.
+
 
 ## 10vpp Operation
 

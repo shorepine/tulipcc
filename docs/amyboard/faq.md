@@ -490,6 +490,8 @@ There's no commercial desktop case yet, but the community has shared several 3D-
 
 The board ships with a plain laser-cut acrylic faceplate. The **bicolor labeled panel** in some Discord photos is a custom 3D print with the [3mf file here](https://github.com/shorepine/tulipcc/blob/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Everything works the same with or without a faceplate.
 
+If you want to print your own, we recommend the [community faceplate by Voltryx](https://github.com/voltryx-music/amyboard/tree/main/hardware/faceplate) ([STL file](https://github.com/voltryx-music/amyboard/blob/main/hardware/faceplate/amyboard.stl)) -- thanks to [Voltryx](https://voltryx.com/) for designing and sharing it. See [Modular Synth Setup](modular.md) for the other panel files.
+
 Note the stock panel's cutouts were measured for the **Adafruit SSD1327 OLED and the Adafruit single rotary encoder** -- other accessories (the quad encoder, the M5Stack 8-pack) *work* with AMYboard but won't physically fit those holes, so plan a custom panel (community members have shared DXF/SVG edits and cases for both). If the acrylic flexes when you press a clicky encoder, supporting the PCB itself in the case (standoffs on its mounting holes) stiffens things a lot.
 
 ### Two AMYboards in a small case -- how much room do I need?
