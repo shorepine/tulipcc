@@ -41,6 +41,7 @@ permissions:
   contents: read
   actions: read            # download the Tulip firmware artifact from the preview run
   pull-requests: write
+  statuses: write          # report the required "HW CI" status on the PR head commit
   issues: write            # delete the previous HW CI comment so each run re-notifies
 
 concurrency:
@@ -125,6 +126,24 @@ jobs:
             core.setOutput('sha', sha);
             core.setOutput('preview_run_id', String(previewRunId));
             core.info(`HW CI: amy=${isAmy} pr=${pr || '-'} @ ${sha} (preview run ${previewRunId})`);
+
+      # The "HW CI" commit status on the PR head is what branch protection on main
+      # requires. A workflow_run job's own check run lands on main's commit, not the
+      # PR's, so we report the result explicitly. hwci-gate.yml sets it pending (or
+      # success, for PRs that don't touch firmware) when the PR is pushed.
+      - name: Set "HW CI" status pending on the PR head
+        if: steps.ctx.outputs.is_amy == 'false' && steps.ctx.outputs.sha != ''
+        uses: actions/github-script@v7
+        env:
+          SHA: ${{ steps.ctx.outputs.sha }}
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner, repo: context.repo.repo, sha: process.env.SHA,
+              state: 'pending', context: 'HW CI',
+              description: 'Running on the hardware bench',
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
 
       # AMY runs only: pull the identity the preview stashed — which AMY PR built
       # this firmware, where to fetch it, and where to comment. Required (we can't
@@ -294,6 +313,23 @@ jobs:
             // previous one, so there's always exactly one and never zero.
             await github.rest.issues.createComment({ owner, repo, issue_number: pr, body });
             if (existing) await github.rest.issues.deleteComment({ owner, repo, comment_id: existing.id });
+
+      - name: Set "HW CI" status on the PR head
+        if: always() && steps.ctx.outputs.is_amy == 'false' && steps.ctx.outputs.sha != ''
+        uses: actions/github-script@v7
+        env:
+          SHA: ${{ steps.ctx.outputs.sha }}
+          AMY_OUTCOME: ${{ steps.amy.outcome }}
+          TULIP_OUTCOME: ${{ steps.tulip.outcome }}
+        with:
+          script: |
+            const ok = process.env.AMY_OUTCOME === 'success' && process.env.TULIP_OUTCOME === 'success';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner, repo: context.repo.repo, sha: process.env.SHA,
+              state: ok ? 'success' : 'failure', context: 'HW CI',
+              description: `AMYboard: ${process.env.AMY_OUTCOME || 'not run'}, Tulip: ${process.env.TULIP_OUTCOME || 'not run'}`,
+              target_url: `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
 
       - name: Mark job failed if either board failed
         if: always()
