@@ -42,7 +42,7 @@ concurrency:
 
 jobs:
   firmware:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write                # create + clobber the 'tulip' release
     steps:
