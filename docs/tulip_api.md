@@ -775,7 +775,8 @@ def game_loop(data):
 tulip.frame_callback(game_loop, game_data) # starts calling the callback every frame
 tulip.frame_callback() # disables the callback
 
-# Sets the screen brightness, from 1-9 (9 max brightness.) 5 is default.
+# Sets the screen brightness from 1-9 (9 is maximum). On Tulip CC,
+# 0 turns the backlight completely off; set 1-9 to turn it back on.
 tulip.brightness(5)
 
 # Show the GPU usage (frames per second, time spent in GPU) at the next GPU epoch (100 frames) in stderr 
