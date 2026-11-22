@@ -87,10 +87,9 @@ void display_pwm_setup() {
 
 
 void display_brightness(uint8_t amount) {
-    if(amount < 1) amount = 1;
     if(amount > 9) amount = 9;
     brightness = amount;
-    uint16_t duty = (9-brightness)*1000;
+    uint16_t duty = brightness == 0 ? (1 << 13) : (9-brightness)*1000;
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1) ;
 }
