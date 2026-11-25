@@ -77,8 +77,10 @@ void* run_midi(void*argp){
                             if(sysex_status == noErr) {
                                 const uint8_t * sysex_bytes = CFDataGetBytePtr(outData);
                                 for(uint16_t i=0;i<CFDataGetLength(outData);i++) {
-                                    sysex_buffer[sysex_len++] = sysex_bytes[i];
-                                    if(sysex_bytes[i]==0xf7) parse_sysex();
+                                    if(sysex_len < MAX_SYSEX_BYTES - 1) sysex_buffer[sysex_len++] = sysex_bytes[i];
+                                    // parse_sysex() hands the message to tulip_midi_input_hook, which
+                                    // copies it out, so start the next message fresh.
+                                    if(sysex_bytes[i]==0xf7) { parse_sysex(); sysex_len = 0; }
                                 }
                             }
                         }

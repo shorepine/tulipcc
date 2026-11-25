@@ -286,11 +286,12 @@ STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_in_obj, 0, 0, tulip_midi_in);
 
-extern uint16_t sysex_len;
+extern uint8_t * tulip_sysex_buffer;
+extern volatile uint16_t tulip_sysex_len;
 STATIC mp_obj_t tulip_sysex_in(size_t n_args, const mp_obj_t *args) {
-    if(sysex_len) {
-        mp_obj_t sysex_bytes = mp_obj_new_bytes(sysex_buffer, sysex_len);
-        sysex_len = 0; // consumed, move on
+    if(tulip_sysex_len) {
+        mp_obj_t sysex_bytes = mp_obj_new_bytes(tulip_sysex_buffer, tulip_sysex_len);
+        tulip_sysex_len = 0; // consumed, move on
         return sysex_bytes;
     } 
     return mp_const_none;

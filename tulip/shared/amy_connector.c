@@ -29,6 +29,12 @@
 #endif
 uint8_t * external_map;
 
+// Tulip's copy of the last received sysex, read by tulip.sysex_in(). Kept
+// separate from AMY's sysex_buffer, which AMY's MIDI parser reuses for the
+// next message.
+uint8_t * tulip_sysex_buffer = NULL;
+volatile uint16_t tulip_sysex_len = 0;
+
 #ifdef AMY_IS_EXTERNAL
 uint8_t * sysex_buffer;
 uint16_t sysex_len = 0;
@@ -209,21 +215,25 @@ void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
     midi_msg_handler(data, len, is_sysex, time);
     #endif
     if(is_sysex) {
-        // f0 and f7 are stripped on some platforms
-        if(data[0]!=0xf0) {
-            uint16_t c = 0;
-            sysex_buffer[c++] = 0xf0;
-            for(uint16_t i = 0; i< len; i++) {
-                sysex_buffer[c++] = data[i];
-            }
-            sysex_buffer[c++] = 0xf7;
-            sysex_len = c;
-        } else {
-            for(uint16_t i = 0; i< len; i++) {
-                sysex_buffer[i] = data[i];
-            }
-            sysex_len = len;
+        // Copy into Tulip's own buffer for tulip.sysex_in(). On hardware, `data`
+        // IS AMY's sysex_buffer (amy_midi.c assembles sysex there), so copying
+        // in place smeared the leading 0xF0 over the whole message, and AMY's
+        // parser resets sysex_len on the next status byte, which could empty a
+        // sysex before Python read it.
+        if(tulip_sysex_buffer == NULL) {
+            tulip_sysex_buffer = malloc_caps(MAX_SYSEX_BYTES + 2, MALLOC_CAP_SPIRAM);
+            if(tulip_sysex_buffer == NULL) return;
         }
+        // f0 and f7 are stripped on some platforms (AMY's UART/USB parser); add them back
+        uint8_t add_framing = (len == 0 || data[0] != 0xf0);
+        uint16_t max_payload = add_framing ? MAX_SYSEX_BYTES : MAX_SYSEX_BYTES + 2;
+        if(len > max_payload) len = max_payload;
+        uint16_t c = 0;
+        if(add_framing) tulip_sysex_buffer[c++] = 0xf0;
+        memcpy(tulip_sysex_buffer + c, data, len);
+        c += len;
+        if(add_framing) tulip_sysex_buffer[c++] = 0xf7;
+        tulip_sysex_len = c;
         if(MP_STATE_PORT(midi_callback)!=NULL) mp_sched_schedule(MP_STATE_PORT(midi_callback), mp_const_true);
     } else {
         for(uint32_t i = 0; i < (uint32_t)len; i++) {
