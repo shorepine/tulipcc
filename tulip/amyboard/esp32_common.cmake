@@ -346,6 +346,11 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     AMY_WAVETABLE
     GAMMA9001
     TULIP_USER_C_DSP
+    # Low-latency audio: 128-sample blocks (2.9 ms at 44.1 kHz) and a 2-block
+    # I2S DMA ring, ~6-7 ms MIDI-in to audio-out vs ~37 ms at AMY's defaults
+    # (256-sample blocks, 6-block ring). AMYboard only; other targets keep them.
+    BLOCK_SIZE_BITS=7
+    AMY_I2S_DMA_BLOCKS=2
     #AMY_DEBUG
     ${MICROPY_DEF_TINYUSB}
     ${BOARD_DEFINITION1}
